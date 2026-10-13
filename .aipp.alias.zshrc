@@ -45,7 +45,7 @@ alias slt="bash $AI_PROJECT_ROOT_DIR/docker/litellm/start-litellm.sh" # Start lo
 alias 9cl="ANTHROPIC_MODEL=9router-low claude" # Run Claude via 9router low-cost model tier: 9router-claude-low
 alias 9ch="ANTHROPIC_MODEL=9router-high claude" # Run Claude via 9router high-cost model tier: 9router-claude-high
 alias dms="$AI_PROJECT_ROOT_DIR/scripts/disable-mcps-default.py" # Disable default MCP servers: disable-mcps
-alias rri="rag-rat init --yes && rag-rat index --full && rag-rat hooks install" # Init rag-rat and install its hooks: rag-rat-init
+alias rri="rag-rat init --yes --no-hooks && rag-rat index --full" # Init rag-rat (no git hooks; lefthook.yml runs rag-rat maintenance instead): rag-rat-init
 alias sri="serena init" # Init serena in current project: serena-init
 alias osd="xdg-open http://localhost:24282/dashboard/" # Open serena dashboard
 alias afa="npx agent-flow-app" # Run agent-flow-app via npx: agent-flow-app

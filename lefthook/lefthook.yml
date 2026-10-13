@@ -1,10 +1,6 @@
 # Lefthook config — migrated from git-hooks/ (symlinked git hooks).
 # Install: `lefthook install` (run once per clone).
 # Bypass: `git commit --no-verify` (see lefthook/scripts/commit-msg.py for why this exists).
-#
-# NOTE: post-checkout, post-commit, post-merge, post-rewrite hooks still live
-# directly in .git/hooks/ and are NOT migrated here yet — protected path,
-# content unknown. Migrate those once their source is available.
 
 pre-commit:
   commands:
@@ -41,6 +37,31 @@ post-commit:
     semantic-version-bump:
       run:
         uv run --project $AI_PROJECT_ROOT_DIR $AI_PROJECT_ROOT_DIR/lefthook/scripts/semantic_version_bump.py
+    rag-rat-maintenance:
+      run:
+        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
+        --trigger post-commit --config $AI_PROJECT_ROOT_DIR/rag-rat.toml ||
+        true
+post-checkout:
+  commands:
+    rag-rat-maintenance:
+      run:
+        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
+        --trigger post-checkout --config $AI_PROJECT_ROOT_DIR/rag-rat.toml
+        --old-head '{1}' --new-head '{2}' --branch-checkout '{3}' || true
+post-merge:
+  commands:
+    rag-rat-maintenance:
+      run:
+        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
+        --trigger post-merge --config $AI_PROJECT_ROOT_DIR/rag-rat.toml || true
+post-rewrite:
+  commands:
+    rag-rat-maintenance:
+      run:
+        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
+        --trigger post-rewrite --config $AI_PROJECT_ROOT_DIR/rag-rat.toml ||
+        true
 pre-push:
   commands:
     jest:

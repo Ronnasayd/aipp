@@ -272,7 +272,10 @@ fi
 ##########################################################################################
 ###########################################################################################
 if command -v rag-rat &>/dev/null && [ -f $LOCAL/rag-rat.toml ]; then
-  nohup sh -c 'rag-rat init --yes && rag-rat index --full && rag-rat hooks install' >/tmp/rag-rat-setup.log 2>&1 &
+  # why: --no-hooks avoids rag-rat writing .git/hooks/* directly; lefthook.yml
+  # runs `rag-rat maintenance` for every event rag-rat needs (post-commit,
+  # post-checkout, post-merge, post-rewrite) instead.
+  nohup sh -c 'rag-rat init --yes --no-hooks && rag-rat index --full' >/tmp/rag-rat-setup.log 2>&1 &
   disown
   echo "rag-rat setup running in background (log: /tmp/rag-rat-setup.log) [ok]"
 else
