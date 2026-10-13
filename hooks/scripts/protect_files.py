@@ -47,8 +47,6 @@ ALLOWED_PATTERNS = [
     f"{home_dir}/develop/public/**",
     *(f"{home_dir}/Desktop/*.{ext}" for ext in ("md", "png", "jpeg", "json")),
     f"{CLAUDE_CONFIG_DIR}/projects/**/memory/*.md",
-    "env.example",
-    "example.env",
 ]
 
 # User-controlled extension of ALLOWED_PATTERNS. Only takes effect if set in
