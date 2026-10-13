@@ -55,7 +55,6 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 
 <!-- INIT:AUTO-GENERATED-CONTEXT:DO-NOT-MODIFY -->
 
-
 ## Mandatory rules that must always be followed
 
 - Every user question → interactive tool, never plain text. Claude:
@@ -86,7 +85,8 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 | Judge PR w/ evidence-first review + inline GH comments | `the-judge`                                  |
 | Resolve merge conflicts                                | `resolve-merge-conflicts`                    |
 | Execute tasks for a spec-driven feature (taskmaster)   | `sd-execute`                                 |
-| Generate a plan step-by-step                           | `sd-planning`                                |
+| Interview idea into an SRS before planning             | `sd-interview`                               |
+| Generate specs/plan from an existing SRS               | `sd-planning`                                |
 | Build requirements review table from spec/design/tasks | `spec-to-requirements-table`                 |
 | Pick between technical options (pros/cons)             | `technical-decision-helper`                  |
 | Map files/deps/tests a task touches before changing    | `context-map`                                |
@@ -94,5 +94,7 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 ## Context-Specific Rules
 
 The following rules apply to specific file types:
+
 - [code.instructions](.claude/instructions/code.instructions.md) — applies to: `**/*.ts, **/*.js, **/*.py, **/*.java, **/*.go, **/*.css, **/*.cpp, **/*.c, **/*.vue, **/*.jsx, **/*.tsx`
+
 <!-- END:AUTO-GENERATED-CONTEXT:DO-NOT-MODIFY -->
