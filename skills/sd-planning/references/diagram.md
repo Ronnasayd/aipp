@@ -50,13 +50,19 @@ flowchart TD
     generate plan"]
     B --> C["3. /spec-to-requirements-table
     generate requirements.md"]
-    C --> D{"Register in
+    C --> V["4. Verifier (fresh sub-agent, no inherited context)
+    /sd-review-spec report-only vs original request + code"]
+    V --> V2{"Gaps found?"}
+    V2 -- yes --> V3["Show gaps to user,
+    apply fixes (/sd-review-spec steps 4-7)"]
+    V3 --> V
+    V2 -- no --> D{"Register in
     taskmaster?"}
     D -- yes --> E["/sd-insert-taskmaster"]
     D -- no --> F
-    E --> F["5. Check docs-adr criteria
+    E --> F["6. Check docs-adr criteria
     offer ADR if met"]
-    F --> G["6. Evaluate durable memory
+    F --> G["7. Evaluate durable memory
     (reason/invariant/preference only)
     /ai-memory-durable-pages"]
     G --> End([Plan complete])
