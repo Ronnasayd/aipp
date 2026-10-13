@@ -458,6 +458,11 @@
           },
           {
             "type": "command",
+            "command": "uvx --from git+https://github.com/Ronnasayd/mcp-manager.git mcp_manager_context $HOME/develop/personal/mcp-manager/catalog.json | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh McpManagerContext",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && JSON_COLORIZE=1 uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/log_hooks.py",
             "timeout": 10
           }
