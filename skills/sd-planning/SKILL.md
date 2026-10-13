@@ -18,7 +18,7 @@ Add the following steps as tasks using the `TaskCreate`, `TaskUpdate`, `TaskGet`
       3. Use every available tool to reach this understanding: semantic search, sub-agents for parallel/deep search, CLI commands, MCP tools, skills, or anything else that helps.
       4. If a knowledge gap remains that the codebase and `context7` (library docs) can't cover — market patterns, RFCs, security advisories, precedent for a novel architectural decision — use `WebSearch` to fill it. Skip this when the codebase/context7 already answer the question.
    3. Run `/prd-get-implicit-requirements` against the gathered problem description to surface gaps across its 14 universal categories (error handling, data persistence, security, accessibility, etc.) before grilling the user — this narrows what still needs asking.
-   4. Conduct a `/grilling` session until you have obtained all necessary information and clarified any doubts with the user, including the gaps surfaced above. Check for unlisted implicit requirements and potential undefined issues.
+   4. Conduct a `/grilling` session over the open branches surfaced in steps 1.1-1.3 (scope, constraints, edge cases, dependencies, implicit-requirement gaps). Work it in frontier rounds per the grilling skill's own format — number each question, give a recommended answer, batch the whole frontier together. Never ask the user for a fact a sub-agent can find; put to them only genuine decisions. End the session when the frontier is empty: no branch left unvisited.
 
 2. Execute the `/tlc-spec-driven` skill to generate a plan/spec based on the described problem.
 3. Execute the `/spec-to-requirements-table` skill to generate a `requirements.md` file.
