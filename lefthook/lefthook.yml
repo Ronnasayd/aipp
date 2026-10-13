@@ -32,6 +32,10 @@ commit-msg:
       run:
         uv run --project $AI_PROJECT_ROOT_DIR $AI_PROJECT_ROOT_DIR/lefthook/scripts/reject-emoji-commit-msg.py
         {1}
+    reject-non-english:
+      run:
+        uv run --project $AI_PROJECT_ROOT_DIR $AI_PROJECT_ROOT_DIR/lefthook/scripts/reject-non-english-commit-msg.py
+        {1}
 post-commit:
   commands:
     semantic-version-bump:
