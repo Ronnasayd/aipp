@@ -87,9 +87,9 @@ ctx_filled=$(( ctx_pct_int / 5 ))
 ctx_bar=""
 for i in $(seq 1 20); do
     if [ "$i" -le "$ctx_filled" ]; then
-        ctx_bar="${ctx_bar}█"
+        ctx_bar="${ctx_bar}▰"
     else
-        ctx_bar="${ctx_bar}░"
+        ctx_bar="${ctx_bar}▱"
     fi
 done
 ctx_usage_k=$(( ctx_usage / 1000 ))

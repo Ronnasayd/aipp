@@ -128,7 +128,7 @@ while [ "$i" -lt "$task_count" ]; do
         [ "$filled" -lt 0 ] && filled=0
         bar=""
         for s in $(seq 1 20); do
-            if [ "$s" -le "$filled" ]; then bar="${bar}█"; else bar="${bar}░"; fi
+            if [ "$s" -le "$filled" ]; then bar="${bar}▰"; else bar="${bar}▱"; fi
         done
         ctx_seg="${SEP}${ICON_CTX} ${cc}${bar}${RESET} ${cc}${ctx_pct}%${RESET}"
     fi
