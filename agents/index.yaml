@@ -34,6 +34,15 @@ agents:
     with thorough and iterative reasoning, documenting all actions and evidence until
     the task is resolved.
 - name:
+  - interview-specialist.agent.md
+  description: This custom agent is an interview specialist responsible for grilling
+    the user about a plan or idea until shared understanding is reached. Use this
+    agent when you need structured requirement elicitation through relentless one-question-at-a-time
+    interrogation before any spec or code gets written — never to generate plans,
+    specs, or code itself. The agent will autonomously conduct the interview, proposing
+    a default for every question, until no structural ambiguity remains, then hand
+    back the synthesized Q&A history.
+- name:
   - generative-ai-specialist.agent.md
   description: This custom agent is a generative AI specialist responsible for designing,
     optimizing, and deploying AI generation workflows for text, images, video, and
