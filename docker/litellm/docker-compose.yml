@@ -21,3 +21,24 @@ services:
       start_period: 20s
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      omniroute:
+        condition: service_healthy
+
+  omniroute:
+    build:
+      context: ./omniroute
+    container_name: omniroute
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - DATA_DIR=/data
+    volumes:
+      - /home/omniroute-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:20128').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 40s
