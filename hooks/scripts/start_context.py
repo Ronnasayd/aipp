@@ -12,11 +12,17 @@ if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 from utils import (  # noqa: E402
+    bump_loop_count,
+    get_by_key,
     get_hooks_logger,
+    get_session_id_short,
     minify_markdown,
     project_dir,
+    read_loop_count,
     walk_respecting_gitignore,
 )
+
+CONTEXT_EMIT_EVERY = 5
 
 LOG = get_hooks_logger("StartContext")
 
@@ -393,6 +399,15 @@ def main() -> None:
         payload = json.load(sys.stdin)
     except json.JSONDecodeError:
         sys.exit(0)  # erro no parse não bloqueia nada
+
+    if get_by_key(payload, "hook_event_name") == "UserPromptSubmit":
+        session_id = get_session_id_short(get_by_key(payload, "session_id") or "")
+        cwd = project_dir(payload)
+        count = read_loop_count(cwd, "start-context-calls", session_id) + 1
+        bump_loop_count(cwd, "start-context-calls", session_id, count)
+        if count % CONTEXT_EMIT_EVERY != 0:
+            sys.exit(0)
+
     additional_context = f"{RULES}\n\n{communication_lang()}"
     package_text = package_json(payload)
     if package_text:
