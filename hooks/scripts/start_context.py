@@ -302,6 +302,53 @@ def docker_containers() -> str:
     return "\n".join(lines)
 
 
+INTERESTING_BINARIES = [
+    "gh",
+    "glab",
+    "acli",
+    "jj",
+    "lazygit",
+    "aws",
+    "gcloud",
+    "az",
+    "kubectl",
+    "k9s",
+    "terraform",
+    "tofu",
+    "doctl",
+    "rg",
+    "fd",
+    "fzf",
+    "bat",
+    "eza",
+    "exa",
+    "zoxide",
+    "jq",
+    "yq",
+    "htop",
+    "btop",
+    "btm",
+    "ncdu",
+    "httpie",
+    "xh",
+    "podman",
+    "lazydocker",
+    "rtk",
+]
+
+
+def available_binaries() -> str:
+    """Render a markdown section listing interesting CLI binaries found on PATH.
+
+    Returns:
+        Markdown section listing available binary names, or "" if none found.
+    """
+    found = sorted(name for name in INTERESTING_BINARIES if shutil.which(name))
+    if not found:
+        return ""
+    return "## Available CLI binaries\n\n" + ", ".join(f"`{name}`" for name in found)
+
+
 def disabled_mcp_servers() -> str:
     """Render a markdown section listing MCP servers disabled for this project.
 
@@ -362,6 +409,9 @@ def main() -> None:
     docker_text = docker_containers()
     if docker_text:
         additional_context += f"\n\n{docker_text}"
+    binaries_text = available_binaries()
+    if binaries_text:
+        additional_context += f"\n\n{binaries_text}"
     output = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
