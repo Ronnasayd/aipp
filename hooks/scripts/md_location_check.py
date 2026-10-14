@@ -10,7 +10,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
-from utils import get_by_key, get_hooks_logger
+from utils import get_hooks_logger, load_md_write_target
 
 LOG = get_hooks_logger("MdLocationCheck")
 
@@ -36,17 +36,10 @@ ALLOWED_PATTERNS = [
 
 def main() -> None:
     """Check if .md file creation is outside allowed documentation directories."""
-    try:
-        payload = json.load(sys.stdin)
-    except (json.JSONDecodeError, EOFError) as e:
-        LOG.debug("Failed to parse JSON: %s", e)
+    target = load_md_write_target(LOG)
+    if target is None:
         sys.exit(0)
-
-    tool_input = get_by_key(payload, "tool_input") or {}
-    file_path = get_by_key(tool_input, "file_path") or ""
-
-    if not file_path.endswith(".md"):
-        sys.exit(0)
+    _payload, file_path = target
 
     if any(pattern in file_path for pattern in ALLOWED_PATTERNS):
         sys.exit(0)
@@ -57,11 +50,11 @@ def main() -> None:
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",
+            "permissionDecision": "deny",
             "permissionDecisionReason": (
                 f"Creating {Path(file_path).name} outside standard documentation "
                 "directories (docs/, skills/, agents/, commands/, .specs/, ...). "
-                "Move it there, or ask the user if this location is intentional."
+                "Move it there instead."
             ),
         }
     }

@@ -13,7 +13,7 @@ import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
-from utils import get_by_key, get_hooks_logger
+from utils import get_by_key, get_hooks_logger, load_md_write_target
 
 LOG = get_hooks_logger("MdLanguageCheck")
 
@@ -69,21 +69,15 @@ def _looks_portuguese(text: str) -> bool:
 
 def main() -> None:
     """Read the tool payload from stdin and emit a language reminder."""
-    try:
-        payload = json.load(sys.stdin)
-    except (json.JSONDecodeError, EOFError) as e:
-        LOG.debug("Failed to parse JSON: %s", e)
+    target = load_md_write_target(LOG)
+    if target is None:
         sys.exit(0)
-
-    tool_input = get_by_key(payload, "tool_input") or {}
-    file_path = get_by_key(tool_input, "file_path") or ""
-
-    if not file_path.endswith(".md"):
-        sys.exit(0)
+    payload, file_path = target
 
     if not any(fnmatch.fnmatch(file_path, pattern) for pattern in ENGLISH_ONLY_DIRS):
         sys.exit(0)
 
+    tool_input = get_by_key(payload, "tool_input") or {}
     content = (
         get_by_key(tool_input, "content") or get_by_key(tool_input, "new_string") or ""
     )

@@ -778,6 +778,40 @@ def project_dir(payload: Mapping[str, Any]) -> str:
     return os.environ.get("CLAUDE_PROJECT_DIR") or get_by_key(payload, "cwd") or "."
 
 
+def is_within_project(file_path: str, payload: Mapping[str, Any]) -> bool:
+    """True if `file_path` resolves inside the project root (see `project_dir`)."""
+    root = project_dir(payload)
+    if root == ".":
+        return False
+    try:
+        Path(file_path).resolve().relative_to(Path(root).resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def load_md_write_target(logger: logging.Logger) -> tuple[dict, str] | None:
+    """Read a PreToolUse write/edit payload from stdin, gated to in-project .md writes.
+
+    Returns (payload, file_path), or None if stdin isn't valid JSON, the target
+    isn't a .md file, or it falls outside the project root.
+    """
+    try:
+        payload = json.loads(sys.stdin.read())
+    except (json.JSONDecodeError, EOFError) as e:
+        logger.debug("Failed to parse JSON: %s", e)
+        return None
+
+    tool_input = get_by_key(payload, "tool_input") or {}
+    file_path = get_by_key(tool_input, "file_path") or ""
+
+    if not file_path.endswith(".md"):
+        return None
+    if not is_within_project(file_path, payload):
+        return None
+    return payload, file_path
+
+
 MAX_QUERY_TEXT_CHARS = 250
 
 
