@@ -9,7 +9,7 @@ services:
       - ./config.yaml:/app/config.yaml:ro
     environment:
       - OMNIROUTER_API_KEY=${OMNIROUTER_API_KEY}
-      - NINE_ROUTER_API_KEY=${NINE_ROUTER_API_KEY}
+      - OMNIROUTER_API_KEY=${OMNIROUTER_API_KEY}
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
       - LITELLM_LOCAL_MODEL_COST_MAP=true
     command: ["--config", "/app/config.yaml", "--port", "4000"]

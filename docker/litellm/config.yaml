@@ -2,35 +2,41 @@ model_list:
   - model_name: openrouter-gpt-oss-20b:free
     litellm_params:
       model: openrouter/openai/gpt-oss-20b:free
-      api_key: os.environ/OMNIROUTER_API_KEY
+      api_key: os.environ/OPENROUTER_API_KEY
 
   - model_name: openrouter-nemotron-3-ultra-550b-a55b:free
     litellm_params:
       model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
-      api_key: os.environ/OMNIROUTER_API_KEY
+      api_key: os.environ/OPENROUTER_API_KEY
 
   - model_name: openrouter-gemma-4-31b-it:free
     litellm_params:
       model: openrouter/google/gemma-4-31b-it:free
-      api_key: os.environ/OMNIROUTER_API_KEY
+      api_key: os.environ/OPENROUTER_API_KEY
 
-  - model_name: 9router-high
+  - model_name: omnirouter-high
     litellm_params:
       model: openai/high
       api_base: http://host.docker.internal:20128/v1
-      api_key: os.environ/NINE_ROUTER_API_KEY
+      api_key: os.environ/OMNIROUTER_API_KEY
 
-  - model_name: 9router-medium
+  - model_name: omnirouter-medium
     litellm_params:
       model: openai/medium
       api_base: http://host.docker.internal:20128/v1
-      api_key: os.environ/NINE_ROUTER_API_KEY
+      api_key: os.environ/OMNIROUTER_API_KEY
 
-  - model_name: 9router-low
+  - model_name: omnirouter-low
     litellm_params:
       model: openai/low
       api_base: http://host.docker.internal:20128/v1
-      api_key: os.environ/NINE_ROUTER_API_KEY
+      api_key: os.environ/OMNIROUTER_API_KEY # pragma: allowlist secret
+
+  - model_name: 9router-images
+    litellm_params:
+      model: openai/images
+      api_base: http://host.docker.internal:20128/v1
+      api_key: os.environ/OMNIROUTER_API_KEY # pragma: allowlist secret
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

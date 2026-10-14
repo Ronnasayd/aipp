@@ -439,7 +439,7 @@
 
 ### **2026-07-25**
 
-- **[✨ Features]** Add 9router-medium model and update environment variables ([d740fc4](https://github.com/Ronnasayd/aipp/commit/d740fc4))
+- **[✨ Features]** Add omnirouter-medium model and update environment variables ([d740fc4](https://github.com/Ronnasayd/aipp/commit/d740fc4))
 - **[✨ Features]** Add start_embedding_daemon.py script for pre-warming daemon ([ac8ebf4](https://github.com/Ronnasayd/aipp/commit/ac8ebf4))
 - **[✨ Features]** Add rag-rat status to status line output ([11dd71f](https://github.com/Ronnasayd/aipp/commit/11dd71f))
 - **[🧹 Chores]** Add debug logging to external hooks and rag-rat init alias ([8c344e2](https://github.com/Ronnasayd/aipp/commit/8c344e2))

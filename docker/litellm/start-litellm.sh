@@ -19,9 +19,9 @@ sudo rm -f /tmp/litellm_env.sh
 echo "export ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL" >> /tmp/litellm_env.sh
 echo "export ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN" >> /tmp/litellm_env.sh
 echo "export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1" >> /tmp/litellm_env.sh
-echo "export ANTHROPIC_DEFAULT_OPUS_MODEL=9router-high" >> /tmp/litellm_env.sh
-echo "export ANTHROPIC_DEFAULT_SONNET_MODEL=9router-medium" >> /tmp/litellm_env.sh
-echo "export ANTHROPIC_DEFAULT_HAIKU_MODEL=9router-low" >> /tmp/litellm_env.sh
+echo "export ANTHROPIC_DEFAULT_OPUS_MODEL=omnirouter-high" >> /tmp/litellm_env.sh
+echo "export ANTHROPIC_DEFAULT_SONNET_MODEL=omnirouter-medium" >> /tmp/litellm_env.sh
+echo "export ANTHROPIC_DEFAULT_HAIKU_MODEL=omnirouter-low" >> /tmp/litellm_env.sh
 echo "export ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> /tmp/litellm_env.sh
 echo "claude" >> /tmp/litellm_env.sh
 echo "docker compose -f $DIR/docker-compose.yml down --remove-orphans" >> /tmp/litellm_env.sh
