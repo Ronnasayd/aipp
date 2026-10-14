@@ -181,7 +181,7 @@ memory_web="http://localhost:49374/web"
 if pgrep -f "serena" > /dev/null; then
     serena_up=1; serena_dot="${C_GREEN}●${RESET}"
 else
-    serena_up=0; serena_dot="${C_RED}●${RESET}"
+    serena_up=0; serena_dot=""
 fi
 
 if curl -s --max-time 1 -o /dev/null "$memory_web"; then
@@ -215,7 +215,7 @@ fi
 if [ -n "$AI_JAIL" ]; then
     jail_up=1; jail_dot="${C_GREEN}●${RESET}"
 else
-    jail_up=0; jail_dot="${C_RED}●${RESET}"
+    jail_up=0; jail_dot=""
 fi
 
 ponytail_up=0
@@ -253,7 +253,7 @@ cbm_web="http://localhost:${CBM_PORT}"
 if curl -s --max-time 1 -o /dev/null "$cbm_web"; then
     cbm_up=1; cbm_dot="${C_GREEN}●${RESET}"
 else
-    cbm_up=0; cbm_dot="${C_RED}●${RESET}"
+    cbm_up=0; cbm_dot=""
 fi
 
 {
@@ -269,7 +269,16 @@ fi
     echo "cbm        : $([ "$cbm_up" -eq 1 ] && echo ON || echo OFF)  (web: $cbm_web)"
 } > "$TOOLS_LOG"
 
-tools_status="${SEP}${ICON_TOOLS} \e]8;;file://${TOOLS_LOG}\e\\\\tools(${serena_dot}|${memory_dot}|${ragrat_dot}|${caveman_dot}|${ponytail_dot}|${jail_dot}|${rtk_dot}|${tlc_dot}|${cbm_dot})\e]8;;\e\\\\"
+tools_dots=""
+for d in "$serena_dot" "$memory_dot" "$ragrat_dot" "$caveman_dot" "$ponytail_dot" "$jail_dot" "$rtk_dot" "$tlc_dot" "$cbm_dot"; do
+    [ -z "$d" ] && continue
+    if [ -z "$tools_dots" ]; then
+        tools_dots="$d"
+    else
+        tools_dots="${tools_dots}|${d}"
+    fi
+done
+tools_status="${SEP}${ICON_TOOLS} \e]8;;file://${TOOLS_LOG}\e\\\\tools(${tools_dots})\e]8;;\e\\\\"
 
 # Session duration (wall clock)
 duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // empty')
