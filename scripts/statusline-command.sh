@@ -337,8 +337,26 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
         remaining_h=$((remaining_seconds / 3600))
         remaining_m=$(( (remaining_seconds % 3600) / 60 ))
         time_left=$(printf "%d:%02d" "$remaining_h" "$remaining_m")
+
+        # Pace: real % vs. % expected from elapsed time (linear, 100%/300min = 0.3333%/min)
+        elapsed_seconds=$(( 18000 - remaining_seconds ))
+        [ "$elapsed_seconds" -lt 0 ] && elapsed_seconds=0
+        elapsed_min=$(( elapsed_seconds / 60 ))
+        estimated_x1000=$(( elapsed_min * 3333 / 10 ))   # % * 1000, since 0.3333%/min = 3333/10000
+        five_x1000=$(( five_int * 1000 ))
+        pace_diff_x1000=$(( five_x1000 - estimated_x1000 ))
+        pace_sign="+"
+        [ "$pace_diff_x1000" -lt 0 ] && pace_sign="-" && pace_diff_x1000=$(( -pace_diff_x1000 ))
+        pace_diff=$(LC_NUMERIC=C printf "%d.%01d" $(( pace_diff_x1000 / 1000 )) $(( (pace_diff_x1000 / 100) % 10 )))
+        if [ "$pace_sign" = "+" ]; then
+            pace_color="$C_RED"
+        else
+            pace_color="$C_GREEN"
+        fi
+        pace_info=" ${pace_color}(${pace_sign}${pace_diff}%)${RESET}"
     else
         time_left="--:--"
+        pace_info=""
     fi
 
     # Calculate next weekly reset day from resets_at timestamp
@@ -362,7 +380,7 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
     esac
     reset_label="${reset_date}${reset_suffix}"
 
-    rate_info="${SEP}${ICON_5H} 5h ${five_color}${five_int}%${RESET} (-${time_left})${SEP}${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} (${reset_label})"
+    rate_info="${SEP}${ICON_5H} 5h ${five_color}${five_int}%${RESET}${pace_info} (-${time_left})${SEP}${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} (${reset_label})"
 fi
 
 # Output the complete status line
