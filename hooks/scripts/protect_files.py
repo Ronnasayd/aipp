@@ -49,15 +49,18 @@ ALLOWED_PATTERNS = [
     f"{CLAUDE_CONFIG_DIR}/projects/**/memory/*.md",
 ]
 
-# User-controlled extension of ALLOWED_PATTERNS. Only takes effect if set in
-# the shell BEFORE launching Claude Code (e.g. in ~/.zshrc or exported prior
-# to `claude`), since this hook process only inherits env from its parent
-# (the Claude Code core process), never from a Bash tool subshell — a value
-# Claude sets via `export` inside a Bash call dies with that subprocess and
-# never reaches here. Colon-separated glob patterns.
+# why: must be exported before launching Claude Code — this hook process
+# inherits env only from its parent (the core process), not from a Bash
+# tool subshell, so an `export` done via a Bash call never reaches here.
 _extra_allowed = os.environ.get("PROTECT_FILES_EXTRA_ALLOWED", "")
 if _extra_allowed:
-    ALLOWED_PATTERNS.extend(p for p in _extra_allowed.split(":") if p)
+    for _p in re.split(r"[;,]", _extra_allowed):
+        _p = _p.strip()
+        if not _p:
+            continue
+        if not any(c in _p for c in "*?["):
+            _p = _p.rstrip("/") + "/**"
+        ALLOWED_PATTERNS.append(_p)
 
 # MCP server tool calls (tool_name = "mcp__<server>__<tool>") route file args
 # through their own server-side auth (e.g. ai-memory scopes to its own DB,
