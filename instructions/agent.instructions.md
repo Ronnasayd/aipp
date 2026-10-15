@@ -18,6 +18,12 @@ applyTo: "**/*"
 
 - Never assume the code is correct without tests to validate it.
 
+- TDD mandatory when repo/project already adopts tests (existing test suite/framework present): write failing test first (Red), then minimal code to pass (Green), then refactor. No large unverified code blocks — small loops only. If repo has no test setup, don't impose one unprompted.
+
+- Evidence over trust: before asking human review, provide proof change works — passing test logs, screenshots/recordings of E2E or visual tests. No "should work" claims.
+
+- Vertical slices only: implement thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice testable and validated before next.
+
 ## Commonly used skills
 
 | When                                                   | Use                                          |
