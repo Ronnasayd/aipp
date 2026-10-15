@@ -43,16 +43,27 @@ for account_file in "$ACCOUNTS_DIR"/*.json; do
 
     # utilization 0 means the 5h session window is cold (no requests yet);
     # /usage itself doesn't count as usage, so fire a real tiny message to warm it.
-    if jq -e --arg u "$utilization" '($u | tonumber) == 0' <<<null >/dev/null 2>&1; then
+    # The request must look like real Claude Code CLI traffic (claude-code-20250219
+    # beta flag + x-claude-code-session-id header) or the server books it under the
+    # 7-day API usage bucket instead of activating the 5h session window.
+    if jq -e --arg u "$utilization" '($u | tonumber) == 0' <<<"$utilization" >/dev/null 2>&1; then
         log "$email: utilization 0, warming with a message"
+        session_id="$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)"
+        prompt_id="$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)"
+        request_id="$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)"
         code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST 'https://api.anthropic.com/v1/messages?beta=true' \
             -H 'Accept: application/json' \
             -H "Authorization: Bearer $token" \
             -H 'Content-Type: application/json' \
-            -H 'User-Agent: claude-cli/2.1.300 (external, cli)' \
-            -H 'Anthropic-Beta: oauth-2025-04-20' \
+            -H 'User-Agent: claude-cli/2.1.300 (external, sdk-cli)' \
+            -H 'Anthropic-Beta: oauth-2025-04-20,claude-code-20250219' \
             -H 'Anthropic-Version: 2023-06-01' \
+            -H 'Anthropic-Dangerous-Direct-Browser-Access: true' \
             -H 'X-App: cli' \
+            -H "X-Claude-Code-Session-Id: $session_id" \
+            -H "X-Claude-Code-Prompt-Id: $prompt_id" \
+            -H 'X-Claude-Code-Request-Class: main' \
+            -H "X-Client-Request-Id: $request_id" \
             --data-binary '{
                 "model": "claude-haiku-4-5",
                 "messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}],
