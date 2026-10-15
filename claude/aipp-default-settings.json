@@ -10,7 +10,7 @@
     "english-teacher-specialist.agent.md": false,
     "generative-ai-specialist.agent.md": false,
     "git-specialist.agent.md": false,
-    "interview-specialist.agent.md": false,
+    "interview-specialist.agent.md": true,
     "planner-specialist.agent.md": true,
     "prd-reviewer-specialist.agent.md": false,
     "product-owner-specialist.agent.md": false,

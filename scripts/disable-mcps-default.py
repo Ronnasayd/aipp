@@ -34,6 +34,7 @@ disabled_mcp_servers = [
     "aipp:krita",
     "aipp:burp",
     "aipp:gcloud",
+    "plugin:rag-rat:rag-rat",
 ]
 
 parser = argparse.ArgumentParser()
