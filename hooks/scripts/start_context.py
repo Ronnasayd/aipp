@@ -400,7 +400,9 @@ def main() -> None:
     except json.JSONDecodeError:
         sys.exit(0)  # erro no parse não bloqueia nada
 
-    if get_by_key(payload, "hook_event_name") == "UserPromptSubmit":
+    hook_event_name = get_by_key(payload, "hook_event_name") or "SessionStart"
+
+    if hook_event_name == "UserPromptSubmit":
         session_id = get_session_id_short(get_by_key(payload, "session_id") or "")
         cwd = project_dir(payload)
         count = read_loop_count(cwd, "start-context-calls", session_id) + 1
@@ -429,7 +431,7 @@ def main() -> None:
         additional_context += f"\n\n{binaries_text}"
     output = {
         "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
+            "hookEventName": hook_event_name,
             "additionalContext": minify_markdown(additional_context),
         }
     }
