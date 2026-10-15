@@ -434,6 +434,14 @@ skills:
     that should fire on a tool call / session event (PreToolUse, PostToolUse, SessionStart,
     Stop, UserPromptSubmit, SubagentStart/Stop).
 - name:
+  - sd-grilling
+  description: Explore the codebase and relentlessly interview the user about a plan,
+    feature, or idea until shared understanding is reached, then write a PRD-style
+    artifact recording decisions and out-of-scope items. Use when user says 'plan
+    this feature step by step', 'help me plan this properly', 'generate a plan for
+    this problem', 'walk through planning this feature', 'grill me about X', or uses
+    any 'grill' trigger phrases.
+- name:
   - extract-automation-candidates
   description: Mine Claude Code session transcripts, git commit history, and spec
     or PRD markdown files for recurring or high-cost manual workflows worth turning
