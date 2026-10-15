@@ -116,6 +116,7 @@
       "mcp__ai-memory__memory_handoff_cancel",
       "mcp__ai-memory__memory_install_self_routing",
       "mcp__ai-memory__memory_forget_sweep",
+      "mcp__ai-memory__memory_read_session_observations",
       "CronCreate",
       "CronDelete",
       "CronList",
@@ -127,7 +128,8 @@
       "EndConversation",
       "RemoteTrigger",
       "ReportFindings",
-      "ScheduleWakeup"
+      "ScheduleWakeup",
+      "SendFeedback"
     ],
     "ask": [],
     "defaultMode": "bypassPermissions"
