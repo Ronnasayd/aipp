@@ -20,6 +20,22 @@
     "pr": "",
     "sessionUrl": false
   },
+  "skillOverrides": {
+    "computer-use": "off",
+    "chrome-browser": "off",
+    "google-workspace": "off",
+    "built-in-browser": "off",
+    "chrome-browser ": "off",
+    "deep-research": "off",
+    "docs": "off",
+    "docx": "off",
+    "import-memory": "off",
+    "morning": "off",
+    "pdf": "off",
+    "pptx": "off",
+    "skill-creator": "off",
+    "xlsx": "off"
+  },
   "permissions": {
     "allow": [
       "Bash(cd:*)",
@@ -92,11 +108,27 @@
       "Bash(cargo publish:*)",
       "Bash(gem push:*)",
       "Bash(kubectl delete:*)",
-      "Bash(kubectl apply:*)"
+      "Bash(kubectl apply:*)",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "DesignSync",
+      "EnterPlanMode",
+      "ExitPlanMode",
+      "NotebookEdit",
+      "ShareOnboardingGuide",
+      "EndConversation",
+      "RemoteTrigger",
+      "ReportFindings",
+      "ScheduleWakeup"
     ],
     "ask": [],
     "defaultMode": "bypassPermissions"
   },
+  "disableBundledSkills": true,
+  "disableWorkflows": true,
+  "disableArtifact": true,
+  "disableClaudeAiConnectors": true,
   "model": "sonnet",
   "hooks": {
     "PermissionRequest": [
