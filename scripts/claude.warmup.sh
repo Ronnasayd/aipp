@@ -6,7 +6,8 @@
 # ( crontab -l 2>/dev/null | grep -vF "$SCRIPT" ; echo "$CRON_LINE" ) | crontab -
 set -euo pipefail
 
-ACCOUNTS_DIR="${ACCOUNTS_DIR:-$HOME/.claude/accounts}"
+CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+ACCOUNTS_DIR="${ACCOUNTS_DIR:-$CLAUDE_CONFIG_DIR/accounts}"
 LOCK_FILE="${TMPDIR:-/tmp}/claude.warmup.lock"
 
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
@@ -15,10 +16,14 @@ command -v jq >/dev/null 2>&1 || { log "error: jq required"; exit 1; }
 command -v curl >/dev/null 2>&1 || { log "error: curl required"; exit 1; }
 command -v flock >/dev/null 2>&1 || { log "error: flock required"; exit 1; }
 
-[ -d "$ACCOUNTS_DIR" ] || { log "error: $ACCOUNTS_DIR not found"; exit 1; }
-
 exec 9>"$LOCK_FILE"
 flock -n 9 || { log "error: another warmup run is already in progress, skipping"; exit 0; }
+
+# shellcheck source=claude.accounts.sh
+source "$(dirname "${BASH_SOURCE[0]}")/claude.accounts.sh"
+save_current_account
+
+[ -d "$ACCOUNTS_DIR" ] || { log "error: $ACCOUNTS_DIR not found"; exit 1; }
 
 for account_file in "$ACCOUNTS_DIR"/*.json; do
     [ -f "$account_file" ] || continue
