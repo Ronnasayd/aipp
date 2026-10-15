@@ -132,10 +132,42 @@ elif [ -f "go.mod" ] || [ -f "go.sum" ] || ls *.go >/dev/null 2>&1; then
     fi
 fi
 
-# Git branch
-branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')
-if [ "${#branch}" -gt 20 ]; then
-    branch="${branch:0:19}…"
+# Git branch + p10k-style working tree status
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+git_info=""
+if [ -n "$branch" ]; then
+    if [ "${#branch}" -gt 20 ]; then
+        branch="${branch:0:19}…"
+    fi
+
+    porcelain=$(git status --porcelain=v2 --branch 2>/dev/null)
+    ahead=$(echo "$porcelain" | grep '^# branch.ab' | awk '{print $3}' | tr -d '+')
+    behind=$(echo "$porcelain" | grep '^# branch.ab' | awk '{print $4}' | tr -d '-')
+    staged=$(echo "$porcelain" | grep -c '^[12] [MADRC]')
+    unstaged=$(echo "$porcelain" | grep -c '^[12] .[MADRC]')
+    untracked=$(echo "$porcelain" | grep -c '^?')
+    conflicts=$(echo "$porcelain" | grep -c '^u')
+    stashes=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null)
+
+    git_flags=""
+    [ "$staged" -gt 0 ] 2>/dev/null && git_flags="${git_flags}+${staged}"
+    [ "$unstaged" -gt 0 ] 2>/dev/null && git_flags="${git_flags}!${unstaged}"
+    [ "$conflicts" -gt 0 ] 2>/dev/null && git_flags="${git_flags}~${conflicts}"
+    [ "$untracked" -gt 0 ] 2>/dev/null && git_flags="${git_flags}?${untracked}"
+    [ -n "$stashes" ] && [ "$stashes" -gt 0 ] 2>/dev/null && git_flags="${git_flags}\$${stashes}"
+
+    [ -n "$ahead" ] && [ "$ahead" -gt 0 ] 2>/dev/null && git_flags="${git_flags}⇡${ahead}"
+    [ -n "$behind" ] && [ "$behind" -gt 0 ] 2>/dev/null && git_flags="${git_flags}⇣${behind}"
+
+    if [ -n "$git_flags" ]; then
+        branch_color="$C_YELLOW"
+        git_info=" ${C_RED}${git_flags}${RESET}"
+    else
+        branch_color="$C_GREEN"
+    fi
+else
+    branch="N/A"
+    branch_color="$C_MAUVE"
 fi
 
 # Claude Code version
@@ -397,6 +429,6 @@ cc_ver_info=""
 # OSC 8 hyperlink: v<version> -> release notes (degrades to plain text on terminals without support)
 [ -n "$cc_version" ] && cc_ver_info="${SEP}\e]8;;https://github.com/anthropics/claude-code/releases\e\\\\${C_SUBTEXT}v${cc_version}${RESET}\e]8;;\e\\\\"
 echo -e "${email_color}${email_info}${RESET}${transcript_link}"
-echo -e "${ICON_FOLDER} ${C_TEAL}$folder${RESET}${lang_info}${SEP}${ICON_BRANCH} ${C_MAUVE}$branch${RESET}${SEP}${ICON_MODEL} ${C_LAVENDER}$model${RESET}${effort_info}${tools_status}${cc_ver_info}"
+echo -e "${ICON_FOLDER} ${C_TEAL}$folder${RESET}${lang_info}${SEP}${ICON_BRANCH} ${branch_color}$branch${RESET}${git_info}${SEP}${ICON_MODEL} ${C_LAVENDER}$model${RESET}${effort_info}${tools_status}${cc_ver_info}"
 echo -e "${ICON_CTX} ctx ${C_BLUE}${ctx_bar}${RESET} ${C_BLUE}${ctx_pct_int}%${RESET} (${ctx_usage_k}k/${ctx_size_k}k)${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${rate_info}"
 
