@@ -1,42 +1,61 @@
 #!/usr/bin/env bash
-# Cron job: for each saved Claude account token, fire /usage via haiku to
-# keep the session clock alive. Execute this script every 30 minutes.
+# Cron job: for each saved Claude account, hit the oauth usage endpoint
+# directly to keep the session clock alive. Execute every 30 minutes.
 # SCRIPT="$AI_PROJECT_ROOT_DIR/scripts/claude.warmup.sh"
 # CRON_LINE="*/30 * * * * $SCRIPT >> /tmp/warmup.log 2>&1"
 # ( crontab -l 2>/dev/null | grep -vF "$SCRIPT" ; echo "$CRON_LINE" ) | crontab -
 set -euo pipefail
 
-# Project root derived from this script's own location (scripts/.. ), not from
-# AI_PROJECT_ROOT_DIR — cron runs a non-login shell where that env var isn't set yet.
-cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-# Cron runs a non-interactive, non-login shell, so ~/.bashrc's "not interactive -> return"
-# guard skips every export in it (CLAUDE_CONFIG_DIR, PATH additions, etc). Re-exec this
-# script through an interactive login shell once, but only when those exports are
-# actually missing, so a manual `bash claude.warmup.sh` run doesn't pay for it twice.
-if [ -z "${WARMUP_REEXECED:-}" ] && [ -z "${CLAUDE_CONFIG_DIR:-}" ]; then
-    export WARMUP_REEXECED=1
-    exec bash -lic "$(printf '%q ' "$0" "$@")"
-fi
-
-TOKENS_FILE="${TOKENS_FILE:-$HOME/.secrets/claude.json}"
+ACCOUNTS_DIR="${ACCOUNTS_DIR:-$HOME/.claude/accounts}"
 LOCK_FILE="${TMPDIR:-/tmp}/claude.warmup.lock"
 
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 
 command -v jq >/dev/null 2>&1 || { log "error: jq required"; exit 1; }
-command -v claude >/dev/null 2>&1 || { log "error: claude CLI required"; exit 1; }
+command -v curl >/dev/null 2>&1 || { log "error: curl required"; exit 1; }
 command -v flock >/dev/null 2>&1 || { log "error: flock required"; exit 1; }
 
-[ -f "$TOKENS_FILE" ] || { log "error: $TOKENS_FILE not found"; exit 1; }
+[ -d "$ACCOUNTS_DIR" ] || { log "error: $ACCOUNTS_DIR not found"; exit 1; }
 
 exec 9>"$LOCK_FILE"
 flock -n 9 || { log "error: another warmup run is already in progress, skipping"; exit 0; }
 
-jq -c '.tokens[] | to_entries[0]' "$TOKENS_FILE" | while IFS= read -r entry; do
-    email="$(jq -r '.key' <<<"$entry")"
-    token="$(jq -r '.value' <<<"$entry")"
+for account_file in "$ACCOUNTS_DIR"/*.json; do
+    [ -f "$account_file" ] || continue
+    email="$(basename "$account_file" .json)"
+    token="$(jq -r '.claudeAiOauth.accessToken // empty' "$account_file")"
+    [ -n "$token" ] || { log "$email: no accessToken, skipping"; continue; }
 
-    log "$email: running /usage"
-    CLAUDE_CODE_OAUTH_TOKEN="$token" claude -p "/usage" --model haiku </dev/null >/dev/null
+    log "$email: checking /usage"
+    usage="$(curl -sS \
+        -H 'Accept: application/json, text/plain, */*' \
+        -H "Authorization: Bearer $token" \
+        -H 'Anthropic-Beta: oauth-2025-04-20' \
+        -H 'User-Agent: claude-cli/2.1.300 (external, cli)' \
+        'https://api.anthropic.com/api/oauth/usage')"
+    utilization="$(jq -r '.five_hour.utilization // 0' <<<"$usage")"
+    log "$email: five_hour.utilization=$utilization"
+
+    # utilization 0 means the 5h session window is cold (no requests yet);
+    # /usage itself doesn't count as usage, so fire a real tiny message to warm it.
+    if jq -e --arg u "$utilization" '($u | tonumber) == 0' <<<null >/dev/null 2>&1; then
+        log "$email: utilization 0, warming with a message"
+        code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST 'https://api.anthropic.com/v1/messages?beta=true' \
+            -H 'Accept: application/json' \
+            -H "Authorization: Bearer $token" \
+            -H 'Content-Type: application/json' \
+            -H 'User-Agent: claude-cli/2.1.300 (external, cli)' \
+            -H 'Anthropic-Beta: oauth-2025-04-20' \
+            -H 'Anthropic-Version: 2023-06-01' \
+            -H 'X-App: cli' \
+            --data-binary '{
+                "model": "claude-haiku-4-5",
+                "messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}],
+                "system": [{"type": "text", "text": "You are Claude Code, Anthropic'"'"'s official CLI for Claude."}],
+                "max_tokens": 16,
+                "thinking": {"type": "disabled"},
+                "stream": false
+            }')"
+        log "$email: warmup message HTTP $code"
+    fi
 done
