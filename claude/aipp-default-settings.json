@@ -278,6 +278,7 @@
     "safe-refactor": false,
     "scan-codebase-rules-ai-memory": false,
     "sd-execute": true,
+    "sd-grilling": true,
     "sd-insert-taskmaster": true,
     "sd-planning": true,
     "sd-review-spec": true,
