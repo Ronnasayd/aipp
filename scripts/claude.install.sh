@@ -128,7 +128,7 @@ LOCAL_SETTINGS="$LOCAL/$DEFAULT_FOLDER/settings.local.json"
 if [ ! -f "$LOCAL_SETTINGS" ]; then
   echo '{}' > "$LOCAL_SETTINGS"
 fi
-jq --arg dir "$LOCAL" '.env.CLAUDE_PROJECT_DIR = $dir' "$LOCAL_SETTINGS" > "${LOCAL_SETTINGS}.tmp" && mv "${LOCAL_SETTINGS}.tmp" "$LOCAL_SETTINGS"
+jq --arg dir "$LOCAL" '.env.CLAUDE_PROJECT_DIR = $dir | .env.PROTECT_FILES_EXTRA_ALLOWED = (.env.PROTECT_FILES_EXTRA_ALLOWED // "")' "$LOCAL_SETTINGS" > "${LOCAL_SETTINGS}.tmp" && mv "${LOCAL_SETTINGS}.tmp" "$LOCAL_SETTINGS"
 ########################################################################################
 if ! [ -e "$LOCAL/$DEFAULT_FOLDER/context-refs.json" ] && ! [ -L "$LOCAL/$DEFAULT_FOLDER/context-refs.json" ]; then
 ln -s "$SOURCE/claude/context-refs.json" "$LOCAL/$DEFAULT_FOLDER/context-refs.json"
