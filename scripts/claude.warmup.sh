@@ -39,15 +39,17 @@ for account_file in "$ACCOUNTS_DIR"/*.json; do
         -H 'User-Agent: claude-cli/2.1.300 (external, cli)' \
         'https://api.anthropic.com/api/oauth/usage')"
     utilization="$(jq -r '.five_hour.utilization // 0' <<<"$usage")"
-    log "$email: five_hour.utilization=$utilization"
+    resets_at="$(jq -r '.five_hour.resets_at // empty' <<<"$usage")"
+    log "$email: five_hour.utilization=$utilization resets_at=${resets_at:-none}"
 
-    # utilization 0 means the 5h session window is cold (no requests yet);
+    # why: resets_at is null only while the 5h window is cold; utilization is not a
+    # usable signal because a tiny warmup message leaves it at 0.0 in a live window.
     # /usage itself doesn't count as usage, so fire a real tiny message to warm it.
     # The request must look like real Claude Code CLI traffic (claude-code-20250219
     # beta flag + x-claude-code-session-id header) or the server books it under the
     # 7-day API usage bucket instead of activating the 5h session window.
-    if jq -e --arg u "$utilization" '($u | tonumber) == 0' <<<"$utilization" >/dev/null 2>&1; then
-        log "$email: utilization 0, warming with a message"
+    if [ -z "$resets_at" ]; then
+        log "$email: 5h window cold, warming with a message"
         session_id="$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)"
         prompt_id="$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)"
         request_id="$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)"
