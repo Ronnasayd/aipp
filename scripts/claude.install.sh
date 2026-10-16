@@ -2,6 +2,7 @@
 DEFAULT_FOLDER=".claude"
 DEFAULT_LOCAL_AGENTS="agents"
 source "$(dirname "${BASH_SOURCE[0]}")/_git-exclude.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/_link-with-backup.sh"
 ############################################################################################
 replace_between() {
     local inicio="$1"
@@ -120,10 +121,7 @@ else
 fi
 ########################################################################################
 mkdir -p "$HOME/$DEFAULT_FOLDER"
-if [ -L "$HOME/$DEFAULT_FOLDER/settings.json" ] || [ -f "$HOME/$DEFAULT_FOLDER/settings.json" ]; then
-rm -rf $HOME/$DEFAULT_FOLDER/settings.json
-fi
-ln -s "$SOURCE/claude/settings.json" "$HOME/$DEFAULT_FOLDER/settings.json"
+link_with_backup "$SOURCE/claude/settings.json" "$HOME/$DEFAULT_FOLDER/settings.json"
 ########################################################################################
 mkdir -p "$LOCAL/$DEFAULT_FOLDER"
 LOCAL_SETTINGS="$LOCAL/$DEFAULT_FOLDER/settings.local.json"

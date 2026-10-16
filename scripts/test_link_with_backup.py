@@ -114,3 +114,22 @@ def test_second_call_leaves_bak_unchanged(tmp_path):
     assert result.stdout == ""
     assert Path(f"{dst}.bak").read_text(encoding="utf-8") == "user data"
     assert dst.readlink() == src
+
+
+SCRIPTS = Path(__file__).parent
+
+
+def _assert_links_without_rm(script, args, dst):
+    text = (SCRIPTS / script).read_text(encoding="utf-8")
+    assert f"link_with_backup {args}" in text
+    assert "_link-with-backup.sh" in text
+    rm_lines = [
+        ln for ln in text.splitlines() if ln.lstrip().startswith("rm") and dst in ln
+    ]
+    assert rm_lines == []
+
+
+def test_claude_installer_links_settings_through_helper():
+    dst = "$HOME/$DEFAULT_FOLDER/settings.json"
+    args = f'"$SOURCE/claude/settings.json" "{dst}"'
+    _assert_links_without_rm("claude.install.sh", args, dst)
