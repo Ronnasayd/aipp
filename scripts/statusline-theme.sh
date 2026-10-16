@@ -31,8 +31,8 @@ if [[ "$_theme" == custom:* ]] && [ -f "$_theme_file" ]; then
             "$((16#${BASH_REMATCH[1]}))" "$((16#${BASH_REMATCH[2]}))" "$((16#${BASH_REMATCH[3]}))"
     done < <(jq -r '.overrides as $o | {
         C_RED: "error", C_YELLOW: "warning", C_GREEN: "success", C_TEAL: "suggestion",
-        C_BLUE: "claude", C_MAUVE: "purple_FOR_SUBAGENTS_ONLY",
-        C_LAVENDER: "permission", C_SUBTEXT: "inactive"
+        C_BLUE: "claude", C_MAUVE: "pink_FOR_SUBAGENTS_ONLY",
+        C_LAVENDER: "permission", C_SUBTEXT: "text"
     } | to_entries[] | "\(.key) \($o[.value] // "")"' "$_theme_file" 2>/dev/null)
 fi
 unset _cfg_dir _theme _theme_file _var _hex

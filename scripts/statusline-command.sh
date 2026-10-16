@@ -173,7 +173,7 @@ if [ -n "$effort_level" ]; then
         high|xhigh|max) effort_color="$C_RED" ;;
         *)      effort_color="" ;;
     esac
-    effort_info="${SEP}${ICON_EFFORT} ${effort_color}${effort_level}${RESET}"
+    effort_info="${SEP}${effort_color}${ICON_EFFORT} ${effort_level}${RESET}"
 fi
 
 # email proxy status
@@ -297,7 +297,7 @@ for d in "$serena_dot" "$memory_dot" "$ragrat_dot" "$caveman_dot" "$ponytail_dot
     if [ -z "$tools_dots" ]; then
         tools_dots="$d"
     else
-        tools_dots="${tools_dots}|${d}"
+        tools_dots="${tools_dots}/${d}"
     fi
 done
 tools_status="${SEP}${ICON_TOOLS} \e]8;;file://${TOOLS_LOG}\e\\\\tools(${tools_dots})\e]8;;\e\\\\"
@@ -317,7 +317,7 @@ if [ -n "$duration_ms" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
     else
         dur_fmt="${dur_sec}s"
     fi
-    dur_info="${SEP}${ICON_DURATION} ${C_SUBTEXT}${dur_fmt}${RESET}"
+    dur_info="${SEP}${C_TEAL}${ICON_DURATION} ${dur_fmt}${RESET}"
 fi
 
 # Session cost
@@ -326,7 +326,7 @@ cost_info=""
 if [ -n "$cost" ]; then
     cost=$(LC_NUMERIC=C printf "%.3f" "$cost")
     cost_color="$C_GREEN"
-    cost_info="${SEP}${ICON_COST} ${cost_color}\$$cost${RESET}"
+    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost${RESET}"
 
 fi
 
@@ -419,6 +419,6 @@ cc_ver_info=""
 # OSC 8 hyperlink: v<version> -> release notes (degrades to plain text on terminals without support)
 [ -n "$cc_version" ] && cc_ver_info="${SEP}\e]8;;https://github.com/anthropics/claude-code/releases\e\\\\${C_SUBTEXT}v${cc_version}${RESET}\e]8;;\e\\\\"
 echo -e "${email_color}${email_info}${RESET}${transcript_link}"
-echo -e "${ICON_FOLDER} ${C_TEAL}$folder${RESET}${lang_info}${SEP}${ICON_BRANCH} ${branch_color}$branch${RESET}${git_info}${SEP}${ICON_MODEL} ${C_LAVENDER}$model${RESET}${effort_info}${tools_status}${cc_ver_info}"
-echo -e "${ICON_CTX} ctx ${C_BLUE}${ctx_bar}${RESET} ${C_BLUE}${ctx_pct_int}%${RESET} (${ctx_usage_k}k/${ctx_size_k}k)${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${rate_info}"
+echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${tools_status}${cc_ver_info}"
+echo -e "${C_BLUE}${ICON_CTX} ctx ${ctx_bar} ${ctx_pct_int}% (${ctx_usage_k}k/${ctx_size_k}k)${RESET}${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${rate_info}"
 
