@@ -44,7 +44,7 @@ cd src && uv sync               # Install MCP server deps
 Run tests:
 
 ```bash
-cd src && uv run pytest              # Run MCP server tests (testpaths = ["tests"])
+uv run --with pytest pytest scripts/  # Run script tests
 ```
 
 Run MCP servers:
