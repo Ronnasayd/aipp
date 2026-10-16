@@ -1,27 +1,35 @@
-## Project Overview
+# AIPP — AI Pair Programming Workspace
 
-This project is a comprehensive toolkit designed to enhance AI-assisted software development. It serves as a centralized "intelligence hub" for AI agents (Gemini, Copilot, etc.), providing them with specialized roles, reusable skills, and structured workflows.
+A toolkit that gives AI coding agents specialized roles, reusable skills and structured workflows, linked into any project with one command.
 
-### Directory Structure
+![Python](https://img.shields.io/badge/python-%E2%89%A53.11-blue)
+![uv](https://img.shields.io/badge/managed%20with-uv-6c47ff)
 
-- `AGENTS.md`: Canonical agent instruction file (single source of truth for all harnesses).
-- `agents/`: Markdown definitions for specialized AI roles.
-- `skills/`: Reusable capabilities (e.g., style guides, TDD workflows, TLC spec-driven flow).
-- `commands/`: Slash-command templates.
-- `instructions/`: Foundation rules for agents and project-specific conventions (per-language/framework).
-- `hooks/`: Hook scripts and config wired into agent harnesses.
-- `src/`: Core Python tooling (context generation, token counting, MCP clients).
-- `scripts/`: Install/clean/setup scripts per harness (claude, gemini, codex, copilot, antigravity...).
-- `taskmaster/`: Task tracking config and state.
-- `docs/`: Reference docs and supporting documentation.
-- `docker/`: Docker compose configs (e.g., litellm proxy).
-- `legacy/`: Archived/deprecated configs kept for reference.
-- `tlc-harness-toolkit/`: TLC harness tooling and config.
-- Per-harness dirs (`claude/`, `gemini/`, `github-copilot/`, `antigravity/`, `.claude/`, `.tlc/`, `.serena/`): harness-specific configs, MCP setups, settings.
-- `install.sh`: Entry-point installer.
-- `uninstall.sh`: Entry-point uninstaller.
+## What's included
 
-### Instalation
+- [`agents/`](agents/): persona definitions with behavioral instructions.
+- [`skills/`](skills/): reusable capabilities (workflows, style guides, analysis patterns).
+- [`commands/`](commands/): slash-command templates.
+- [`instructions/`](instructions/): domain rules and conventions per language or framework.
+- [`hooks/`](hooks/): hook scripts wired into the agent harnesses.
+- [`src/`](src/): MCP servers and Python tooling.
+
+## Requirements
+
+- `git`, `curl`, [`uv`](https://docs.astral.sh/uv/), Node.js 24 or newer, and the Claude CLI.
+- Tested on Linux. macOS support is partial: one bundled tool download only targets Linux x86_64.
+- Everything else the bootstrap downloads is listed in [External tools](docs/external-tools.md).
+
+## Warning: what the installer changes
+
+- It edits your shell startup files (`~/.zshrc` and `~/.bashrc`): `PATH`, `AI_PROJECT_ROOT_DIR`, `CLAUDE_CONFIG_DIR` and the alias file are added.
+- Global harness config files become symlinks into this repo (`~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.copilot/mcp-config.json`, `~/.copilot/config.json`). A regular file already at one of these paths is kept beside it as `<path>.bak`; a folder at that path is left untouched and a warning is printed.
+
+## Quickstart
+
+Installation has two stages.
+
+**1. One-time bootstrap**, run inside the clone. It installs dependencies and tools and creates the `aipp` command:
 
 ```sh
 git clone https://github.com/Ronnasayd/aipp.git ~/aipp
@@ -29,59 +37,74 @@ cd ~/aipp
 bash install.sh
 ```
 
-### Uninstalation
+**2. Per project**, run `aipp` from the project root with a backend flag:
+
+```sh
+cd ~/my-project
+aipp --claude
+```
+
+| Flag            | Effect                                             |
+| --------------- | -------------------------------------------------- |
+| `--all`         | Install every backend (default with no flag)       |
+| `--claude`      | Install the Claude backend                         |
+| `--copilot`     | Install the Copilot backend                        |
+| `--gemini`      | Install the Gemini backend                         |
+| `--codex`       | Install the Codex backend                          |
+| `--antigravity` | Install the Antigravity backend                    |
+| `--taskmaster`  | Install the taskmaster config                      |
+| `--gitignore`   | Install the gitignore entries                      |
+| `--clean`       | Remove the symlinks created by the install scripts |
+| `--help`, `-h`  | Show the help screen                               |
+
+To run the tests, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## How it works
+
+`aipp <flag>` symlinks the agents, skills, commands and instructions into the project's harness folder (for example `.claude/`). Which items are linked is a per-project toggle stored in `$CLAUDE_CONFIG_DIR/aipp-settings.json`, seeded from the repo defaults the first time a project is installed. The `mif` alias opens a selection tool that enables or disables items; `mia` runs it and then installs the Claude backend.
+
+## Handy aliases
+
+Defined in [`.aipp.alias.zshrc`](.aipp.alias.zshrc) and sourced from your shell startup files:
+
+| Alias               | What it does                                                        |
+| ------------------- | ------------------------------------------------------------------- |
+| `mif`               | Toggle skills, agents and instructions for the current project      |
+| `mia`               | Run `mif`, then `aipp --claude`                                     |
+| `ats`, `ata`, `atr` | Show enabled skills, agents and instructions of the current project |
+| `lgh`               | Follow the hooks log                                                |
+| `aij`               | Run the `ai-jail` sandbox script                                    |
+
+## Uninstall
 
 ```sh
 bash uninstall.sh
 ```
 
-### Environment Variables
+It removes the `aipp` command, runs the harness uninstall, and strips the lines the installer added to `~/.zshrc` and `~/.bashrc` (each edited file is saved as `<rc>.bak`).
 
-Hook-specific env vars: [`hooks/ENVIRONMENTS.md`](hooks/ENVIRONMENTS.md).
+It does **not** restore your `.bak` config files; the global config paths stay as symlinks into this repo. To restore one by hand:
 
-| Variable                                                                                                                                            | Default         | Used in                                                           | Description                                                                                                     |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE_INSTALL_SKIP_AUTO_CONTEXT`                                                                                                                  | unset           | `scripts/claude.install.sh`                                       | Set to `1` to skip regenerating the `<!-- INIT AUTO-CONTEXT -->` block in `AGENTS.md` on install.               |
-| `CLAUDE_INSTALL_SKIP_CLAUDE_MD`                                                                                                                     | unset           | `scripts/claude.install.sh`                                       | Set to `1` to skip (re)writing `CLAUDE.md` on install.                                                          |
-| `CLAUDE_PROJECT_DIR`                                                                                                                                | project path    | `scripts/claude.install.sh`, `scripts/statusline-command.sh`      | Local project dir written to `settings.local.json`; used to locate `rag-rat.toml`/index cbm for the statusline. |
-| `AI_PROJECT_ROOT_DIR`                                                                                                                               | unset           | `scripts/ai-jail.sh`                                              | Root dir (hooks/statusline/skills live here via symlinks) read-only-bind-mounted into the sandbox.              |
-| `AI_JAIL`                                                                                                                                           | unset           | `scripts/ai-jail.sh`, `scripts/statusline-command.sh`             | Set to `1` inside the sandbox by `ai-jail.sh`; read by the statusline to show a jail indicator.                 |
-| `GITHUB_PAT_TOKEN`                                                                                                                                  | none (required) | `scripts/update-external-tools.sh`                                | GitHub PAT used to authenticate API calls when syncing external tools.                                          |
-| `NERD_FONT`                                                                                                                                         | `1`             | `scripts/statusline-command.sh`, `scripts/subagent-statusline.sh` | Set to anything other than `1` to disable Nerd Font glyphs in the statusline.                                   |
-| `CLAUDE_CONFIG_DIR`                                                                                                                                 | `$HOME/.claude` | `scripts/statusline-command.sh`                                   | Claude config dir; used to locate the caveman-mode flag file and detect the `-L` (local) profile.               |
-| `ANTHROPIC_BASE_URL`, `ANTHROPIC_MODEL`, `ANTHROPIC_API_KEY`, `CLAUDE_PROJECT_DIR`, `ENABLE_TOOL_SEARCH`, `ASDF_NODEJS_VERSION`, `CONTEXT7_API_KEY` | unset           | `scripts/ai-jail.sh`                                              | Passed through into the sandbox when set (see `PASSTHROUGH_VARS`).                                              |
+```sh
+mv ~/.claude/settings.json.bak ~/.claude/settings.json
+```
 
-### External Tools
+## Directory structure
 
-Non-native (non-coreutils) tools required or installed by this project's bash/python scripts.
+- `agents/`, `skills/`, `commands/`, `instructions/`, `hooks/`: the shared catalog described above.
+- `src/`: MCP servers and Python tooling.
+- `scripts/`: install, clean and setup scripts per harness.
+- `claude/`, `gemini/`, `github-copilot/`, `antigravity/`: harness-specific configs and settings.
+- `taskmaster/`: task tracking config.
+- `docs/`: reference and supporting documentation.
+- `docker/`: Docker compose configs (for example the LiteLLM proxy).
+- `legacy/`: archived configs kept for reference.
+- `tlc-harness-toolkit/`: TLC harness tooling and config.
+- `install.sh`, `uninstall.sh`: entry-point installer and uninstaller.
 
-| Tool                                                 | Purpose                                                                                                         |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `uv`                                                 | Python package/dependency manager                                                                               |
-| spaCy models (`pt_core_news_sm`, `en_core_web_sm`)   | NLP models used by Python tooling                                                                               |
-| `claude` (Claude Code CLI)                           | Plugin marketplace management                                                                                   |
-| `rag-rat` plugin (cq27-dev/rag-rat)                  | Claude Code plugin: repo intelligence                                                                           |
-| `codebase-memory-mcp` (DeusData/codebase-memory-mcp) | MCP server: repo intelligence fallback for languages rag-rat doesn't index here (162 languages via tree-sitter) |
-| `caveman` plugin (JuliusBrussee/caveman)             | Claude Code plugin: token-compressed communication mode                                                         |
-| `ponytail` plugin (DietrichGebert/ponytail)          | Claude Code plugin: lazy/minimal-code enforcement mode                                                          |
-| `serena`                                             | Code agent / LSP-backed coding tool                                                                             |
-| `rtk`                                                | Token-usage-reducing CLI proxy                                                                                  |
-| `bat`                                                | Syntax-highlighted `cat` replacement                                                                            |
-| `jq`                                                 | JSON processor                                                                                                  |
-| `fzf`                                                | Fuzzy finder                                                                                                    |
-| `lefthook`                                           | Git hooks manager                                                                                               |
-| `ai-memory`                                          | Persistent cross-session memory CLI                                                                             |
-| `curl`                                               | HTTP client (GitHub Contents API)                                                                               |
-| `python3`                                            | Config merging, inline JSON parsing                                                                             |
-| `skillspector` (via `uv run`)                        | Security scan of downloaded skills, quarantines findings                                                        |
-| `security` (macOS Keychain CLI)                      | Stores/reads Claude OAuth token in `scripts/claude.accounts.sh`                                                 |
-| `bwrap` (bubblewrap)                                 | Sandboxing for `scripts/ai-jail.sh`                                                                             |
-| `docker`                                             | Runs sandbox mounts (`ai-jail.sh`) and the litellm proxy container                                              |
-| `litellm` (Docker image `ghcr.io/berriai/litellm`)   | LLM proxy service, `docker/litellm/docker-compose.yml`                                                          |
-| `ai-memory` container (`akitaonrails/ai-memory`)     | Docker image run by `aims`/`aimsllm` aliases in `.aipp.alias.zshrc`                                             |
-| `codeburn` (via `npx`)                               | CLI run by `codeburn` alias                                                                                     |
-| `agent-flow-app` (via `npx`)                         | CLI run by `afa` alias                                                                                          |
-| `omniroute` (via `npx`)                              | CLI run by `omniroute` alias                                                                                    |
-| `detect-secrets`                                     | Secret scanning in `hooks/scripts/secret_scan.py` (regex fallback if absent)                                    |
+## Reference
 
----
+- [Environment variables](docs/environment.md)
+- [External tools](docs/external-tools.md)
+- [Contributing](CONTRIBUTING.md)
+- [`AGENTS.md`](AGENTS.md): canonical instructions for AI agents working in this repo.
