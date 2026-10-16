@@ -57,17 +57,7 @@ cache_read=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_inp
 cache_creation=$(echo "$input" | jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
 total_input=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
 total_output=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
-# Catppuccin Frappe palette (24-bit true color)
-C_RED="\033[38;2;231;130;132m"
-C_YELLOW="\033[38;2;229;200;144m"
-C_GREEN="\033[38;2;166;209;137m"
-C_TEAL="\033[38;2;129;200;190m"
-C_BLUE="\033[38;2;140;170;238m"
-C_MAUVE="\033[38;2;202;158;230m"
-C_LAVENDER="\033[38;2;186;187;241m"
-C_PEACH="\033[38;2;239;159;118m"
-C_SUBTEXT="\033[38;2;165;173;206m"
-RESET="\033[0m"
+source "$(dirname "${BASH_SOURCE[0]}")/statusline-theme.sh"
 
 # Field separator
 SEP=" • "

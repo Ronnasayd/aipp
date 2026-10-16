@@ -12,7 +12,7 @@
 # Output: one JSON line per row to override, {"id": "...", "content": "..."}.
 # Omit a task's id to keep its default rendering; empty content hides it.
 #
-# Mirrors scripts/statusline-command.sh: same Catppuccin Frappe palette,
+# Mirrors scripts/statusline-command.sh: same palette (statusline-theme.sh),
 # fmt_k helper, 20-segment context bar and effort colour scheme.
 
 NERD_FONT="${NERD_FONT:-1}"
@@ -32,15 +32,7 @@ else
     ICON_RUN="▶" ICON_OK="✓" ICON_ERR="✗" ICON_WAIT="⏸"
 fi
 
-# Catppuccin Frappe (24-bit true color)
-C_RED="\033[38;2;231;130;132m"
-C_YELLOW="\033[38;2;229;200;144m"
-C_GREEN="\033[38;2;166;209;137m"
-C_BLUE="\033[38;2;140;170;238m"
-C_MAUVE="\033[38;2;202;158;230m"
-C_LAVENDER="\033[38;2;186;187;241m"
-C_SUBTEXT="\033[38;2;165;173;206m"
-RESET="\033[0m"
+source "$(dirname "${BASH_SOURCE[0]}")/statusline-theme.sh"
 
 SEP=" • "
 

@@ -20,22 +20,6 @@
     "pr": "",
     "sessionUrl": false
   },
-  "skillOverrides": {
-    "computer-use": "off",
-    "chrome-browser": "off",
-    "google-workspace": "off",
-    "built-in-browser": "off",
-    "chrome-browser ": "off",
-    "deep-research": "off",
-    "docs": "off",
-    "docx": "off",
-    "import-memory": "off",
-    "morning": "off",
-    "pdf": "off",
-    "pptx": "off",
-    "skill-creator": "off",
-    "xlsx": "off"
-  },
   "permissions": {
     "allow": [
       "Bash(cd:*)",
@@ -134,11 +118,25 @@
     "ask": [],
     "defaultMode": "bypassPermissions"
   },
-  "disableBundledSkills": true,
-  "disableWorkflows": true,
-  "disableArtifact": true,
-  "disableClaudeAiConnectors": true,
   "model": "sonnet",
+  "disableClaudeAiConnectors": true,
+  "skillOverrides": {
+    "computer-use": "off",
+    "chrome-browser": "off",
+    "google-workspace": "off",
+    "built-in-browser": "off",
+    "chrome-browser ": "off",
+    "deep-research": "off",
+    "docs": "off",
+    "docx": "off",
+    "import-memory": "off",
+    "morning": "off",
+    "pdf": "off",
+    "pptx": "off",
+    "skill-creator": "off",
+    "xlsx": "off"
+  },
+  "disableBundledSkills": true,
   "hooks": {
     "PermissionRequest": [
       {
@@ -761,6 +759,8 @@
   "worktree": {
     "baseRef": "head"
   },
+  "disableWorkflows": true,
+  "disableArtifact": true,
   "statusLine": {
     "type": "command",
     "command": "bash \"$AI_PROJECT_ROOT_DIR/scripts/statusline-command.sh\""
@@ -810,7 +810,7 @@
     "mode": "hold"
   },
   "skipDangerousModePermissionPrompt": true,
-  "theme": "dark",
+  "theme": "custom:moonlight",
   "verbose": false,
   "autoCompactEnabled": true,
   "remoteControlAtStartup": true,
