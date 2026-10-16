@@ -18,7 +18,6 @@ from utils import (
     bump_loop_count,
     get_by_key,
     get_hooks_logger,
-    get_session_id_short,
     minify_json,
     project_dir,
     read_loop_count,
@@ -64,14 +63,18 @@ def main() -> None:
     if not message.strip():
         sys.exit(0)
 
+    agent_id = get_by_key(payload, "agent_id")
+    if not agent_id:
+        # why: known Claude Code bug fires SubagentStop-registered hooks on the
+        # main session too; main-session payloads carry no real agent_id
+        LOG.debug("No agent_id in payload, treating as main session, skipping")
+        sys.exit(0)
+
     missing = missing_fields(message)
     if not missing:
         sys.exit(0)
 
     project_root = project_dir(payload)
-    agent_id = get_by_key(payload, "agent_id") or get_session_id_short(
-        get_by_key(payload, "session_id") or ""
-    )
 
     loop_count = read_loop_count(project_root, LOOP_NAMESPACE, agent_id) + 1
     if loop_count > MAX_LOOPS:
