@@ -63,11 +63,11 @@ def main() -> None:
     if not message.strip():
         sys.exit(0)
 
-    agent_id = get_by_key(payload, "agent_id")
-    if not agent_id:
+    agent_type = get_by_key(payload, "agent_type")
+    if not agent_type:
         # why: known Claude Code bug fires SubagentStop-registered hooks on the
-        # main session too; main-session payloads carry no real agent_id
-        LOG.debug("No agent_id in payload, treating as main session, skipping")
+        # main session too; main-session payloads carry no agent_type
+        LOG.debug("No agent_type in payload, treating as main session, skipping")
         sys.exit(0)
 
     missing = missing_fields(message)
@@ -75,6 +75,7 @@ def main() -> None:
         sys.exit(0)
 
     project_root = project_dir(payload)
+    agent_id = get_by_key(payload, "agent_id") or agent_type
 
     loop_count = read_loop_count(project_root, LOOP_NAMESPACE, agent_id) + 1
     if loop_count > MAX_LOOPS:
