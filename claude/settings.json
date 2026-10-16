@@ -763,11 +763,13 @@
   "disableArtifact": true,
   "statusLine": {
     "type": "command",
-    "command": "bash \"$AI_PROJECT_ROOT_DIR/scripts/statusline-command.sh\""
+    "command": "bash \"$AI_PROJECT_ROOT_DIR/scripts/statusline-command.sh\"",
+    "refreshInterval": 1
   },
   "subagentStatusLine": {
     "type": "command",
-    "command": "bash \"$AI_PROJECT_ROOT_DIR/scripts/subagent-statusline.sh\""
+    "command": "bash \"$AI_PROJECT_ROOT_DIR/scripts/subagent-statusline.sh\"",
+    "refreshInterval": 1
   },
   "enabledPlugins": {
     "caveman@caveman": true,
