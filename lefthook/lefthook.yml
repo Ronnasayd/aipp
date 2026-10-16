@@ -35,6 +35,8 @@ commit-msg:
       run:
         uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/reject-non-english-commit-msg.py
         {1}
+# why: rag-rat-maintenance runs detached (nohup + redirected fds) so git returns
+# immediately; lefthook would otherwise wait on the open stdout/stderr pipes.
 post-commit:
   commands:
     semantic-version-bump:
@@ -42,29 +44,26 @@ post-commit:
         uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/semantic_version_bump.py
     rag-rat-maintenance:
       run:
-        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
-        --trigger post-commit --config $AI_PROJECT_ROOT_DIR/rag-rat.toml ||
-        true
+        test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-commit
+        > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 post-checkout:
   commands:
     rag-rat-maintenance:
       run:
-        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
-        --trigger post-checkout --config $AI_PROJECT_ROOT_DIR/rag-rat.toml
-        --old-head '{1}' --new-head '{2}' --branch-checkout '{3}' || true
+        test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-checkout --old-head '{1}' --new-head '{2}' --branch-checkout '{3}'
+        > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 post-merge:
   commands:
     rag-rat-maintenance:
       run:
-        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
-        --trigger post-merge --config $AI_PROJECT_ROOT_DIR/rag-rat.toml || true
+        test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-merge
+        > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 post-rewrite:
   commands:
     rag-rat-maintenance:
       run:
-        test -f $AI_PROJECT_ROOT_DIR/rag-rat.toml && rag-rat maintenance
-        --trigger post-rewrite --config $AI_PROJECT_ROOT_DIR/rag-rat.toml ||
-        true
+        test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-rewrite
+        > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 pre-push:
   commands:
     jest:
