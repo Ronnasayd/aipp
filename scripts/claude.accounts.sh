@@ -9,7 +9,7 @@ ACCOUNTS_DIR="$CLAUDE_CONFIG_DIR/accounts"
 BACKUPS_DIR="$CLAUDE_CONFIG_DIR/backups"
 KEYCHAIN_SERVICE="Claude Code-credentials"
 
-log() { printf '%s\n' "$*" >&2; }
+log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >&2; }
 die() { log "error: $*"; exit 1; }
 
 check_deps() {
