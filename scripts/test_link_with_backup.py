@@ -139,3 +139,15 @@ def test_gemini_installer_links_settings_through_helper():
     dst = "$HOME/$DEFAULT_FOLDER/settings.json"
     args = f'"$SOURCE/gemini/settings.json" "{dst}"'
     _assert_links_without_rm("gemini.install.sh", args, dst)
+
+
+def test_copilot_installer_links_mcp_config_through_helper():
+    dst = "$HOME/.copilot/mcp-config.json"
+    args = f'"$SOURCE/github-copilot/mcp-config.json" "{dst}"'
+    _assert_links_without_rm("copilot.install.sh", args, dst)
+
+
+def test_copilot_installer_links_config_through_helper():
+    dst = "$HOME/.copilot/config.json"
+    args = f'"$SOURCE/github-copilot/config.json" "{dst}"'
+    _assert_links_without_rm("copilot.install.sh", args, dst)

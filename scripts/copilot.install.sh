@@ -1,17 +1,12 @@
 ## GITHUB COPILOT
 DEFAULT_FOLDER=".github"
 source "$(dirname "${BASH_SOURCE[0]}")/_git-exclude.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/_link-with-backup.sh"
 
 ########################################################################################
-if [ -L "$HOME/.copilot/mcp-config.json" ] || [ -f "$HOME/.copilot/mcp-config.json" ]; then
-rm  $HOME/.copilot/mcp-config.json
-fi
-ln -s "$SOURCE/github-copilot/mcp-config.json" "$HOME/.copilot/mcp-config.json"
+link_with_backup "$SOURCE/github-copilot/mcp-config.json" "$HOME/.copilot/mcp-config.json"
 ########################################################################################
-if [ -L "$HOME/.copilot/config.json" ] || [ -f "$HOME/.copilot/config.json" ]; then
-rm  $HOME/.copilot/config.json
-fi
-ln -s "$SOURCE/github-copilot/config.json" "$HOME/.copilot/config.json"
+link_with_backup "$SOURCE/github-copilot/config.json" "$HOME/.copilot/config.json"
 ########################################################################################
 mkdir -p $LOCAL/$DEFAULT_FOLDER/skills/
 find "$LOCAL/$DEFAULT_FOLDER/skills" -maxdepth 1 -type l | while read -r link; do
