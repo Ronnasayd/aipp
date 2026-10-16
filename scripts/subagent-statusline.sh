@@ -114,7 +114,7 @@ while [ "$i" -lt "$task_count" ]; do
         [ "$ctx_pct" -gt 100 ] && ctx_pct=100
         if [ "$ctx_pct" -ge 80 ]; then cc="$C_RED"
         elif [ "$ctx_pct" -ge 50 ]; then cc="$C_YELLOW"
-        else cc="$C_MAUVE"; fi
+        else cc="$C_GREEN"; fi
         filled=$(( ctx_pct / 5 ))
         [ "$filled" -gt 20 ] && filled=20
         [ "$filled" -lt 0 ] && filled=0
@@ -149,7 +149,7 @@ while [ "$i" -lt "$task_count" ]; do
         fi
     fi
 
-    content="${status_seg} ${name_seg}${model_seg}${effort_seg}${ctx_seg}${tok_seg}${elapsed_seg}"
+    content="${status_seg}${model_seg}${effort_seg}${ctx_seg}${tok_seg}${elapsed_seg}"
 
     # Render escapes, then emit as a JSON string.
     printf '%b' "$content" | jq -Rs --arg id "$id" '{id: $id, content: .}' -c

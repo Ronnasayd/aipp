@@ -1,0 +1,157 @@
+{
+  "readme-improvement": {
+    "tasks": [
+      {
+        "id": "1",
+        "title": "Create link_with_backup helper (TDD)",
+        "description": "Sourced shell function `link_with_backup <src> <dst>` per design, driven by failing tests first.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [],
+        "details": "Where: `scripts/_link-with-backup.sh` (tests in `scripts/test_link_with_backup.py`)\nReuses: header/sourcing style of `scripts/_git-exclude.sh`; subprocess pattern of `scripts/test_aipp_settings.py:20-30`\nRequirement: LINK-01, LINK-02, LINK-03, LINK-04, LINK-05, LINK-06, LINK-07\nReview rows: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011\nSkill: NONE\nDone when:\n- [ ] Red: tests for missing dst, symlink dst, dangling symlink, regular file (`.bak` content == original, `readlink dst` == src), regular file with old `.bak` (overwritten), directory (unchanged, rc 1, stderr non-empty), missing parent dir, `backup: <dst> -> <dst>.bak` stdout line, paths with spaces, second call leaves `.bak` unchanged - run fails because helper is absent\n- [ ] Green: helper implemented; quick gate passes\n- [ ] FR-011: `mv` runs before `ln -s` in the helper (code read), so an `ln` failure leaves the original at `<dst>.bak`\n- [ ] Test count: 10 tests pass in `scripts/test_link_with_backup.py`\nGate: quick\nCommit: `feat(scripts): add link_with_backup helper`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "pytest unit via scripts/test_link_with_backup.py (subprocess bash -c source helper); see Done when cases",
+        "subtasks": [],
+        "metadata": {
+          "wave": 1,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-10-16T15:34:38.027Z"
+      },
+      {
+        "id": "2",
+        "title": "Route claude global settings through helper",
+        "description": "Replace `scripts/claude.install.sh:123-126` delete-then-link block with `link_with_backup`; source the helper.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["1"],
+        "details": "Where: `scripts/claude.install.sh`\nReuses: `scripts/_link-with-backup.sh`\nRequirement: LINK-08\nReview rows: FR-012, FR-016\nSkill: NONE\nDone when:\n- [ ] Static test added: script contains `link_with_backup \"$SOURCE/claude/settings.json\" \"$HOME/$DEFAULT_FOLDER/settings.json\"` and no `rm` of `$HOME/$DEFAULT_FOLDER/settings.json`\n- [ ] `bash -n scripts/claude.install.sh` clean\n- [ ] Smoke: `HOME=<tmp> LOCAL=<tmp-project> SOURCE=$PWD bash scripts/claude.install.sh` with a regular `<tmp>/.claude/settings.json` → `ls -la` shows symlink + `settings.json.bak` byte-identical (output captured as evidence)\n- [ ] FR-016: installer has no `set -e` (grep), so a helper `return 1` does not abort the remaining steps\n- [ ] Quick gate passes; test count: 11\nGate: quick\nCommit: `fix(scripts): back up claude settings before linking`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "pytest unit via scripts/test_link_with_backup.py (subprocess bash -c source helper); see Done when cases",
+        "subtasks": [],
+        "metadata": {
+          "wave": 2,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-10-16T15:35:52.197Z"
+      },
+      {
+        "id": "3",
+        "title": "Route gemini global settings through helper",
+        "description": "Replace `scripts/gemini.install.sh:95-98` block with `link_with_backup`; source the helper.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["2"],
+        "details": "Where: `scripts/gemini.install.sh`\nReuses: `scripts/_link-with-backup.sh`\nRequirement: LINK-08\nReview rows: FR-013\nSkill: NONE\nDone when:\n- [ ] Static test case added for `$SOURCE/gemini/settings.json` → `$HOME/$DEFAULT_FOLDER/settings.json`, no `rm` of that path\n- [ ] `bash -n scripts/gemini.install.sh` clean\n- [ ] Quick gate passes; test count: 12\nGate: quick\nCommit: `fix(scripts): back up gemini settings before linking`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "pytest unit via scripts/test_link_with_backup.py (subprocess bash -c source helper); see Done when cases",
+        "subtasks": [],
+        "metadata": {
+          "wave": 3,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-10-16T15:36:15.266Z"
+      },
+      {
+        "id": "4",
+        "title": "Route copilot global configs through helper",
+        "description": "Replace both blocks in `scripts/copilot.install.sh:6-9` and `:11-14` with two `link_with_backup` calls; source the helper.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["3"],
+        "details": "Where: `scripts/copilot.install.sh`\nReuses: `scripts/_link-with-backup.sh`\nRequirement: LINK-08\nReview rows: FR-014, FR-015\nSkill: NONE\nDone when:\n- [ ] Static test cases added for `mcp-config.json` and `config.json` under `$HOME/.copilot/`, no `rm` of either\n- [ ] `bash -n scripts/copilot.install.sh` clean\n- [ ] Full gate passes; test count in `scripts/test_link_with_backup.py`: 14\nGate: full\nCommit: `fix(scripts): back up copilot configs before linking`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "pytest unit via scripts/test_link_with_backup.py (subprocess bash -c source helper); see Done when cases",
+        "subtasks": [],
+        "metadata": {
+          "wave": 4,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-10-16T15:36:30.407Z"
+      },
+      {
+        "id": "5",
+        "title": "Fix documented test command in AGENTS.md",
+        "description": "Replace `cd src && uv run pytest` with `uv run --with pytest pytest scripts/` in the \"Run tests\" block only.",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [],
+        "details": "Where: `AGENTS.md`\nReuses: NONE\nRequirement: TEST-01, TEST-02, TEST-03\nReview rows: FR-017, FR-018, FR-019\nSkill: NONE\nDone when:\n- [ ] `grep -c \"cd src && uv run pytest\" AGENTS.md` = 0\n- [ ] `uv run --with pytest pytest scripts/` collects ≥ 1 test and exits 0 (log captured)\n- [ ] `git diff AGENTS.md` = owner's pending hunks + this hunk; commit stages only this hunk (`git add -p`)\nGate: full\nCommit: `docs(agents): fix test command`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "none (doc check: links resolve, flags/aliases exist, tables byte-identical)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 1,
+          "onCriticalPath": false
+        },
+        "updatedAt": "2026-10-16T15:37:08.200Z"
+      },
+      {
+        "id": "6",
+        "title": "Move env-var table to docs/environment.md",
+        "description": "Create `docs/environment.md` with a title and the README \"Environment Variables\" table verbatim.",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [],
+        "details": "Where: `docs/environment.md`\nReuses: `git show HEAD:README.md` table rows\nRequirement: REF-01\nReview rows: FR-020\nSkill: NONE\nDone when:\n- [ ] Row diff between `git show HEAD:README.md` env table and new file is empty\nGate: build\nCommit: `docs: move environment variables reference`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "none (doc check: links resolve, flags/aliases exist, tables byte-identical)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 1,
+          "onCriticalPath": false
+        },
+        "updatedAt": "2026-10-16T15:37:30.625Z"
+      },
+      {
+        "id": "7",
+        "title": "Move external-tools table to docs/external-tools.md",
+        "description": "Create `docs/external-tools.md` with a title and the README \"External Tools\" table verbatim.",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": ["6"],
+        "details": "Where: `docs/external-tools.md`\nReuses: `git show HEAD:README.md` table rows\nRequirement: REF-02\nReview rows: FR-021\nSkill: NONE\nDone when:\n- [ ] Row diff between `git show HEAD:README.md` tools table and new file is empty\nGate: build\nCommit: `docs: move external tools reference`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "none (doc check: links resolve, flags/aliases exist, tables byte-identical)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 2,
+          "onCriticalPath": false
+        },
+        "updatedAt": "2026-10-16T15:37:42.483Z"
+      },
+      {
+        "id": "8",
+        "title": "Rewrite README.md",
+        "description": "Rewrite README in the spec README-01 section order, linking T6/T7 docs and `CONTRIBUTING.md`.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["4", "7"],
+        "details": "Where: `README.md`\nReuses: `install.sh` flag `case` block; `.aipp.alias.zshrc`; current \"Directory Structure\" list\nRequirement: README-01, README-02, README-03, README-04, README-05, README-06, README-07, README-08, README-09, README-10\nReview rows: FR-022, FR-023, FR-024, FR-025, FR-026, FR-027, FR-028, FR-029, FR-030, FR-031, FR-032, FR-033, FR-034, FR-035\nSkill: generate-docs\nDone when:\n- [ ] Section order matches README-01; no numeric component counts\n- [ ] Doc check: every flag in flags table is a `case` label in `install.sh`; every alias is defined in `.aipp.alias.zshrc`; every relative link resolves (except `CONTRIBUTING.md`, created in T9 - re-checked there)\n- [ ] Warning block states rc-file edits and `<path>.bak` backup; Uninstall section states manual `.bak` restore\nGate: build\nCommit: `docs(readme): rewrite with quickstart and install side effects`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "none (doc check: links resolve, flags/aliases exist, tables byte-identical)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 5,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-10-16T15:41:56.410Z"
+      },
+      {
+        "id": "9",
+        "title": "Create CONTRIBUTING.md",
+        "description": "Contributor guide: adding a skill/agent, adding a hook, tests, commit rules.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["8"],
+        "details": "Where: `CONTRIBUTING.md`\nReuses: `scripts/list_skills_agents.py`, `scripts/build-skill-index.py`, `claude/settings.json`, `hooks/README.md`, `lefthook/lefthook.yml`\nRequirement: CONTRIB-01, CONTRIB-02, CONTRIB-03, CONTRIB-04, CONTRIB-05\nReview rows: FR-036, FR-037, FR-038, FR-039, FR-040, FR-041, FR-042, FR-043\nSkill: generate-docs\nDone when:\n- [ ] Doc check: every relative link and script path in `CONTRIBUTING.md` resolves; README link to `CONTRIBUTING.md` now resolves\n- [ ] Build gate passes\nGate: build\nCommit: `docs: add contributing guide`\nSpec: .specs/features/readme-improvement/",
+        "testStrategy": "none (doc check: links resolve, flags/aliases exist, tables byte-identical)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 6,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-10-16T15:39:31.333Z"
+      }
+    ],
+    "metadata": {
+      "version": "1.0.0",
+      "lastModified": "2026-10-16T15:41:56.411Z",
+      "taskCount": 9,
+      "completedCount": 9,
+      "tags": ["readme-improvement"]
+    }
+  }
+}
