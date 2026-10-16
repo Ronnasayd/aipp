@@ -1,0 +1,6 @@
+{
+  "name": "tool-history",
+  "version": "0.1.0",
+  "description": "Side pane listing tool calls as Claude makes them",
+  "types": "./types/index.d.ts"
+}

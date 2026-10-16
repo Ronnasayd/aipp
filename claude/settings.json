@@ -13,7 +13,8 @@
     "PROTECT_FILES_MCP_ALLOWLIST": "ssh-mcp",
     "QUESTION_TOOL_LANG": "Portuguese",
     "MD_LANGUAGE": "English",
-    "PROTECT_FILES_EXTRA_ALLOWED": ""
+    "PROTECT_FILES_EXTRA_ALLOWED": "",
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/develop/personal/aipp/claude/dev-mods/tool-history"
   },
   "attribution": {
     "commit": "",
