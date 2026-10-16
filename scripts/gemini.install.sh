@@ -1,6 +1,7 @@
 ## GEMINI
 DEFAULT_FOLDER=".gemini"
 source "$(dirname "${BASH_SOURCE[0]}")/_git-exclude.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/_link-with-backup.sh"
 yes | rtk init -g --gemini
 python3 $SOURCE/scripts/md2toml.py $SOURCE/commands/  $LOCAL/$DEFAULT_FOLDER/commands/
 
@@ -92,10 +93,7 @@ Do not duplicate project rules here. Update `AGENTS.md` instead.
 EOF
 
 #######################################################################################
-if [ -L "$HOME/$DEFAULT_FOLDER/settings.json" ] || [ -f "$HOME/$DEFAULT_FOLDER/settings.json" ]; then
-rm $HOME/$DEFAULT_FOLDER/settings.json
-fi
-ln -s "$SOURCE/gemini/settings.json" "$HOME/$DEFAULT_FOLDER/settings.json"
+link_with_backup "$SOURCE/gemini/settings.json" "$HOME/$DEFAULT_FOLDER/settings.json"
 #######################################################################################
 if [ -L "$HOME/$DEFAULT_FOLDER/.geminignore" ] || [ -f "$HOME/$DEFAULT_FOLDER/.geminignore" ]; then
 rm $HOME/$DEFAULT_FOLDER/.geminignore

@@ -133,3 +133,9 @@ def test_claude_installer_links_settings_through_helper():
     dst = "$HOME/$DEFAULT_FOLDER/settings.json"
     args = f'"$SOURCE/claude/settings.json" "{dst}"'
     _assert_links_without_rm("claude.install.sh", args, dst)
+
+
+def test_gemini_installer_links_settings_through_helper():
+    dst = "$HOME/$DEFAULT_FOLDER/settings.json"
+    args = f'"$SOURCE/gemini/settings.json" "{dst}"'
+    _assert_links_without_rm("gemini.install.sh", args, dst)
