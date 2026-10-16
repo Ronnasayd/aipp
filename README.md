@@ -20,10 +20,11 @@ A toolkit that gives AI coding agents specialized roles, reusable skills and str
 - Tested on Linux. macOS support is partial: one bundled tool download only targets Linux x86_64.
 - Everything else the bootstrap downloads is listed in [External tools](docs/external-tools.md).
 
-## Warning: what the installer changes
-
-- It edits your shell startup files (`~/.zshrc` and `~/.bashrc`): `PATH`, `AI_PROJECT_ROOT_DIR`, `CLAUDE_CONFIG_DIR` and the alias file are added.
-- Global harness config files become symlinks into this repo (`~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.copilot/mcp-config.json`, `~/.copilot/config.json`). A regular file already at one of these paths is kept beside it as `<path>.bak`; a folder at that path is left untouched and a warning is printed.
+> [!WARNING]
+> The installer changes files outside this repo.
+>
+> - It edits your shell startup files (`~/.zshrc` and `~/.bashrc`): `PATH`, `AI_PROJECT_ROOT_DIR`, `CLAUDE_CONFIG_DIR` and the alias file are added.
+> - Global harness config files become symlinks into this repo (`~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.copilot/mcp-config.json`, `~/.copilot/config.json`). A regular file already at one of these paths is kept beside it as `<path>.bak`; a folder at that path is left untouched and a warning is printed.
 
 ## Quickstart
 
