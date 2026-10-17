@@ -9,8 +9,24 @@ export type ToolCallRecord = {
   agentLabel: string;
 };
 
+export type AgentMessageRecord = {
+  id: string;
+  turnId: string;
+  kind: "text" | "thinking";
+  text: string;
+  agentId?: string;
+  agentLabel: string;
+};
+
+export type ToolHistoryTab = "calls" | "messages";
+
 declare module "claude-code" {
   interface PluginState {
-    "tool-history": { calls: ToolCallRecord[]; isOpen: boolean };
+    "tool-history": {
+      calls: ToolCallRecord[];
+      messages: AgentMessageRecord[];
+      isOpen: boolean;
+      activeTab: ToolHistoryTab;
+    };
   }
 }

@@ -1,11 +1,20 @@
 import { atom, read, update } from "claude-code";
 import type { EngineInterface, Register } from "claude-code";
 
-import type { ToolCallRecord } from "../types";
+import type {
+  AgentMessageRecord,
+  ToolCallRecord,
+  ToolHistoryTab
+} from "../types";
 
 const PANE = "tool-history";
 const calls = atom({ plugin: "tool-history", key: "calls" } as const, []);
+const messages = atom({ plugin: "tool-history", key: "messages" } as const, []);
 const isOpen = atom({ plugin: "tool-history", key: "isOpen" } as const, false);
+const activeTab = atom(
+  { plugin: "tool-history", key: "activeTab" } as const,
+  "calls" as ToolHistoryTab
+);
 
 /**
  * Builds a one-line summary of a tool call's arguments for display in the pane.
@@ -113,10 +122,107 @@ export const register: Register = (on) => {
     return ran;
   });
 
-  on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e);
-    const list = await read($, calls);
+  on("turn.step", async function* ($, e, next) {
+    const agentLabel = await resolveAgentLabel($, e.agentId);
+    const buffers = new Map<
+      number,
+      { kind: "text" | "thinking"; text: string }
+    >();
 
+    const stream = next(e);
+    for await (const chunk of stream) {
+      if (chunk.kind === "text" || chunk.kind === "thinking") {
+        const buf = buffers.get(chunk.index);
+        if (buf && buf.kind === chunk.kind) buf.text += chunk.text;
+        else buffers.set(chunk.index, { kind: chunk.kind, text: chunk.text });
+      }
+      yield chunk;
+    }
+
+    const turnId = e.turnId;
+    const newRecords: AgentMessageRecord[] = [...buffers.entries()]
+      .sort(([a], [b]) => a - b)
+      .filter(([, buf]) => buf.text.trim().length > 0)
+      .map(([index, buf]) => ({
+        id: `${turnId}-${index}`,
+        turnId,
+        kind: buf.kind,
+        text: buf.text,
+        agentId: e.agentId,
+        agentLabel
+      }));
+
+    if (newRecords.length > 0) {
+      await update($, messages, (list) => [...list, ...newRecords].slice(-200));
+      if (
+        (await read($, isOpen)) &&
+        (await read($, activeTab)) === "messages"
+      ) {
+        void $.ui.scroll({ to: "end", in: PANE });
+      }
+    }
+  });
+
+  on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
+    const { Box, Text, Button } = $.ui.resolve(e);
+    const tab = await read($, activeTab);
+
+    const selectTab = (next: ToolHistoryTab) => async () => {
+      await update($, activeTab, () => next);
+      void $.ui.scroll({ to: "end", in: PANE });
+    };
+
+    const header = (
+      <Box flexDirection="row" gap={1}>
+        <Button
+          plain
+          hotkey="1"
+          variant={tab === "calls" ? "primary" : "secondary"}
+          onPress={selectTab("calls")}
+        >
+          Tool Calls
+        </Button>
+        <Button
+          plain
+          hotkey="2"
+          variant={tab === "messages" ? "primary" : "secondary"}
+          onPress={selectTab("messages")}
+        >
+          Agent Messages
+        </Button>
+      </Box>
+    );
+
+    if (tab === "messages") {
+      const list = await read($, messages);
+      return (
+        <Box flexDirection="column" gap={1}>
+          {header}
+          {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
+          {list.map((msg) => (
+            <Box
+              key={msg.id}
+              flexDirection="column"
+              borderStyle="round"
+              paddingX={1}
+              borderColor={msg.kind === "thinking" ? "subtle" : "claude"}
+            >
+              <Text bold dimColor>
+                {msg.agentLabel} · {msg.kind}
+              </Text>
+              <Text
+                italic={msg.kind === "thinking"}
+                dimColor={msg.kind === "thinking"}
+              >
+                {msg.text}
+              </Text>
+            </Box>
+          ))}
+        </Box>
+      );
+    }
+
+    const list = await read($, calls);
     const groups: { agentLabel: string; calls: ToolCallRecord[] }[] = [];
     for (const call of list) {
       const lastGroup = groups[groups.length - 1];
@@ -129,6 +235,7 @@ export const register: Register = (on) => {
 
     return (
       <Box flexDirection="column" gap={1}>
+        {header}
         {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
         {groups.map((group, groupIndex) => (
           <Box key={groupIndex} flexDirection="column">
