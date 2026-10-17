@@ -41,6 +41,11 @@ async function resolveAgentLabel(
   return info.name ?? info.type ?? info.description ?? agentId;
 }
 
+// why: unfiltered ANSI/control bytes (e.g. from MCP console-log tools) can
+// throw while the pane draws, which makes the engine render it empty.
+// eslint-disable-next-line no-control-regex
+const ANSI_AND_CONTROL = /\x1b\[[0-9;]*[a-zA-Z]|[\x00-\x08\x0b\x0c\x0e-\x1f]/g;
+
 /**
  * Trims a tool result's text down to the first few lines for pane display.
  * @param text - The raw result text, or undefined when the call produced none.
@@ -48,8 +53,9 @@ async function resolveAgentLabel(
  */
 function trimResult(text: string | undefined): string | undefined {
   if (!text) return undefined;
-  const lines = text.split("\n");
-  if (lines.length <= RESULT_LINES_SHOWN) return text;
+  const clean = text.replace(ANSI_AND_CONTROL, "");
+  const lines = clean.split("\n");
+  if (lines.length <= RESULT_LINES_SHOWN) return clean;
   const hidden = lines.length - RESULT_LINES_SHOWN;
   return [...lines.slice(0, RESULT_LINES_SHOWN), `… +${hidden} lines`].join(
     "\n"
