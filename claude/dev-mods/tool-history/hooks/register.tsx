@@ -39,6 +39,8 @@ function summarize(e: Record<string, unknown>): string {
 }
 
 const RESULT_LINES_SHOWN = 4;
+// why: engine's ui.render chokes past ~100k chars in one draw (observed crash)
+const RESULT_CHARS_SHOWN = 2000;
 
 /**
  * Resolves a human-readable label for the agent loop a tool call ran in.
@@ -71,11 +73,15 @@ function trimResult(text: string | undefined): string | undefined {
   if (!text) return undefined;
   const clean = text.replace(ANSI_AND_CONTROL, "");
   const lines = clean.split("\n");
-  if (lines.length <= RESULT_LINES_SHOWN) return clean;
-  const hidden = lines.length - RESULT_LINES_SHOWN;
-  return [...lines.slice(0, RESULT_LINES_SHOWN), `… +${hidden} lines`].join(
-    "\n"
-  );
+  const byLines =
+    lines.length <= RESULT_LINES_SHOWN
+      ? clean
+      : [
+          ...lines.slice(0, RESULT_LINES_SHOWN),
+          `… +${lines.length - RESULT_LINES_SHOWN} lines`
+        ].join("\n");
+  if (byLines.length <= RESULT_CHARS_SHOWN) return byLines;
+  return `${byLines.slice(0, RESULT_CHARS_SHOWN)}… +${byLines.length - RESULT_CHARS_SHOWN} chars`;
 }
 
 // invariant: result written to disk first — OS handler opens a file path, not stdin/stdout
