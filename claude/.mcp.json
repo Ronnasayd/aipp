@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "aipp:figma-console": {
+      "command": "npx",
+      "args": ["-y", "figma-console-mcp@latest"],
+      "env": {
+        "FIGMA_ACCESS_TOKEN": "${MCP_FIGMA_ACCESS_TOKEN:-add-value-to-env-vars}",
+        "ENABLE_MCP_APPS": "true"
+      }
+    },
     "aipp:krita": {
       "command": "python3",
       "args": ["${HOME}/develop/public/krita-mcp/mcp_server.py"]

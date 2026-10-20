@@ -27,6 +27,7 @@ declare module "claude-code" {
       messages: AgentMessageRecord[];
       isOpen: boolean;
       activeTab: ToolHistoryTab;
+      fullResults: Record<string, string>;
     };
   }
 }

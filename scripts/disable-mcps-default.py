@@ -35,6 +35,7 @@ disabled_mcp_servers = [
     "aipp:burp",
     "aipp:gcloud",
     "plugin:rag-rat:rag-rat",
+    "aipp:figma-console",
 ]
 
 parser = argparse.ArgumentParser()

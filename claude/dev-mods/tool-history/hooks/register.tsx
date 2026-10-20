@@ -8,12 +8,19 @@ import type {
 } from "../types";
 
 const PANE = "tool-history";
+const OUTPUT_DIR = "/tmp/tool-history";
 const calls = atom({ plugin: "tool-history", key: "calls" } as const, []);
 const messages = atom({ plugin: "tool-history", key: "messages" } as const, []);
 const isOpen = atom({ plugin: "tool-history", key: "isOpen" } as const, false);
 const activeTab = atom(
   { plugin: "tool-history", key: "activeTab" } as const,
   "calls" as ToolHistoryTab
+);
+// why: full, untruncated results keyed by tool_use_id, so the pane can write
+// them out on click without re-running the tool or growing `calls` itself.
+const fullResults = atom(
+  { plugin: "tool-history", key: "fullResults" } as const,
+  {} as Record<string, string>
 );
 
 /**
@@ -71,6 +78,38 @@ function trimResult(text: string | undefined): string | undefined {
   );
 }
 
+// invariant: result written to disk first — OS handler opens a file path, not stdin/stdout
+async function openFullResult(
+  $: EngineInterface,
+  call: ToolCallRecord
+): Promise<void> {
+  const map = await read($, fullResults);
+  const text = map[call.id];
+  if (!text) return;
+  const path = `${OUTPUT_DIR}/${call.id}.md`;
+  const doc = [
+    `# ${call.tool}`,
+    "",
+    "## Command",
+    "",
+    "```",
+    call.summary || "(no arguments)",
+    "```",
+    "",
+    "## Result",
+    "",
+    "```",
+    text,
+    "```"
+  ].join("\n");
+  await $.fs.write(path, doc);
+  // why: no platform-detection API is exposed to plugins; try both openers.
+  await $.process
+    .run(["xdg-open", path])
+    .catch(() => $.process.run(["open", path]))
+    .catch(() => {});
+}
+
 export const register: Register = (on) => {
   on("session.start", async ($, e, next) => {
     await $.command.register({
@@ -107,15 +146,28 @@ export const register: Register = (on) => {
     };
     await update($, calls, (list) => [...list, record].slice(-200));
     const ran = await next(e);
-    const resultText = trimResult("text" in ran ? ran.text : undefined);
+    const rawText = "text" in ran ? ran.text : undefined;
+    const resultText = trimResult(rawText);
     const isError = "isError" in ran ? ran.isError : undefined;
-    await update($, calls, (list) =>
-      list.map((one) =>
+    let trimmed: ToolCallRecord[] = [];
+    await update($, calls, (list) => {
+      trimmed = list.map((one) =>
         one.id === record.id
           ? { ...one, isDone: true, resultText, isError }
           : one
-      )
-    );
+      );
+      return trimmed;
+    });
+    if (rawText) {
+      const liveIds = new Set(trimmed.map((one) => one.id));
+      await update($, fullResults, (map) => {
+        const nextMap: Record<string, string> = { [record.id]: rawText };
+        for (const [id, text] of Object.entries(map)) {
+          if (liveIds.has(id)) nextMap[id] = text;
+        }
+        return nextMap;
+      });
+    }
 
     if (await read($, isOpen)) void $.ui.scroll({ to: "end", in: PANE });
 
@@ -222,7 +274,10 @@ export const register: Register = (on) => {
         <Box flexDirection="column" gap={1}>
           {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
           {groups.map((group, groupIndex) => (
-            <Box key={groupIndex} flexDirection="column">
+            <Box
+              key={`${group.agentLabel}-${groupIndex}`}
+              flexDirection="column"
+            >
               <Text bold dimColor>
                 ── {group.agentLabel} ──
               </Text>
@@ -259,6 +314,7 @@ export const register: Register = (on) => {
     }
 
     const list = await read($, calls);
+    const results = await read($, fullResults);
     const groups: { agentLabel: string; calls: ToolCallRecord[] }[] = [];
     for (const call of list) {
       const lastGroup = groups[groups.length - 1];
@@ -273,7 +329,7 @@ export const register: Register = (on) => {
       <Box flexDirection="column" gap={1}>
         {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
         {groups.map((group, groupIndex) => (
-          <Box key={groupIndex} flexDirection="column">
+          <Box key={`${group.agentLabel}-${groupIndex}`} flexDirection="column">
             <Text bold dimColor>
               ── {group.agentLabel} ──
             </Text>
@@ -293,9 +349,20 @@ export const register: Register = (on) => {
                   paddingX={1}
                   borderColor={borderColor}
                 >
-                  <Text bold color={borderColor}>
-                    {icon} {call.tool.toUpperCase()}
-                  </Text>
+                  <Box flexDirection="row" gap={1}>
+                    <Text bold color={borderColor}>
+                      {icon} {call.tool.toUpperCase()}
+                    </Text>
+                    {results[call.id] && (
+                      <Button
+                        key={`open-${call.id}`}
+                        plain
+                        onPress={() => openFullResult($, call)}
+                      >
+                        [{call.id.slice(-8)}]
+                      </Button>
+                    )}
+                  </Box>
                   {call.summary && <Text color="yellow">{call.summary}</Text>}
                   {call.resultText && (
                     <Text color="cyan" dimColor={call.isDone}>
