@@ -229,7 +229,7 @@ export const register: Register = (on) => {
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
-    const { Box, Text, Button } = $.ui.resolve(e);
+    const { Box, Text, Button, Markdown } = $.ui.resolve(e);
     const tab = await read($, activeTab);
 
     const selectTab = (next: ToolHistoryTab) => async () => {
@@ -298,12 +298,10 @@ export const register: Register = (on) => {
                   <Text bold dimColor>
                     {msg.kind === "user" ? "User" : msg.kind}
                   </Text>
-                  <Text
-                    italic={msg.kind === "thinking"}
+                  <Markdown
+                    text={msg.text}
                     dimColor={msg.kind === "thinking"}
-                  >
-                    {msg.text}
-                  </Text>
+                  />
                 </Box>
               ))}
             </Box>
