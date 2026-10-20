@@ -122,6 +122,19 @@ export const register: Register = (on) => {
     return ran;
   });
 
+  on("prompt.submit", async ($, e, next) => {
+    if (!e.isMeta) {
+      const record: AgentMessageRecord = {
+        id: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        kind: "user",
+        text: e.text,
+        agentLabel: "Main"
+      };
+      await update($, messages, (list) => [...list, record].slice(-200));
+    }
+    return next(e);
+  });
+
   on("turn.step", async function* ($, e, next) {
     const agentLabel = await resolveAgentLabel($, e.agentId);
     const buffers = new Map<
@@ -195,29 +208,52 @@ export const register: Register = (on) => {
 
     if (tab === "messages") {
       const list = await read($, messages);
+      const groups: { agentLabel: string; messages: AgentMessageRecord[] }[] =
+        [];
+      for (const msg of list) {
+        const lastGroup = groups[groups.length - 1];
+        if (lastGroup && lastGroup.agentLabel === msg.agentLabel) {
+          lastGroup.messages.push(msg);
+        } else {
+          groups.push({ agentLabel: msg.agentLabel, messages: [msg] });
+        }
+      }
       return (
         <Box flexDirection="column" gap={1}>
-          {header}
           {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
-          {list.map((msg) => (
-            <Box
-              key={msg.id}
-              flexDirection="column"
-              borderStyle="round"
-              paddingX={1}
-              borderColor={msg.kind === "thinking" ? "subtle" : "claude"}
-            >
+          {groups.map((group, groupIndex) => (
+            <Box key={groupIndex} flexDirection="column">
               <Text bold dimColor>
-                {msg.agentLabel} · {msg.kind}
+                ── {group.agentLabel} ──
               </Text>
-              <Text
-                italic={msg.kind === "thinking"}
-                dimColor={msg.kind === "thinking"}
-              >
-                {msg.text}
-              </Text>
+              {group.messages.map((msg) => (
+                <Box
+                  key={msg.id}
+                  flexDirection="column"
+                  borderStyle="round"
+                  paddingX={1}
+                  borderColor={
+                    msg.kind === "user"
+                      ? "green"
+                      : msg.kind === "thinking"
+                        ? "subtle"
+                        : "claude"
+                  }
+                >
+                  <Text bold dimColor>
+                    {msg.kind === "user" ? "User" : msg.kind}
+                  </Text>
+                  <Text
+                    italic={msg.kind === "thinking"}
+                    dimColor={msg.kind === "thinking"}
+                  >
+                    {msg.text}
+                  </Text>
+                </Box>
+              ))}
             </Box>
           ))}
+          {header}
         </Box>
       );
     }
@@ -235,7 +271,6 @@ export const register: Register = (on) => {
 
     return (
       <Box flexDirection="column" gap={1}>
-        {header}
         {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
         {groups.map((group, groupIndex) => (
           <Box key={groupIndex} flexDirection="column">
@@ -272,6 +307,7 @@ export const register: Register = (on) => {
             })}
           </Box>
         ))}
+        {header}
       </Box>
     );
   });

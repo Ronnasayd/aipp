@@ -11,8 +11,8 @@ export type ToolCallRecord = {
 
 export type AgentMessageRecord = {
   id: string;
-  turnId: string;
-  kind: "text" | "thinking";
+  turnId?: string;
+  kind: "text" | "thinking" | "user";
   text: string;
   agentId?: string;
   agentLabel: string;
