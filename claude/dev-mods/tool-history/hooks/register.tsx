@@ -28,14 +28,22 @@ const fullResults = atom(
  * @param e - The tool.call event, carrying `tool` and that tool's own args spread on it.
  * @returns A short string describing the call, or empty string if there is nothing notable to show.
  */
+const SUMMARY_CHARS_SHOWN = 300;
+
 function summarize(e: Record<string, unknown>): string {
-  if (typeof e.command === "string") return e.command;
-  if (typeof e.file_path === "string") return e.file_path;
-  if (typeof e.pattern === "string") return e.pattern;
-  if (typeof e.url === "string") return e.url;
-  if (typeof e.query === "string") return e.query;
-  if (typeof e.description === "string") return e.description;
-  return "";
+  const raw =
+    (typeof e.command === "string" && e.command) ||
+    (typeof e.file_path === "string" && e.file_path) ||
+    (typeof e.pattern === "string" && e.pattern) ||
+    (typeof e.url === "string" && e.url) ||
+    (typeof e.query === "string" && e.query) ||
+    (typeof e.description === "string" && e.description) ||
+    "";
+  if (!raw) return raw;
+  const oneLine = raw.replace(/\s+/g, " ").trim();
+  return oneLine.length <= SUMMARY_CHARS_SHOWN
+    ? oneLine
+    : `${oneLine.slice(0, SUMMARY_CHARS_SHOWN)}…`;
 }
 
 const RESULT_LINES_SHOWN = 4;
