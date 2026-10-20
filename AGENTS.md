@@ -60,6 +60,13 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 - Every user question → interactive tool, never plain text. Claude:
   `AskUserQuestion`. Multiple questions: `grilling` skill.
 
+- `AskUserQuestion` questions must be fully contextualized, never terse. Each
+  question's body must explain _why_ it's being asked (what was found in the
+  code, what trade-off is at stake) before stating the choice. Each option's
+  `description` must explain what picking it actually does/causes — not just
+  restate the label. Never submit a question or option whose text would be
+  truncated or cut short; write the full explanation every time.
+
 - When task list exists (multi-step work), use `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate` to give user feedback. Mark tasks complete as done, don't batch.
 
 - Whenever you modify a component or screen → run tests using Playwright (or a similar E2E tool) before finalizing.
