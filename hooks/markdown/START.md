@@ -10,11 +10,14 @@
   restate the label. Never submit a question or option whose text would be
   truncated or cut short; write the full explanation every time.
 
+- When user asks a question → answer only. Do not modify code without user's
+  explicit authorization first.
+
 - When task list exists (multi-step work), use `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate` to give user feedback. Mark tasks complete as done, don't batch.
 
 - Whenever you modify a component or screen → run tests using Playwright (or a similar E2E tool) before finalizing.
 
-- Whenever lint, type, or test errors are reported, fix them, even if they were not caused by your changes.
+- Whenever lint, type, or test errors are reported in files you have touched, fix them — even if they were not caused by your own changes.
 
 - Never treat documentation (`markdown files`,`memories`) as absolute truth. Only the implemented code should be treated as the truth.
 
