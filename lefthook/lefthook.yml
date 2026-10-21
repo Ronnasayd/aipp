@@ -5,35 +5,35 @@
 pre-commit:
   commands:
     format-staged:
-      run: uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/format_staged.py
+      run: uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/format_staged.py
     lint-staged:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/hooks/scripts/lint_changed.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/hooks/scripts/lint_changed.py
         --staged
     test-staged:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/hooks/scripts/test_changed.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/hooks/scripts/test_changed.py
         --staged
     comment-policy-staged:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/comment_policy_check.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/comment_policy_check.py
 commit-msg:
   commands:
     conventional-commits:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/conventional-commits-commit-msg.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/conventional-commits-commit-msg.py
         {1}
     reject-ai-mentions:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/commit-msg.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/commit-msg.py
         {1}
     reject-emoji:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/reject-emoji-commit-msg.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/reject-emoji-commit-msg.py
         {1}
     reject-non-english:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/reject-non-english-commit-msg.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/reject-non-english-commit-msg.py
         {1}
 # why: rag-rat-maintenance runs detached (nohup + redirected fds) so git returns
 # immediately; lefthook would otherwise wait on the open stdout/stderr pipes.
@@ -41,7 +41,7 @@ post-commit:
   commands:
     semantic-version-bump:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/semantic_version_bump.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/semantic_version_bump.py
     rag-rat-maintenance:
       run:
         test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-commit
@@ -72,4 +72,4 @@ pre-push:
       run: $AI_PROJECT_ROOT_DIR/lefthook/scripts/pre-push-typecheck
     push-pending-tags:
       run:
-        uv run --project $(git rev-parse --show-toplevel) $AI_PROJECT_ROOT_DIR/lefthook/scripts/push_pending_tags.py
+        uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/push_pending_tags.py
