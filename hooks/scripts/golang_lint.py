@@ -95,11 +95,11 @@ def _run_golangci_lint(resolved: Path, project_root: str) -> dict:
         logger.debug("golangci-lint not installed, skipping lint for %s", resolved)
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    cmd = f"golangci-lint run --out-format json {resolved!s}"
+    cmd = f"golangci-lint run --output.json.path stdout {resolved!s}"
     logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
     result = _exec(
         "golangci-lint",
-        ["run", "--out-format", "json", str(resolved)],
+        ["run", "--output.json.path", "stdout", str(resolved)],
         cwd=project_root,
     )
     logger.debug("golangci-lint result: success=%s", result["success"])
