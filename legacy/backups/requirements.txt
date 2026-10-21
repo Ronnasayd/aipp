@@ -60,7 +60,7 @@ loguru==0.7.3
 lxml==6.0.1
 markdownify==1.2.0
 MarkupSafe==3.0.2
-mcp==1.12.4
+mcp==1.30.0
 mitmproxy==12.1.2
 mitmproxy_linux==0.12.7
 mitmproxy_rs==0.12.7
