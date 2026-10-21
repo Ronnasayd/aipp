@@ -67,66 +67,112 @@ def _check_tool_installed(tool: str) -> bool:
     return result.returncode == 0
 
 
+def _filter_lines_by_file(text: str, resolved: Path) -> tuple[str, bool]:
+    """Keep only lines whose leading `path:` matches resolved's name.
+
+    go vet's text output is one issue per line prefixed `file.go:line:col:`.
+    Returns (filtered_text, any_matched_line_failed) — the bool is always
+    False here since go vet has no separate pass/fail per line; callers
+    derive success from whether filtered output is empty.
+    """
+    name = resolved.name
+    kept = [
+        line
+        for line in text.splitlines()
+        if line.split(":", 1)[0].endswith(name) or not line.strip()
+    ]
+    return "\n".join(kept).strip(), False
+
+
 def _run_govet(resolved: Path, project_root: str) -> dict:
-    """Run go vet. Returns {success, output, error}."""
+    """Run go vet on resolved's package and filter to resolved's own issues.
+
+    Running on the package (not the lone file) gives go vet the sibling
+    symbols it needs; filtering back by filename keeps the result scoped to
+    the file actually edited. Returns {success, output, error}.
+    """
     if not _check_tool_installed("go"):
         logger.debug("go not installed, skipping vet for %s", resolved)
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    cmd = f"go vet {resolved!s}"
+    pkg_dir = f"./{resolved.parent.relative_to(project_root)!s}"
+    cmd = f"go vet {pkg_dir}"
     logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
-    result = _exec("go", ["vet", str(resolved)], cwd=project_root)
-    logger.debug("go vet result: success=%s", result["success"])
-    if result["success"]:
+    result = _exec("go", ["vet", pkg_dir], cwd=project_root)
+    # why: go vet's issues land on stderr, not stdout
+    filtered_err, _ = _filter_lines_by_file(result.get("error", ""), resolved)
+    success = result["success"] or not filtered_err
+    logger.debug("go vet result: success=%s", success)
+    if success:
         logger.debug("go vet passed for %s", resolved)
     else:
-        logger.warning(
-            "go vet found issues in %s:\n%s",
-            resolved,
-            result.get("output", ""),
-        )
-    if result.get("error"):
-        logger.warning("go vet stderr: %s", result.get("error", ""))
+        logger.warning("go vet found issues in %s:\n%s", resolved, filtered_err)
     output = truncate_large_output(result.get("output", ""), "govet")
     return {
-        "success": result["success"],
+        "success": success,
         "output": output,
-        "error": result.get("error", ""),
+        "error": truncate_large_output(filtered_err, "govet-err"),
         "installed": True,
     }
 
 
-def _run_golangci_lint(resolved: Path, project_root: str) -> dict:
-    """Run golangci-lint. Returns {success, output, error}.
+def _filter_issues_by_file(
+    parsed: Any,  # noqa: ANN401 - golangci-lint JSON shape varies (dict/list/str)
+    resolved: Path,
+) -> tuple[Any, bool]:
+    """Keep only golangci-lint JSON Issues whose Pos.Filename matches resolved.
 
-    `output` is parsed from golangci-lint's `--out-format json` (structured
-    Issues list) since agents parse structured data far more reliably than
-    the default text output.
+    Returns (filtered_parsed, any_left) — `any_left` tells the caller whether
+    issues remain after filtering so success can be recomputed.
+    """
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("Issues"), list):
+        return parsed, False
+    name = resolved.name
+    kept = [
+        issue
+        for issue in parsed["Issues"]
+        if str(issue.get("Pos", {}).get("Filename", "")).endswith(name)
+    ]
+    filtered = {**parsed, "Issues": kept}
+    return filtered, bool(kept)
+
+
+def _run_golangci_lint(resolved: Path, project_root: str) -> dict:
+    """Run golangci-lint on resolved's package and filter to resolved's issues.
+
+    Running on the package (not the lone file) gives the linter the sibling
+    symbols it needs; filtering back by filename keeps the result scoped to
+    the file actually edited. `output` is parsed from golangci-lint's
+    `--out-format json` (structured Issues list) since agents parse
+    structured data far more reliably than the default text output.
     """
     if not _check_tool_installed("golangci-lint"):
         logger.debug("golangci-lint not installed, skipping lint for %s", resolved)
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    cmd = f"golangci-lint run --output.json.path stdout {resolved!s}"
+    pkg_dir = f"./{resolved.parent.relative_to(project_root)!s}"
+    cmd = f"golangci-lint run --output.json.path stdout {pkg_dir}"
     logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
     result = _exec(
         "golangci-lint",
-        ["run", "--output.json.path", "stdout", str(resolved)],
+        ["run", "--output.json.path", "stdout", pkg_dir],
         cwd=project_root,
     )
-    logger.debug("golangci-lint result: success=%s", result["success"])
-    output = parse_json_output(
+    parsed = parse_json_output(
         result.get("output", ""), "GolangLint", "golangci-lint", logger
     )
-    if result["success"]:
+    filtered, any_left = _filter_issues_by_file(parsed, resolved)
+    success = result["success"] or not any_left
+    logger.debug("golangci-lint result: success=%s", success)
+    if success:
         logger.debug("golangci-lint passed for %s", resolved)
     else:
-        logger.warning("golangci-lint found issues in %s:\n%s", resolved, output)
+        logger.warning("golangci-lint found issues in %s:\n%s", resolved, filtered)
     if result.get("error"):
         logger.warning("golangci-lint stderr: %s", result.get("error", ""))
-    output = truncate_large_output(output, "golangci-lint")
+    output = truncate_large_output(filtered, "golangci-lint")
     return {
-        "success": result["success"],
+        "success": success,
         "output": output,
         "error": result.get("error", ""),
         "installed": True,
