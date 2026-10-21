@@ -20,7 +20,7 @@ from utils import get_by_key, get_hooks_logger, split_on_operators  # noqa: E402
 
 logger = get_hooks_logger("ProtectBranches")
 
-PROJECT_ROOT = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+CLAUDE_PROJECT_DIR = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
 
 DEFAULT_PROTECTED_BRANCHES = {"main", "master", "develop", "homolog"}
 
@@ -52,7 +52,7 @@ def current_branch() -> str | None:
     """
     try:
         result = subprocess.run(  # noqa: S603
-            ["git", "-C", PROJECT_ROOT, "branch", "--show-current"],  # noqa: S607 -- fixed lookup binary, trusted internal tool name
+            ["git", "-C", CLAUDE_PROJECT_DIR, "branch", "--show-current"],  # noqa: S607 -- fixed lookup binary, trusted internal tool name
             capture_output=True,
             text=True,
             timeout=5,

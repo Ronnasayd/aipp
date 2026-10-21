@@ -32,18 +32,23 @@ logger = get_hooks_logger("ProtectFiles")
 # CLAUDE_PROJECT_DIR (set by Claude Code) takes precedence when present, since it's
 # stable for the whole session; os.getcwd() is the fallback but can drift if cwd
 # changes mid-session (cd, subagents), silently widening the boundary check.
-PROJECT_ROOT = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+CLAUDE_PROJECT_DIR = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
 AI_PROJECT_ROOT_DIR = os.environ.get("AI_PROJECT_ROOT_DIR", os.getcwd())
 CLAUDE_CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR", os.path.expanduser("~/.claude"))
 
 # Get the home directory path object
 home_dir = str(Path.home())
 
+# Each entry may carry a trailing ":r" or ":rw" mode suffix (default "rw"
+# when omitted) — ":r" waives the project-boundary check for reads only, so
+# Write/Edit/NotebookEdit and any shell write (redirect, cp dest, etc.)
+# against that path still falls through to the normal boundary/pattern checks.
 ALLOWED_PATTERNS = [
-    os.path.join(PROJECT_ROOT, ".claude", "**"),
     "/tmp/**",  # noqa: S108 - a fixed allowlist glob, not a temp-file write
-    f"{AI_PROJECT_ROOT_DIR}/skills/**",
-    f"{AI_PROJECT_ROOT_DIR}/instructions/**",
+    f"{CLAUDE_PROJECT_DIR}/.claude/**:r",
+    f"{AI_PROJECT_ROOT_DIR}/skills/**:r",
+    f"{AI_PROJECT_ROOT_DIR}/instructions/**:r",
+    f"{AI_PROJECT_ROOT_DIR}/hooks/**:r",
     f"{home_dir}/develop/public/**",
     *(f"{home_dir}/Desktop/*.{ext}" for ext in ("md", "png", "jpeg", "json")),
     f"{CLAUDE_CONFIG_DIR}/projects/**/memory/*.md",
@@ -58,9 +63,30 @@ if _extra_allowed:
         _p = _p.strip()
         if not _p:
             continue
+        _mode_suffix = ""
+        if _p.endswith((":r", ":rw")):
+            _p, _, _mode = _p.rpartition(":")
+            _mode_suffix = f":{_mode}"
         if not any(c in _p for c in "*?["):
             _p = _p.rstrip("/") + "/**"
-        ALLOWED_PATTERNS.append(_p)
+        ALLOWED_PATTERNS.append(_p + _mode_suffix)
+
+
+def _split_pattern_mode(pattern: str) -> tuple[str, str]:
+    """Split an ALLOWED_PATTERNS entry into (glob, mode).
+
+    Args:
+        pattern: An ALLOWED_PATTERNS entry, optionally suffixed ":r"/":rw".
+
+    Returns:
+        (glob_without_suffix, mode) where mode is "r" or "rw" (default "rw").
+    """
+    if pattern.endswith(":rw"):
+        return pattern[: -len(":rw")], "rw"
+    if pattern.endswith(":r"):
+        return pattern[: -len(":r")], "r"
+    return pattern, "rw"
+
 
 # MCP server tool calls (tool_name = "mcp__<server>__<tool>") route file args
 # through their own server-side auth (e.g. ai-memory scopes to its own DB,
@@ -155,9 +181,9 @@ PROTECTED_PATTERNS = [
     # .claude/hooks, .claude/settings.json etc are symlinks into these real
     # paths — normalize() resolves symlinks, so protect the real targets too,
     # or realpath silently strips the .claude/** prefix before matching.
-    os.path.join(PROJECT_ROOT, ".claude", "hooks", "**"),
-    os.path.join(PROJECT_ROOT, ".claude", "settings.json"),
-    os.path.join(PROJECT_ROOT, ".claude", "settings.local.json"),
+    os.path.join(CLAUDE_PROJECT_DIR, ".claude", "hooks", "**"),
+    os.path.join(CLAUDE_PROJECT_DIR, ".claude", "settings.json"),
+    os.path.join(CLAUDE_PROJECT_DIR, ".claude", "settings.local.json"),
 ]
 
 READ_COMMANDS = {
@@ -313,29 +339,37 @@ def normalize(path: str) -> str:
 
 
 def is_within_project(path: str) -> bool:
-    """True if normalized path is PROJECT_ROOT or lives under it.
+    """True if normalized path is CLAUDE_PROJECT_DIR or lives under it.
 
     Args:
         path: Raw path string from a tool call.
 
     Returns:
-        True if the normalized path is PROJECT_ROOT or a descendant of it.
+        True if the normalized path is CLAUDE_PROJECT_DIR or a descendant of it.
     """
     norm = normalize(path)
-    return norm == PROJECT_ROOT or norm.startswith(PROJECT_ROOT.rstrip("/") + os.sep)
+    return norm == CLAUDE_PROJECT_DIR or norm.startswith(
+        CLAUDE_PROJECT_DIR.rstrip("/") + os.sep
+    )
 
 
-def is_allowed(path: str) -> bool:
-    """Check if path is in allowed patterns (safe to access).
+def is_allowed(path: str, *, write: bool = False) -> bool:
+    """Check if path is in allowed patterns for the requested access mode.
 
     Args:
         path: Normalized path string to check.
+        write: True if the access is a write (Write/Edit/NotebookEdit, or a
+            shell write target); a ":r"-suffixed entry then does not match.
 
     Returns:
-        True if path matches an entry in ALLOWED_PATTERNS.
+        True if path matches an ALLOWED_PATTERNS entry whose mode covers the
+        requested access (":r" entries only cover reads).
     """
     p = Path(path)
-    for pattern in ALLOWED_PATTERNS:
+    for raw_pattern in ALLOWED_PATTERNS:
+        pattern, mode = _split_pattern_mode(raw_pattern)
+        if mode == "r" and write:
+            continue
         if fnmatch.fnmatch(path, pattern) or p.match(pattern):
             return True
     return False
@@ -1182,11 +1216,17 @@ def _check_write_content(tool_input: Mapping, tool_name: str, file_path: str) ->
 # ─────────────────────────────────────────────────────────────
 
 
-def _check_direct_file_access(tool_input: Mapping) -> str | None:
+WRITE_TOOLS = {"Write", "Edit", "NotebookEdit"}
+
+
+def _check_direct_file_access(tool_input: Mapping, tool_name: str) -> str | None:
     """Deny direct Read/Write/Edit/NotebookEdit/Grep/Glob access to protected paths.
 
     Args:
         tool_input: The tool call's input mapping.
+        tool_name: The tool name, used to tell a write (Write/Edit/
+            NotebookEdit) from a read (Read/Grep/Glob) so a ":r" allowlist
+            entry only waives the boundary check for the latter.
 
     Returns:
         The resolved file_path if one was present in tool_input, else None.
@@ -1203,7 +1243,7 @@ def _check_direct_file_access(tool_input: Mapping) -> str | None:
         return None
 
     norm = normalize(file_path)
-    allowed = is_allowed(norm)
+    allowed = is_allowed(norm, write=tool_name in WRITE_TOOLS)
 
     # allowlist only waives the project-boundary check (e.g. /tmp/**),
     # never the protected-pattern check — a secret is a secret anywhere
@@ -1274,7 +1314,12 @@ def _check_shell_command_target(command: str, target: str) -> None:
         target: One file-like target extracted from command.
     """
     norm = normalize(target)
-    allowed = is_allowed(norm)
+    # Shell commands mix read (cat) and write (cp dest, >, tee) syntax that
+    # extract_file_targets doesn't distinguish per-target — treat every
+    # shell target as a write so a ":r" allowlist entry never waives the
+    # boundary check here (it only waives it for direct Read/Write/Edit
+    # tool calls, where the mode is known for certain).
+    allowed = is_allowed(norm, write=True)
 
     # allowlist only waives the project-boundary check (e.g. /tmp/**),
     # never the protected-pattern check — a secret is a secret anywhere
@@ -1307,7 +1352,7 @@ def main() -> None:
         sys.exit(0)
     tool_name = str(tool_name) if tool_name is not None else ""
 
-    file_path = _check_direct_file_access(tool_input)
+    file_path = _check_direct_file_access(tool_input, tool_name)
     if file_path:
         _check_write_content(tool_input, tool_name, file_path)
     _check_mcp_string_args(tool_input, tool_name, file_path)
