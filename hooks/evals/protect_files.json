@@ -764,6 +764,145 @@
       },
       "expect": "deny",
       "expect_pattern": ".env"
+    },
+    {
+      "name": "bash_c_chained_semicolon_cat_env_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "bash -c 'echo hi; cat .env'"
+      },
+      "expect": "deny",
+      "expect_pattern": ".env"
+    },
+    {
+      "name": "bash_c_glued_redirect_env_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "bash -c 'echo x >.env'"
+      },
+      "expect": "deny",
+      "expect_pattern": ".env"
+    },
+    {
+      "name": "bash_lc_bundled_flag_redirect_env_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "bash -lc 'echo x > .env'"
+      },
+      "expect": "deny",
+      "expect_pattern": ".env"
+    },
+    {
+      "name": "bash_glued_redirect_outside_project_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "echo x >/etc/passwd"
+      },
+      "expect": "deny",
+      "expect_pattern": "outside_project"
+    },
+    {
+      "name": "bash_fd_prefixed_glued_redirect_outside_project_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "some_cmd 2>/etc/passwd"
+      },
+      "expect": "deny",
+      "expect_pattern": "outside_project"
+    },
+    {
+      "name": "bash_redirect_stderr_devnull_allowed",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "some_cmd 2>/dev/null"
+      },
+      "expect": "allow"
+    },
+    {
+      "name": "bash_sed_inplace_env_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "sed -i 's/x/y/' .env"
+      },
+      "expect": "deny",
+      "expect_pattern": ".env"
+    },
+    {
+      "name": "bash_openssl_out_ssh_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "openssl rsa -in /tmp/plain_key.txt -out ~/.ssh/id_rsa"
+      },
+      "expect": "deny",
+      "expect_pattern": "id_rsa"
+    },
+    {
+      "name": "bash_touch_env_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "touch .env"
+      },
+      "expect": "deny",
+      "expect_pattern": ".env"
+    },
+    {
+      "name": "bash_touch_normal_file_allowed",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "touch README.md"
+      },
+      "expect": "allow"
+    },
+    {
+      "name": "bash_tee_ssh_key_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "tee ~/.ssh/id_rsa"
+      },
+      "expect": "deny",
+      "expect_pattern": "id_rsa"
+    },
+    {
+      "name": "bash_tee_normal_file_allowed",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "tee /tmp/scratch_out.txt"
+      },
+      "expect": "allow"
+    },
+    {
+      "name": "edit_file_path_env_var_literal_settings_denied",
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "$AI_PROJECT_ROOT_DIR/.claude/settings.json"
+      },
+      "expect": "deny",
+      "expect_pattern": "settings.json"
+    },
+    {
+      "name": "edit_file_path_env_var_literal_hooks_dir_denied",
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "$AI_PROJECT_ROOT_DIR/.claude/hooks/foo.py"
+      },
+      "expect": "deny",
+      "expect_pattern": "hooks"
+    },
+    {
+      "name": "bash_python_script_file_in_rx_skills_allowed",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "python3 $AI_PROJECT_ROOT_DIR/skills/foo/run.py"
+      },
+      "expect": "allow"
+    },
+    {
+      "name": "bash_cat_script_file_in_rx_skills_allowed",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "cat $AI_PROJECT_ROOT_DIR/skills/foo/SKILL.md"
+      },
+      "expect": "allow"
     }
   ]
 }

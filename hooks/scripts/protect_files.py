@@ -39,16 +39,22 @@ CLAUDE_CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR", os.path.expanduser("~/.c
 # Get the home directory path object
 home_dir = str(Path.home())
 
-# Each entry may carry a trailing ":r" or ":rw" mode suffix (default "rw"
-# when omitted) — ":r" waives the project-boundary check for reads only, so
-# Write/Edit/NotebookEdit and any shell write (redirect, cp dest, etc.)
-# against that path still falls through to the normal boundary/pattern checks.
+# invariant: suffix is any subset of r/w/x in any order, e.g. ":r", ":rw", ":rx",
+# ":rwx" — no suffix defaults to "rwx" (full access, unchanged from before
+# mode flags existed)
+_MODE_SUFFIX_RE = re.compile(r":([rwx]{1,3})$")
+
+# why: letters are r (read), w (write), x (execute — run via Bash). A letter
+# missing from the suffix falls through to the normal boundary/pattern
+# checks for that access (e.g. ":rx" waives reads and Bash execution, but
+# Write/Edit/NotebookEdit and shell writes still need their own checks).
 ALLOWED_PATTERNS = [
     "/tmp/**",  # noqa: S108 - a fixed allowlist glob, not a temp-file write
-    f"{CLAUDE_PROJECT_DIR}/.claude/**:r",
-    f"{AI_PROJECT_ROOT_DIR}/skills/**:r",
-    f"{AI_PROJECT_ROOT_DIR}/instructions/**:r",
-    f"{AI_PROJECT_ROOT_DIR}/hooks/**:r",
+    "/dev/null",  # universal discard target — never a real read/write/exec risk
+    f"{CLAUDE_PROJECT_DIR}/.claude/**:rx",
+    f"{AI_PROJECT_ROOT_DIR}/skills/**:rx",
+    f"{AI_PROJECT_ROOT_DIR}/instructions/**:rx",
+    f"{AI_PROJECT_ROOT_DIR}/hooks/**:rx",
     f"{home_dir}/develop/public/**",
     *(f"{home_dir}/Desktop/*.{ext}" for ext in ("md", "png", "jpeg", "json")),
     f"{CLAUDE_CONFIG_DIR}/projects/**/memory/*.md",
@@ -64,28 +70,31 @@ if _extra_allowed:
         if not _p:
             continue
         _mode_suffix = ""
-        if _p.endswith((":r", ":rw")):
-            _p, _, _mode = _p.rpartition(":")
-            _mode_suffix = f":{_mode}"
+        _m = _MODE_SUFFIX_RE.search(_p)
+        if _m:
+            _p = _p[: _m.start()]
+            _mode_suffix = f":{_m.group(1)}"
         if not any(c in _p for c in "*?["):
             _p = _p.rstrip("/") + "/**"
         ALLOWED_PATTERNS.append(_p + _mode_suffix)
 
 
-def _split_pattern_mode(pattern: str) -> tuple[str, str]:
-    """Split an ALLOWED_PATTERNS entry into (glob, mode).
+def _split_pattern_mode(pattern: str) -> tuple[str, frozenset[str]]:
+    """Split an ALLOWED_PATTERNS entry into (glob, mode flags).
 
     Args:
-        pattern: An ALLOWED_PATTERNS entry, optionally suffixed ":r"/":rw".
+        pattern: An ALLOWED_PATTERNS entry, optionally suffixed with any
+            subset of ":r"/":w"/":x" letters (e.g. ":r", ":rx", ":rwx").
 
     Returns:
-        (glob_without_suffix, mode) where mode is "r" or "rw" (default "rw").
+        (glob_without_suffix, frozenset of single-letter mode flags); no
+        suffix defaults to {"r", "w", "x"} (full access, unchanged from
+        before mode flags existed — a bare entry waived everything).
     """
-    if pattern.endswith(":rw"):
-        return pattern[: -len(":rw")], "rw"
-    if pattern.endswith(":r"):
-        return pattern[: -len(":r")], "r"
-    return pattern, "rw"
+    m = _MODE_SUFFIX_RE.search(pattern)
+    if not m:
+        return pattern, frozenset({"r", "w", "x"})
+    return pattern[: m.start()], frozenset(m.group(1))
 
 
 # MCP server tool calls (tool_name = "mcp__<server>__<tool>") route file args
@@ -203,8 +212,23 @@ READ_COMMANDS = {
     "openssl",
 }
 
-# commands whose args are ALL file targets (both src/dest for copy-like tools)
-COPY_COMMANDS = {"cp", "mv", "rsync", "scp", "install", "dd", "tar", "zip", "cat"}
+# why: commands whose args are ALL file targets (both src/dest for copy-like
+# tools). touch/tee create or overwrite their target with zero read/copy
+# semantics — grouped here (not a new family) since _extract_copy_like_targets
+# already does exactly what they need: every non-flag arg is a write target
+COPY_COMMANDS = {
+    "cp",
+    "mv",
+    "rsync",
+    "scp",
+    "install",
+    "dd",
+    "tar",
+    "zip",
+    "cat",
+    "touch",
+    "tee",
+}
 
 # destructive/permission commands: delete, wipe, or loosen perms on a target file
 DESTRUCTIVE_COMMANDS = {"rm", "unlink", "shred", "truncate"}
@@ -353,24 +377,32 @@ def is_within_project(path: str) -> bool:
     )
 
 
-def is_allowed(path: str, *, write: bool = False) -> bool:
+def is_allowed(path: str, *, needs: str = "w") -> bool:
     """Check if path is in allowed patterns for the requested access mode.
 
     Args:
         path: Normalized path string to check.
-        write: True if the access is a write (Write/Edit/NotebookEdit, or a
-            shell write target); a ":r"-suffixed entry then does not match.
+        needs: Single-letter access mode being requested: "r" (read),
+            "w" (write — Write/Edit/NotebookEdit, or a shell redirect
+            target), or "x" (execute — a Bash command-argument target,
+            e.g. `python3 script.py`). An entry only matches if its own
+            mode flags (":r"/":rw"/":rx"/":rwx"/...) include `needs`.
 
     Returns:
-        True if path matches an ALLOWED_PATTERNS entry whose mode covers the
-        requested access (":r" entries only cover reads).
+        True if path matches an ALLOWED_PATTERNS entry whose mode flags
+        cover the requested access.
     """
     p = Path(path)
     for raw_pattern in ALLOWED_PATTERNS:
-        pattern, mode = _split_pattern_mode(raw_pattern)
-        if mode == "r" and write:
+        pattern, modes = _split_pattern_mode(raw_pattern)
+        if needs not in modes:
             continue
         if fnmatch.fnmatch(path, pattern) or p.match(pattern):
+            return True
+        # hazard: a "/**"-suffixed pattern's base dir has no trailing slash once
+        # normalize() resolves it (realpath drops it), so "/tmp" alone
+        # never matches "/tmp/**" by fnmatch — match the bare base too.
+        if pattern.endswith("/**") and path == pattern[: -len("/**")]:
             return True
     return False
 
@@ -430,22 +462,23 @@ def iter_string_leaves(value: object) -> list[str]:
     return strings
 
 
-def expand_targets(targets: list[str]) -> list[str]:
-    """Expand globs like *.env → actual files.
+def expand_targets(targets: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Expand globs like *.env → actual files, preserving each target's mode.
 
     Args:
-        targets: Raw target strings, possibly containing glob patterns.
+        targets: (target, mode) pairs; target may contain glob patterns.
 
     Returns:
-        Each target's glob matches, or the target itself if it matched nothing.
+        Each target's glob matches (mode carried over), or the pair itself
+        if it matched nothing.
     """
-    expanded = []
-    for t in targets:
+    expanded: list[tuple[str, str]] = []
+    for t, mode in targets:
         matches = glob.glob(t, recursive=True)
         if matches:
-            expanded.extend(matches)
+            expanded.extend((m, mode) for m in matches)
         else:
-            expanded.append(t)
+            expanded.append((t, mode))
     return expanded
 
 
@@ -802,29 +835,32 @@ def _extract_git_targets(it: Iterator[str]) -> list[str]:
     return targets
 
 
-def _extract_inline_code_targets(cmd: str, arg: str) -> list[str]:
-    """Extract targets from a single -c/-e inline-code argument.
+def _extract_inline_code_targets(cmd: str, arg: str) -> list[tuple[str, str]]:
+    """Extract (target, mode) pairs from a single -c/-e inline-code argument.
 
     Args:
         cmd: The interpreter's basename (e.g. "python3", "bash").
         arg: The inline code string that followed the -c/-e/--eval flag.
 
     Returns:
-        Targets found by re-tokenizing arg as shell (for bash/sh/zsh -c), or
-        by pulling quoted string literals out of it otherwise.
+        (target, mode) pairs found by re-tokenizing arg as shell (for
+        bash/sh/zsh -c — mode is real here, e.g. "w" for a `>` redirect
+        inside the -c string), or ("x"-tagged) refs pulled out of quoted
+        string literals otherwise. Mode must be preserved through this
+        call: `bash -c "echo x > /protected"` embeds a real write inside
+        an interpreter invocation, and _dispatch_command_targets must not
+        downgrade it to "x" just because the outer command is bash.
     """
     if cmd in SHELL_INTERPRETER_COMMANDS:
-        # bash/sh/zsh -c takes a shell command line, not code with quoted
-        # string literals — re-tokenize as shell
-        try:
-            inner_tokens = shlex.split(arg)
-        except ValueError:
-            inner_tokens = arg.split()
-        return extract_targets_from_tokens(inner_tokens)
-    return extract_inline_code_refs(arg)
+        # hazard: bash/sh/zsh -c takes a full shell command line, not a
+        # single tokenized command — it can chain with ;/&&/||/|
+        # (`bash -c "echo hi; cat .env"`). A single shlex.split() only
+        # dispatches the first chained command, dropping the rest.
+        return extract_file_targets(arg)
+    return [(ref, "x") for ref in extract_inline_code_refs(arg)]
 
 
-def _extract_interpreter_targets(cmd: str, it: Iterator[str]) -> list[str]:
+def _extract_interpreter_targets(cmd: str, it: Iterator[str]) -> list[tuple[str, str]]:
     """Collect file/code-literal targets from an interpreter command's args.
 
     Args:
@@ -832,20 +868,49 @@ def _extract_interpreter_targets(cmd: str, it: Iterator[str]) -> list[str]:
         it: Iterator positioned just after the interpreter token.
 
     Returns:
-        Non-flag script-file args, plus refs pulled out of any -c/-e inline
-        code argument.
+        (target, mode) pairs: non-flag script-file args tagged "x" (running
+        a script file, not writing it), plus refs pulled out of any -c/-e
+        inline code argument with their real mode preserved.
     """
-    targets = []
+    targets: list[tuple[str, str]] = []
     prev = None
     for arg in it:
         if arg in SHELL_OPERATORS:
             break
-        if prev in INLINE_CODE_FLAGS:
+        if _is_inline_code_flag(cmd, prev):
             targets.extend(_extract_inline_code_targets(cmd, arg))
         elif not arg.startswith("-"):
-            targets.append(arg)
+            targets.append((arg, "x"))
         prev = arg
     return targets
+
+
+def _is_inline_code_flag(cmd: str, arg: str | None) -> bool:
+    """True if arg is -c/-e/--eval, possibly bundled with other short flags.
+
+    bash/sh/zsh use single-char getopt bundling — `bash -lc '...'` packs
+    the login flag `-l` and the code flag `-c` into one token, which a
+    plain `arg in INLINE_CODE_FLAGS` equality check never matches. A
+    missed match here means the arg that follows is never re-tokenized as
+    shell at all, so a write hidden inside it skips every check below.
+
+    Args:
+        cmd: The interpreter's basename (e.g. "bash", "python3").
+        arg: The previous token, or None if there wasn't one.
+
+    Returns:
+        True if arg is a recognized inline-code flag for cmd.
+    """
+    if arg is None:
+        return False
+    if arg in INLINE_CODE_FLAGS:
+        return True
+    return (
+        cmd in SHELL_INTERPRETER_COMMANDS
+        and arg.startswith("-")
+        and not arg.startswith("--")
+        and "c" in arg[1:]
+    )
 
 
 def _extract_network_targets(it: Iterator[str]) -> list[str]:
@@ -897,14 +962,16 @@ def _extract_raw_socket_targets(it: Iterator[str]) -> list[str]:
     return targets
 
 
-def _extract_eval_targets(it: Iterator[str]) -> list[str]:
+def _extract_eval_targets(it: Iterator[str]) -> list[tuple[str, str]]:
     """Re-tokenize and recurse into an `eval` command's remaining args.
 
     Args:
         it: Iterator positioned just after the `eval` token.
 
     Returns:
-        Targets extracted from re-tokenizing the joined remaining args.
+        (target, mode) pairs extracted from re-tokenizing the joined
+        remaining args — already mode-tagged by the recursive call, unlike
+        every other extractor here (hence the dispatch-level passthrough).
     """
     rest = []
     for arg in it:
@@ -919,14 +986,15 @@ def _extract_eval_targets(it: Iterator[str]) -> list[str]:
     return extract_targets_from_tokens(inner_tokens)
 
 
-def _extract_xargs_targets(it: Iterator[str]) -> list[str]:
+def _extract_xargs_targets(it: Iterator[str]) -> list[tuple[str, str]]:
     """Strip xargs's own flags and recurse into its remaining args.
 
     Args:
         it: Iterator positioned just after the `xargs` token.
 
     Returns:
-        Targets extracted from xargs's non-flag remaining args.
+        (target, mode) pairs extracted from xargs's non-flag remaining
+        args — already mode-tagged, see _extract_eval_targets.
     """
     inner_tokens = [a for a in it if a not in SHELL_OPERATORS]
     # xargs's own flags (e.g. -0, -n1, -I{}) aren't file targets
@@ -997,14 +1065,21 @@ def _extract_copy_like_targets(it: Iterator[str]) -> list[str]:
     return targets
 
 
+# why: eval/xargs recurse into extract_targets_from_tokens() and so already
+# return (target, mode) pairs — kept in their own dict (distinct type from
+# _EXACT_NAME_HANDLERS below) so _dispatch_command_targets can pass their
+# output straight through instead of re-wrapping it in another mode tag.
+_PRETAGGED_HANDLERS: dict[str, Callable[[Iterator[str]], list[tuple[str, str]]]] = {
+    "eval": _extract_eval_targets,
+    "xargs": _extract_xargs_targets,
+}
+
 # invariant: checked in order; a command matching more than one group
 # (impossible today, since the groups are disjoint) would only hit the first
 _EXACT_NAME_HANDLERS: dict[str, Callable[[Iterator[str]], list[str]]] = {
     "find": _extract_find_targets,
     "docker": _extract_docker_targets,
     "git": _extract_git_targets,
-    "eval": _extract_eval_targets,
-    "xargs": _extract_xargs_targets,
 }
 _GROUP_HANDLERS: list[tuple[frozenset[str], Callable[[Iterator[str]], list[str]]]] = [
     (frozenset(NETWORK_COMMANDS), _extract_network_targets),
@@ -1018,8 +1093,21 @@ _GROUP_HANDLERS: list[tuple[frozenset[str], Callable[[Iterator[str]], list[str]]
 ]
 
 
-def _dispatch_command_targets(cmd: str, it: Iterator[str]) -> list[str]:
-    """Route to the first matching per-command-family target extractor.
+# hazard: sed/awk/xxd/openssl are in READ_COMMANDS but each has its own
+# write-in-place flag (`sed -i`, `xxd -r -o`, `openssl ... -out file`).
+# _extract_copy_like_targets can't tell a flag's argument from a plain
+# positional, so these stay "w" instead of the blanket "x".
+_WRITE_CAPABLE_READ_COMMANDS = frozenset({"sed", "awk", "xxd", "openssl"})
+
+# why: families whose targets are only run/read need just "x", covered by
+# a ":rx"-only allowlist entry. Every other family (copy, destructive,
+# perm, network, raw-socket, redirection) needs "w" since its targets can
+# overwrite, delete, or exfiltrate the path.
+_EXEC_ONLY_COMMANDS = frozenset(READ_COMMANDS - _WRITE_CAPABLE_READ_COMMANDS)
+
+
+def _resolve_untagged_targets(cmd: str, it: Iterator[str]) -> list[str]:
+    """Route cmd to its plain-string target extractor, if any.
 
     Args:
         cmd: The command's basename.
@@ -1029,8 +1117,6 @@ def _dispatch_command_targets(cmd: str, it: Iterator[str]) -> list[str]:
         That family's extracted targets, or an empty list if cmd matches
         no known family.
     """
-    if cmd in INTERPRETER_COMMANDS:
-        return _extract_interpreter_targets(cmd, it)
     handler = _EXACT_NAME_HANDLERS.get(cmd)
     if handler is not None:
         return handler(it)
@@ -1040,37 +1126,95 @@ def _dispatch_command_targets(cmd: str, it: Iterator[str]) -> list[str]:
     return []
 
 
+def _dispatch_command_targets(cmd: str, it: Iterator[str]) -> list[tuple[str, str]]:
+    """Route to the first matching per-command-family target extractor.
+
+    Args:
+        cmd: The command's basename.
+        it: Iterator positioned just after the command token.
+
+    Returns:
+        (target, mode) pairs for that family's extracted targets.
+        Interpreters and eval/xargs come back already mode-tagged (their
+        own extractors compute the real mode per target, e.g. a write
+        redirect inside `bash -c "... > file"` stays "w" even though the
+        outer command is an interpreter) — never re-tagged here. Every
+        other family gets a single fixed mode: "x" for exec-only families
+        (read commands), "w" otherwise (copy, destructive, perm, network,
+        raw-socket, redirection — their targets can overwrite, delete, or
+        exfiltrate the path). Empty list if cmd matches no known family.
+    """
+    pretagged = _PRETAGGED_HANDLERS.get(cmd)
+    if pretagged is not None:
+        return pretagged(it)
+    if cmd in INTERPRETER_COMMANDS:
+        return _extract_interpreter_targets(cmd, it)
+
+    mode = "x" if cmd in _EXEC_ONLY_COMMANDS else "w"
+    targets = _resolve_untagged_targets(cmd, it)
+    return [(t, mode) for t in targets]
+
+
+# hazard: redirect operator forms shlex can hand back glued to their target with no
+# separating space (`>/etc/foo`, `2>&log`, `>>file`, `&>file`) — a plain
+# `tok in REDIRECT_OPERATORS` equality check only catches the spaced form
+# and silently drops the glued one, which never reaches is_allowed() at all
+_REDIRECT_PREFIX_RE = re.compile(r"^(?:\d*>>?|&>>?|\d*<<?)(?!\()")
+
+
 def _extract_redirection_targets(tokens: list[str]) -> list[str]:
     """Collect `>`/`>>`/`<`/`<<` redirection targets, regardless of command.
+
+    Handles both the spaced form (`>`, `file` as two tokens) and the form
+    shlex hands back glued together with no space (`>file` as one token,
+    optionally fd-prefixed like `2>file` or `&>file`).
 
     Args:
         tokens: The shlex-tokenized argv of one command segment.
 
     Returns:
-        The token immediately following each redirection operator.
+        The token immediately following each redirection operator, or the
+        trailing part of a glued operator+target token.
     """
     targets = []
     for i, tok in enumerate(tokens):
-        if (
-            tok in REDIRECT_OPERATORS or tok in INPUT_REDIRECT_OPERATORS
-        ) and i + 1 < len(tokens):
-            nxt = tokens[i + 1]
-            if nxt not in SHELL_OPERATORS:
+        if tok in REDIRECT_OPERATORS or tok in INPUT_REDIRECT_OPERATORS:
+            nxt = tokens[i + 1] if i + 1 < len(tokens) else None
+            if nxt is not None and nxt not in SHELL_OPERATORS:
                 targets.append(nxt)
+            continue
+        glued = _glued_redirect_target(tok)
+        if glued is not None:
+            targets.append(glued)
     return targets
 
 
-def extract_targets_from_tokens(tokens: list[str]) -> list[str]:
+def _glued_redirect_target(tok: str) -> str | None:
+    """Pull a target out of a redirect+target token with no space, if any.
+
+    Args:
+        tok: A single shlex token, e.g. `>file` or `2>&log`.
+
+    Returns:
+        The part after the redirect prefix, or None if tok isn't one.
+    """
+    m = _REDIRECT_PREFIX_RE.match(tok)
+    if m and m.end() < len(tok):
+        return tok[m.end() :]
+    return None
+
+
+def extract_targets_from_tokens(tokens: list[str]) -> list[tuple[str, str]]:
     """Extract file arguments from a single tokenized command.
 
     Args:
         tokens: The shlex-tokenized argv of one command segment.
 
     Returns:
-        File-like arguments found for that command's family (redirection
-        targets, plus per-command-family matches).
+        (target, mode) pairs: redirection targets always need "w"; a
+        command-family target's mode comes from _dispatch_command_targets.
     """
-    targets = _extract_redirection_targets(tokens)
+    targets = [(t, "w") for t in _extract_redirection_targets(tokens)]
     it = iter(tokens)
     for token in it:
         cmd = os.path.basename(token)
@@ -1079,7 +1223,7 @@ def extract_targets_from_tokens(tokens: list[str]) -> list[str]:
     return targets
 
 
-def extract_file_targets(command: str) -> list[str]:
+def extract_file_targets(command: str) -> list[tuple[str, str]]:
     """Extract file arguments from common read/copy commands.
 
     Covers chained subcommands and command substitutions ($(...) / `...`).
@@ -1088,9 +1232,11 @@ def extract_file_targets(command: str) -> list[str]:
         command: Raw shell command text from the Bash tool call.
 
     Returns:
-        Every file-like target found across the command and its subshells.
+        (target, mode) pairs found across the command and its subshells;
+        mode is "w" (write/destroy) or "x" (execute/read-only) — see
+        _dispatch_command_targets.
     """
-    targets = []
+    targets: list[tuple[str, str]] = []
 
     raw_commands = split_on_operators(command, protect_exec=True)
     for sub in extract_subshells(command):
@@ -1116,23 +1262,22 @@ def extract_file_targets(command: str) -> list[str]:
             tokens = neutralized.split()
         targets.extend(extract_targets_from_tokens(tokens))
 
-    # eval/xargs can smuggle a target through stdin or a nested string that the
-    # per-subcommand tokenizer can't resolve (e.g. `echo .env | xargs cat`) —
-    # fall back to a whole-line keyword scan whenever either appears. Tokenize
-    # with shlex first so quoted words (e.g. `echo '.env'`) get their quotes
-    # stripped before the keyword match — a raw \S+ split leaves the quotes
-    # attached, which then survives into normalize() as part of the filename
-    # and silently dodges every PROTECTED_PATTERNS glob.
+    # hazard: eval/xargs can smuggle a target through stdin the per-subcommand
+    # tokenizer can't resolve (e.g. `echo .env | xargs cat`) — fall back to a
+    # whole-line keyword scan. Kept strict ("w"): this fallback can't tell
+    # read from write, so it must not be waivable by a ":rx"-only entry.
     if re.search(r"\b(eval|xargs)\b", command):
         try:
             words = shlex.split(command)
         except ValueError:
             words = command.split()
         targets.extend(
-            word for word in words if any(kw in word for kw in PROTECTED_KEYWORDS)
+            (word, "w")
+            for word in words
+            if any(kw in word for kw in PROTECTED_KEYWORDS)
         )
 
-    return [expand_env_vars(t) for t in targets]
+    return [(expand_env_vars(t), mode) for t, mode in targets]
 
 
 def deny(file_path: str, pattern: str, source: str) -> None:
@@ -1242,8 +1387,12 @@ def _check_direct_file_access(tool_input: Mapping, tool_name: str) -> str | None
     if not file_path:
         return None
 
-    norm = normalize(file_path)
-    allowed = is_allowed(norm, write=tool_name in WRITE_TOOLS)
+    # hazard: a file_path built from an env var (e.g. "$AI_PROJECT_ROOT_DIR/x")
+    # otherwise stays a literal "$VAR/..." string — normalize() then resolves
+    # it relative to cwd, never matching a PROTECTED_PATTERNS glob built from
+    # the real absolute path.
+    norm = normalize(expand_env_vars(file_path))
+    allowed = is_allowed(norm, needs="w" if tool_name in WRITE_TOOLS else "r")
 
     # allowlist only waives the project-boundary check (e.g. /tmp/**),
     # never the protected-pattern check — a secret is a secret anywhere
@@ -1285,7 +1434,7 @@ def _check_mcp_string_args(
 
         if not os.path.isfile(norm):
             continue
-        if not is_allowed(norm) and not is_within_project(norm):
+        if not is_allowed(norm, needs="r") and not is_within_project(norm):
             deny(candidate, "outside_project", "mcp_path_escape")
 
 
@@ -1302,24 +1451,21 @@ def _check_shell_command(tool_input: Mapping) -> None:
     targets = extract_file_targets(command)
     targets = expand_targets(targets)
 
-    for target in targets:
-        _check_shell_command_target(command, target)
+    for target, mode in targets:
+        _check_shell_command_target(command, target, mode)
 
 
-def _check_shell_command_target(command: str, target: str) -> None:
+def _check_shell_command_target(command: str, target: str, mode: str) -> None:
     """Deny one shell-command target that resolves to a protected path.
 
     Args:
         command: The raw shell command text, used only for the debug log.
         target: One file-like target extracted from command.
+        mode: The access mode needed — "w" (write/destroy) or "x"
+            (execute/read-only), from extract_file_targets.
     """
     norm = normalize(target)
-    # Shell commands mix read (cat) and write (cp dest, >, tee) syntax that
-    # extract_file_targets doesn't distinguish per-target — treat every
-    # shell target as a write so a ":r" allowlist entry never waives the
-    # boundary check here (it only waives it for direct Read/Write/Edit
-    # tool calls, where the mode is known for certain).
-    allowed = is_allowed(norm, write=True)
+    allowed = is_allowed(norm, needs=mode)
 
     # allowlist only waives the project-boundary check (e.g. /tmp/**),
     # never the protected-pattern check — a secret is a secret anywhere
