@@ -179,6 +179,13 @@ def find_findings(old_content: str, new_content: str, file_path: str) -> list[di
     if not added:
         return []
 
+    # why: go-bindata marks only the file header as generated, but every
+    # function it emits (ModTime, Name, Size...) also gets an undeclared
+    # doc-comment — exempt the whole file, not just the header's block.
+    header = new_content.splitlines()[0] if new_content else ""
+    if GENERATED_RE.search(header):
+        return []
+
     blocks = group_blocks(comment_lines(new_content, file_path))
     findings: list[dict] = []
     for block in blocks:
