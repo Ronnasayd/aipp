@@ -22,6 +22,12 @@ const fullResults = atom(
   { plugin: "tool-history", key: "fullResults" } as const,
   {} as Record<string, string>
 );
+// why: passive auto-scroll (new tool call/message) should not yank the
+// window back down once the person has scrolled up to read something.
+const isAtBottom = atom(
+  { plugin: "tool-history", key: "isAtBottom" } as const,
+  true
+);
 
 /**
  * Builds a one-line summary of a tool call's arguments for display in the pane.
@@ -149,6 +155,16 @@ export const register: Register = (on) => {
     return { text: "Tool calls pane opened." };
   });
 
+  on(
+    "ui.scroll",
+    { component: "Pane", requestId: PANE },
+    async ($, e, next) => {
+      const maxOffset = Math.max(0, e.contentRows - e.bodyRows);
+      await update($, isAtBottom, () => e.offset >= maxOffset);
+      return next(e);
+    }
+  );
+
   on("tool.call", async ($, e, next) => {
     const record: ToolCallRecord = {
       id: e.tool_use_id,
@@ -183,7 +199,9 @@ export const register: Register = (on) => {
       });
     }
 
-    if (await read($, isOpen)) void $.ui.scroll({ to: "end", in: PANE });
+    if ((await read($, isOpen)) && (await read($, isAtBottom))) {
+      void $.ui.scroll({ to: "end", in: PANE });
+    }
 
     return ran;
   });
@@ -235,7 +253,8 @@ export const register: Register = (on) => {
       await update($, messages, (list) => [...list, ...newRecords].slice(-200));
       if (
         (await read($, isOpen)) &&
-        (await read($, activeTab)) === "messages"
+        (await read($, activeTab)) === "messages" &&
+        (await read($, isAtBottom))
       ) {
         void $.ui.scroll({ to: "end", in: PANE });
       }
