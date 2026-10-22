@@ -11,10 +11,12 @@
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "2",
     "CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS": "1",
     "PROTECT_FILES_MCP_ALLOWLIST": "ssh-mcp",
-    "QUESTION_TOOL_LANG": "English",
+    "QUESTION_TOOL_LANG": "Portuguese",
     "MD_LANGUAGE": "English",
     "PROTECT_FILES_EXTRA_ALLOWED": "",
-    "CLAUDE_CODE_PLUGIN_DIRS": "~/develop/personal/aipp/claude/dev-mods/tool-history"
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/develop/personal/aipp/claude/dev-mods/tool-history:~/develop/personal/aipp/claude/dev-mods/cache-warmup",
+    "CLAUDE_CODE_PROMPT_CACHE_TTL": "5m",
+    "CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL": "5m"
   },
   "attribution": {
     "commit": "",

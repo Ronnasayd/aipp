@@ -1,0 +1,28 @@
+{
+  "name": "cache-warmup",
+  "version": "0.1.0",
+  "description": "Keeps the prompt cache warm with a one-word background request before it expires, with no band",
+  "userConfig": {
+    "ttl": {
+      "type": "string",
+      "title": "Cache length",
+      "description": "How long the prompt cache lives. Auto reads it from the session transcript; or fix it at 1h or 5m.",
+      "options": ["auto", "1h", "5m"],
+      "default": "auto"
+    },
+    "lead": {
+      "type": "string",
+      "title": "Lead time",
+      "description": "How long before expiry the ping goes out. Auto is 4 minutes for a 1h cache and 40 seconds for 5m.",
+      "options": ["auto", "1m", "2m", "4m", "8m"],
+      "default": "auto"
+    },
+    "idle_cap": {
+      "type": "string",
+      "title": "Stop after idle for",
+      "description": "Pings stop once you have not sent anything for this long, so a forgotten session does not keep spending.",
+      "options": ["1h", "3h", "8h", "none"],
+      "default": "3h"
+    }
+  }
+}
