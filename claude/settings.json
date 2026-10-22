@@ -1,8 +1,8 @@
 {
   "env": {
     "ENABLE_TOOL_SEARCH": "false",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5[1m]",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5-5[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5-5",
     "ASDF_NODEJS_VERSION": "24.16.0",
     "NODE_VERSION": "24.16.0",
     "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1",
@@ -11,7 +11,7 @@
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "2",
     "CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS": "1",
     "PROTECT_FILES_MCP_ALLOWLIST": "ssh-mcp",
-    "QUESTION_TOOL_LANG": "Portuguese",
+    "QUESTION_TOOL_LANG": "English",
     "MD_LANGUAGE": "English",
     "PROTECT_FILES_EXTRA_ALLOWED": "",
     "CLAUDE_CODE_PLUGIN_DIRS": "~/develop/personal/aipp/claude/dev-mods/tool-history"
@@ -119,7 +119,7 @@
     "ask": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "sonnet",
+  "model": "opus",
   "disableClaudeAiConnectors": true,
   "skillOverrides": {
     "computer-use": "off",
@@ -769,8 +769,7 @@
   },
   "subagentStatusLine": {
     "type": "command",
-    "command": "bash \"$AI_PROJECT_ROOT_DIR/scripts/subagent-statusline.sh\"",
-    "refreshInterval": 1
+    "command": "bash \"$AI_PROJECT_ROOT_DIR/scripts/subagent-statusline.sh\""
   },
   "enabledPlugins": {
     "caveman@caveman": true,
@@ -804,7 +803,7 @@
       "effortLevel": "high"
     },
     "claude-opus-5-5": {
-      "effortLevel": "high"
+      "effortLevel": "medium"
     }
   },
   "plansDirectory": "./docs/plans/",

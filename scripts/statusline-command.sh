@@ -337,9 +337,17 @@ fi
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
 cost_info=""
 if [ -n "$cost" ]; then
+    # why: statusline re-renders without new API calls; keep last two distinct costs so delta = last request's cost
+    cost_state="/tmp/claude-statusline-cost-${session_id:-default}"
+    read -r last_cost prev_cost 2>/dev/null < "$cost_state"
+    if [ "$cost" != "$last_cost" ]; then
+        prev_cost="${last_cost:-$cost}"
+        echo "$cost $prev_cost" > "$cost_state"
+    fi
+    cost_delta=$(LC_NUMERIC=C awk -v a="$cost" -v b="${prev_cost:-$cost}" 'BEGIN{printf "%.3f", a-b}')
     cost=$(LC_NUMERIC=C printf "%.3f" "$cost")
     cost_color="$C_GREEN"
-    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost${RESET}"
+    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost (+\$${cost_delta})${RESET}"
 
 fi
 
