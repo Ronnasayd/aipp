@@ -31,11 +31,12 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_TOKEN=$'\U0000EB7E'
     ICON_5H=$'\u23F1'
     ICON_DURATION=$'\U000F0954'
+    ICON_SESSION=$'\U000025B2'
 else
     ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙"
     ICON_EMAIL="📧" ICON_SERENA="🧭" ICON_MEMORY="💾" ICON_RAGRAT="🐀" ICON_COST="💰"
     ICON_WEEK="📅" ICON_FOLDER="📁" ICON_BRANCH="🌿" ICON_MODEL="🤖" ICON_CTX="📚"
-    ICON_CACHE="📦" ICON_TOKEN="🎟" ICON_5H="⏱" ICON_DURATION="⌛"
+    ICON_CACHE="📦" ICON_TOKEN="🎟" ICON_5H="⏱" ICON_DURATION="⌛" ICON_SESSION="👤"
 fi
 
 # Read JSON input from stdin
@@ -432,7 +433,17 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
     esac
     reset_label="${reset_date}${reset_suffix}"
 
-    rate_info="${ICON_5H} 5h ${five_color}${five_int}%${RESET}${pace_info} (-${time_left})${SEP}${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} (${reset_label})"
+    # why: rate_limits is account-wide; baseline at first sighting per session isolates this session's share
+    five_state="/tmp/claude-statusline-5h-${session_id:-default}"
+    read -r five_base 2>/dev/null < "$five_state"
+    # invariant: current < baseline means the 5h window reset; rebase to 0 so session usage stays >= 0
+    if [ -z "$five_base" ] || [ "$five_int" -lt "$five_base" ] 2>/dev/null; then
+        [ -z "$five_base" ] && five_base="$five_int" || five_base=0
+        echo "$five_base" > "$five_state"
+    fi
+    five_sess=$(( five_int - five_base ))
+
+    rate_info="${ICON_5H} 5h ${five_color}${five_int}%${RESET} ${C_MAUVE}(${ICON_SESSION}+${five_sess}%)${RESET}${pace_info} (-${time_left})${SEP}${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} (${reset_label})"
 fi
 
 # Output the complete status line
