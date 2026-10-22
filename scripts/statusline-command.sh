@@ -57,6 +57,8 @@ cache_read=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_inp
 cache_creation=$(echo "$input" | jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
 total_input=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
 total_output=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
+cache_warm=$(echo "$input" | jq -r '.prompt_cache.warm // false')
+cache_expires_at=$(echo "$input" | jq -r '.prompt_cache.expires_at // empty')
 source "$(dirname "${BASH_SOURCE[0]}")/statusline-theme.sh"
 
 # Field separator
@@ -98,6 +100,17 @@ cache_creation_f=$(fmt_k "$cache_creation")
 input_tokens_f=$(fmt_k "$input_tokens")
 total_input_f=$(fmt_k "$total_input")
 total_output_f=$(fmt_k "$total_output")
+
+# Cache TTL countdown (mm:ss until prompt_cache.expires_at, empty if cold/absent)
+cache_ttl_info=""
+if [ "$cache_warm" = "true" ] && [ -n "$cache_expires_at" ]; then
+    now_ts=$(date +%s)
+    ttl_secs=$(( cache_expires_at - now_ts ))
+    if [ "$ttl_secs" -gt 0 ]; then
+        ttl_info=$(printf "%d:%02d" $(( ttl_secs / 60 )) $(( ttl_secs % 60 )))
+        cache_ttl_info="${C_YELLOW}${ICON_CACHE} ${ttl_info}${RESET}"
+    fi
+fi
 
 # Detect project type and language info
 lang_info=""
@@ -419,6 +432,6 @@ cc_ver_info=""
 # OSC 8 hyperlink: v<version> -> release notes (degrades to plain text on terminals without support)
 [ -n "$cc_version" ] && cc_ver_info="${SEP}\e]8;;https://github.com/anthropics/claude-code/releases\e\\\\${C_SUBTEXT}v${cc_version}${RESET}\e]8;;\e\\\\"
 echo -e "${email_color}${email_info}${RESET}${transcript_link}"
-echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${tools_status}${cc_ver_info}"
+echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${tools_status}${cc_ver_info}${SEP}${cache_ttl_info}"
 echo -e "${C_BLUE}${ICON_CTX} ctx ${ctx_bar} ${ctx_pct_int}% (${ctx_usage_k}k/${ctx_size_k}k)${RESET}${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${rate_info}"
 
