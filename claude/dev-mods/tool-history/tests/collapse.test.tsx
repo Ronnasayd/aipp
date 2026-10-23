@@ -57,10 +57,30 @@ test("collapse closes the pane and the band reopens it", async ($, on) => {
     expect(await band.find({ type: "Button", key: "expand" })).toBeFalsy();
 
     const pane = await $.ui.mount({ ...PANE, surface });
+    expect((await pane.find({ type: "Button", key: "calls" }))?.text).toBe(
+      "🔧"
+    );
+    expect((await pane.find({ type: "Button", key: "messages" }))?.text).toBe(
+      "💬"
+    );
+    expect((await pane.find({ type: "Button", key: "collapse" }))?.text).toBe(
+      "📋"
+    );
+    const toolbar = await pane.find({ type: "Box", key: "toolbar" });
+    expect(toolbar?.props?.borderStyle).toBe("round");
+    expect(toolbar?.props?.paddingX).toBe(1);
+    expect(await pane.find({ type: "Box", key: "calls-frame" })).toBeFalsy();
+    // why: the cards keep their 1-row gap; the toolbar sits flush under them.
+    expect((await pane.find({ type: "Box", key: "list" }))?.props?.gap).toBe(1);
+    expect(
+      (await pane.find({ type: "Box", key: "root" }))?.props?.gap
+    ).toBeUndefined();
     await pane.press({ key: "collapse" });
     await pane.unmount();
     expect(closes.at(-1)).toBe("tool-history");
-    expect(await band.find({ type: "Button", key: "expand" })).toBeTruthy();
+    expect((await band.find({ type: "Button", key: "expand" }))?.text).toBe(
+      "» Tool-History"
+    );
 
     const opensBefore = opens.length;
     await band.press({ key: "expand" });

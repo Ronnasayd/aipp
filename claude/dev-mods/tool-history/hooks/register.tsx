@@ -290,7 +290,7 @@ export const register: Register = (on) => {
     const { Button } = $.ui.resolve(e);
     return (
       <Button key="expand" plain onPress={() => setCollapsed($, false)}>
-        » Tool calls
+        » Tool-History
       </Button>
     );
   });
@@ -305,30 +305,33 @@ export const register: Register = (on) => {
     };
 
     const header = (
-      <Box flexDirection="row" gap={1}>
+      <Box
+        key="toolbar"
+        flexDirection="row"
+        gap={1}
+        borderStyle="round"
+        borderColor="subtle"
+        paddingX={1}
+        alignSelf="flex-start"
+      >
         <Button
+          key="calls"
           plain
-          hotkey="1"
           variant={tab === "calls" ? "primary" : "secondary"}
           onPress={selectTab("calls")}
         >
-          Tool Calls
+          🔧
         </Button>
         <Button
+          key="messages"
           plain
-          hotkey="2"
           variant={tab === "messages" ? "primary" : "secondary"}
           onPress={selectTab("messages")}
         >
-          Agent Messages
+          💬
         </Button>
-        <Button
-          key="collapse"
-          plain
-          hotkey="c"
-          onPress={() => setCollapsed($, true)}
-        >
-          «
+        <Button key="collapse" plain onPress={() => setCollapsed($, true)}>
+          📋
         </Button>
       </Box>
     );
@@ -346,41 +349,43 @@ export const register: Register = (on) => {
         }
       }
       return (
-        <Box flexDirection="column" gap={1}>
-          {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
-          {groups.map((group, groupIndex) => (
-            <Box
-              key={`${group.agentLabel}-${groupIndex}`}
-              flexDirection="column"
-            >
-              <Text bold dimColor>
-                ── {group.agentLabel} ──
-              </Text>
-              {group.messages.map((msg) => (
-                <Box
-                  key={msg.id}
-                  flexDirection="column"
-                  borderStyle="round"
-                  paddingX={1}
-                  borderColor={
-                    msg.kind === "user"
-                      ? "green"
-                      : msg.kind === "thinking"
-                        ? "subtle"
-                        : "claude"
-                  }
-                >
-                  <Text bold dimColor>
-                    {msg.kind === "user" ? "User" : msg.kind}
-                  </Text>
-                  <Markdown
-                    text={msg.text}
-                    dimColor={msg.kind === "thinking"}
-                  />
-                </Box>
-              ))}
-            </Box>
-          ))}
+        <Box key="root" flexDirection="column">
+          <Box key="list" flexDirection="column" gap={1}>
+            {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
+            {groups.map((group, groupIndex) => (
+              <Box
+                key={`${group.agentLabel}-${groupIndex}`}
+                flexDirection="column"
+              >
+                <Text bold dimColor>
+                  ── {group.agentLabel} ──
+                </Text>
+                {group.messages.map((msg) => (
+                  <Box
+                    key={msg.id}
+                    flexDirection="column"
+                    borderStyle="round"
+                    paddingX={1}
+                    borderColor={
+                      msg.kind === "user"
+                        ? "green"
+                        : msg.kind === "thinking"
+                          ? "subtle"
+                          : "claude"
+                    }
+                  >
+                    <Text bold dimColor>
+                      {msg.kind === "user" ? "User" : msg.kind}
+                    </Text>
+                    <Markdown
+                      text={msg.text}
+                      dimColor={msg.kind === "thinking"}
+                    />
+                  </Box>
+                ))}
+              </Box>
+            ))}
+          </Box>
           {header}
         </Box>
       );
@@ -399,54 +404,59 @@ export const register: Register = (on) => {
     }
 
     return (
-      <Box flexDirection="column" gap={1}>
-        {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
-        {groups.map((group, groupIndex) => (
-          <Box key={`${group.agentLabel}-${groupIndex}`} flexDirection="column">
-            <Text bold dimColor>
-              ── {group.agentLabel} ──
-            </Text>
-            {group.calls.map((call) => {
-              const isBash = call.tool === "Bash";
-              const icon = call.isDone ? (isBash ? "$" : "✓") : "⚙";
-              const borderColor = call.isError
-                ? "danger"
-                : call.isDone
-                  ? "subtle"
-                  : "claude";
-              return (
-                <Box
-                  key={call.id}
-                  flexDirection="column"
-                  borderStyle="round"
-                  paddingX={1}
-                  borderColor={borderColor}
-                >
-                  <Box flexDirection="row" gap={1}>
-                    <Text bold color={borderColor}>
-                      {icon} {call.tool.toUpperCase()}
-                    </Text>
-                    {results[call.id] && (
-                      <Button
-                        key={`open-${call.id}`}
-                        plain
-                        onPress={() => openFullResult($, call)}
-                      >
-                        [{call.id.slice(-8)}]
-                      </Button>
+      <Box key="root" flexDirection="column">
+        <Box key="list" flexDirection="column" gap={1}>
+          {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
+          {groups.map((group, groupIndex) => (
+            <Box
+              key={`${group.agentLabel}-${groupIndex}`}
+              flexDirection="column"
+            >
+              <Text bold dimColor>
+                ── {group.agentLabel} ──
+              </Text>
+              {group.calls.map((call) => {
+                const isBash = call.tool === "Bash";
+                const icon = call.isDone ? (isBash ? "$" : "✓") : "⚙";
+                const borderColor = call.isError
+                  ? "danger"
+                  : call.isDone
+                    ? "subtle"
+                    : "claude";
+                return (
+                  <Box
+                    key={call.id}
+                    flexDirection="column"
+                    borderStyle="round"
+                    paddingX={1}
+                    borderColor={borderColor}
+                  >
+                    <Box flexDirection="row" gap={1}>
+                      <Text bold color={borderColor}>
+                        {icon} {call.tool.toUpperCase()}
+                      </Text>
+                      {results[call.id] && (
+                        <Button
+                          key={`open-${call.id}`}
+                          plain
+                          onPress={() => openFullResult($, call)}
+                        >
+                          [{call.id.slice(-8)}]
+                        </Button>
+                      )}
+                    </Box>
+                    {call.summary && <Text color="yellow">{call.summary}</Text>}
+                    {call.resultText && (
+                      <Text color="cyan" dimColor={call.isDone}>
+                        {call.resultText}
+                      </Text>
                     )}
                   </Box>
-                  {call.summary && <Text color="yellow">{call.summary}</Text>}
-                  {call.resultText && (
-                    <Text color="cyan" dimColor={call.isDone}>
-                      {call.resultText}
-                    </Text>
-                  )}
-                </Box>
-              );
-            })}
-          </Box>
-        ))}
+                );
+              })}
+            </Box>
+          ))}
+        </Box>
         {header}
       </Box>
     );
