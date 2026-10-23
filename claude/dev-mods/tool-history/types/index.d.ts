@@ -26,6 +26,8 @@ declare module "claude-code" {
       calls: ToolCallRecord[];
       messages: AgentMessageRecord[];
       isOpen: boolean;
+      isCollapsed: boolean;
+      isAtBottom: boolean;
       activeTab: ToolHistoryTab;
       fullResults: Record<string, string>;
     };

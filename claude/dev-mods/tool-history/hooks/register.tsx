@@ -12,6 +12,10 @@ const OUTPUT_DIR = "/tmp/tool-history";
 const calls = atom({ plugin: "tool-history", key: "calls" } as const, []);
 const messages = atom({ plugin: "tool-history", key: "messages" } as const, []);
 const isOpen = atom({ plugin: "tool-history", key: "isOpen" } as const, false);
+const isCollapsed = atom(
+  { plugin: "tool-history", key: "isCollapsed" } as const,
+  false
+);
 const activeTab = atom(
   { plugin: "tool-history", key: "activeTab" } as const,
   "calls" as ToolHistoryTab
@@ -130,13 +134,32 @@ async function openFullResult(
     .catch(() => {});
 }
 
+// why: fire-and-forget; with no surface attached the scroll rejects, and an
+// unhandled rejection there must not fail the hook that asked for it.
+function scrollToEnd($: EngineInterface) {
+  $.ui.scroll({ to: "end", in: PANE }).catch(() => {});
+}
+
+// why: the dock never narrows below 24 columns, so collapsing closes the pane
+// outright and leaves the reopen button in the band above the prompt.
+async function setCollapsed($: EngineInterface, collapsed: boolean) {
+  await update($, isCollapsed, () => collapsed);
+  await update($, isOpen, () => !collapsed);
+  if (collapsed) {
+    await $.ui.close({ id: PANE });
+    return;
+  }
+  await $.ui.open({ id: PANE, title: "Tool calls" });
+  scrollToEnd($);
+}
+
 export const register: Register = (on) => {
   on("session.start", async ($, e, next) => {
     await $.command.register({
       name: "tool-history",
       description: "Toggle the tool calls pane for this session"
     });
-    void $.ui.scroll({ to: "end", in: PANE });
+    scrollToEnd($);
 
     return next(e);
   });
@@ -149,9 +172,10 @@ export const register: Register = (on) => {
       return { text: "Tool calls pane closed." };
     }
 
+    await update($, isCollapsed, () => false);
     await $.ui.open({ id: PANE, title: "Tool calls" });
     await update($, isOpen, () => true);
-    void $.ui.scroll({ to: "end", in: PANE });
+    scrollToEnd($);
     return { text: "Tool calls pane opened." };
   });
 
@@ -200,7 +224,7 @@ export const register: Register = (on) => {
     }
 
     if ((await read($, isOpen)) && (await read($, isAtBottom))) {
-      void $.ui.scroll({ to: "end", in: PANE });
+      scrollToEnd($);
     }
 
     return ran;
@@ -256,9 +280,19 @@ export const register: Register = (on) => {
         (await read($, activeTab)) === "messages" &&
         (await read($, isAtBottom))
       ) {
-        void $.ui.scroll({ to: "end", in: PANE });
+        scrollToEnd($);
       }
     }
+  });
+
+  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+    if (e.props.hasSurvey || !(await read($, isCollapsed))) return next(e);
+    const { Button } = $.ui.resolve(e);
+    return (
+      <Button key="expand" plain onPress={() => setCollapsed($, false)}>
+        » Tool calls
+      </Button>
+    );
   });
 
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
@@ -267,7 +301,7 @@ export const register: Register = (on) => {
 
     const selectTab = (next: ToolHistoryTab) => async () => {
       await update($, activeTab, () => next);
-      void $.ui.scroll({ to: "end", in: PANE });
+      scrollToEnd($);
     };
 
     const header = (
@@ -287,6 +321,14 @@ export const register: Register = (on) => {
           onPress={selectTab("messages")}
         >
           Agent Messages
+        </Button>
+        <Button
+          key="collapse"
+          plain
+          hotkey="c"
+          onPress={() => setCollapsed($, true)}
+        >
+          «
         </Button>
       </Box>
     );
