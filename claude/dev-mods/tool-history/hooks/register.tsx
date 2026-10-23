@@ -286,25 +286,27 @@ export const register: Register = (on) => {
   });
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
-    if (e.props.hasSurvey || !(await read($, isCollapsed))) return next(e);
-    const { Button } = $.ui.resolve(e);
-    return (
-      <Button key="expand" plain onPress={() => setCollapsed($, false)}>
-        » Tool-History
-      </Button>
-    );
-  });
+    if (e.props.hasSurvey) return next(e);
+    if (await read($, isCollapsed)) {
+      const { Button } = $.ui.resolve(e);
+      return (
+        <Button key="expand" plain onPress={() => setCollapsed($, false)}>
+          » Tool-History
+        </Button>
+      );
+    }
+    if (!(await read($, isOpen))) return next(e);
 
-  on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
-    const { Box, Text, Button, Markdown } = $.ui.resolve(e);
+    // why: the pane body scrolls; the band is the only spot that stays
+    // visible while the person reads further up, so the toolbar lives here.
+    const { Box, Button } = $.ui.resolve(e);
     const tab = await read($, activeTab);
-
-    const selectTab = (next: ToolHistoryTab) => async () => {
-      await update($, activeTab, () => next);
+    const atBottom = await read($, isAtBottom);
+    const selectTab = (target: ToolHistoryTab) => async () => {
+      await update($, activeTab, () => target);
       scrollToEnd($);
     };
-
-    const header = (
+    return (
       <Box
         key="toolbar"
         flexDirection="row"
@@ -333,8 +335,18 @@ export const register: Register = (on) => {
         <Button key="collapse" plain onPress={() => setCollapsed($, true)}>
           📋
         </Button>
+        {!atBottom && (
+          <Button key="to-end" plain onPress={() => scrollToEnd($)}>
+            ⬇ fim
+          </Button>
+        )}
       </Box>
     );
+  });
+
+  on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
+    const { Box, Text, Button, Markdown } = $.ui.resolve(e);
+    const tab = await read($, activeTab);
 
     if (tab === "messages") {
       const list = await read($, messages);
@@ -386,7 +398,6 @@ export const register: Register = (on) => {
               </Box>
             ))}
           </Box>
-          {header}
         </Box>
       );
     }
@@ -457,7 +468,6 @@ export const register: Register = (on) => {
             </Box>
           ))}
         </Box>
-        {header}
       </Box>
     );
   });
