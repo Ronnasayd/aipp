@@ -246,29 +246,9 @@ export const register: Register = (on, options: PluginOptions) => {
     return started;
   });
 
-  // why: a resumed conversation's cache may still be live; restore its start so it is kept warm while idle
-  on(
-    "classic.SessionStart",
-    { source: ["clear", "resume", "fork"] },
-    async ($, e, next) => {
-      rt.startedAt = 0;
-      rt.lookup.path = "";
-      if (
-        e.source !== "clear" &&
-        e.seconds_since_last_response !== undefined &&
-        !e.prompt_cache_likely_expired
-      ) {
-        rt.startedAt =
-          (await $.clock.now()) - e.seconds_since_last_response * 1000;
-        arm($, cfg);
-      }
-      return next(e);
-    }
-  );
-
   on("session.end", async ($, e, next) => {
     rt.isTurnRunning = false;
-    // why: classic.SessionStart can be cut short by an earlier plugin, so reset here where the old session id ends
+    // why: reset where the old session id ends, so the next session looks up its own transcript
     rt.lookup.path = "";
     if (e.reason === "clear") rt.startedAt = 0;
     return next(e);

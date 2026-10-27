@@ -87,7 +87,6 @@ async function boot($: Engine, on: On, transcriptTail = "") {
       }
     } as never;
   });
-  on("classic.SessionStart", () => ({}) as never);
   on("session.end", () => ({ sessionId: "session-1" }) as never);
   on("session.start", () => ({ cwd: "/work" }));
   on("command.register", () => ({ value: undefined }) as never);
@@ -289,21 +288,6 @@ test("parseTtl reads the newest cache write split", () => {
   expect(parseTtl(`${line(0, 100)}\n${line(100, 0)}`)).toBe(60 * MINUTE);
   expect(parseTtl('{"cut line')).toBe(null);
 });
-
-fiveMinute(
-  "a resumed session with a live cache is kept warm without a new message",
-  async ($, on) => {
-    const { clock, fork } = await boot($, on);
-    await $.classic.SessionStart({
-      source: "resume",
-      seconds_since_last_response: 100,
-      prompt_cache_likely_expired: false
-    } as never);
-    // why: 100s already elapsed of the 5m entry, so the 40s lead is reached ~160s later
-    await clock.advance(165 * SECOND);
-    expect(fork.calls).toBe(1);
-  }
-);
 
 fiveMinute("a successful ping raises a native notification", async ($, on) => {
   const { clock, notices, request } = await boot($, on);
