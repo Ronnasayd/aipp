@@ -408,7 +408,7 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
         else
             pace_color="$C_GREEN"
         fi
-        pace_info=" ${pace_color}(${pace_sign}${pace_diff}%)${RESET}"
+        pace_info="${pace_color}${pace_sign}${pace_diff}%${RESET}"
     else
         time_left="--:--"
         pace_info=""
@@ -445,7 +445,7 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
     fi
     five_sess=$(( five_int - five_base ))
 
-    rate_info="${ICON_5H} 5h ${five_color}${five_int}%${RESET} ${C_MAUVE}(${ICON_SESSION}+${five_sess}%)${RESET}${pace_info} (-${time_left})${SEP}${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} (${reset_label})"
+    rate_info="(${ICON_5H} 5h ${five_color}${five_int}%${RESET} -${time_left} / ${C_MAUVE}${ICON_SESSION}+${five_sess}%${RESET} / ${pace_info})${SEP}(${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} ${reset_label})"
 fi
 
 # Output the complete status line
