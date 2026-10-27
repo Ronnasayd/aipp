@@ -38,7 +38,8 @@ const rt = {
   startedAt: 0,
   learnedTtlMs: null as number | null,
   lastActivity: 0,
-  isTurnRunning: false,
+  // why: only a main request in flight blocks a ping; a turn waiting on tools or a subagent sends none
+  isRequesting: false,
   isPinging: false,
   // why: the entry whose ping failed, so a failure is not retried on every tick until expiry
   skippedFor: -1,
@@ -148,7 +149,7 @@ async function tick($: EngineInterface, cfg: Cfg) {
   if (left <= 0) return disarm();
   if (
     left > leadMs(cfg, ttl) ||
-    rt.isTurnRunning ||
+    rt.isRequesting ||
     rt.isPinging ||
     rt.skippedFor === rt.startedAt
   )
@@ -247,7 +248,7 @@ export const register: Register = (on, options: PluginOptions) => {
   });
 
   on("session.end", async ($, e, next) => {
-    rt.isTurnRunning = false;
+    rt.isRequesting = false;
     // why: reset where the old session id ends, so the next session looks up its own transcript
     rt.lookup.path = "";
     if (e.reason === "clear") rt.startedAt = 0;
@@ -255,21 +256,20 @@ export const register: Register = (on, options: PluginOptions) => {
   });
 
   on("turn.start", async ($, e, next) => {
-    rt.isTurnRunning = true;
     rt.lastActivity = await $.clock.now();
     return next(e);
-  });
-
-  on("turn.complete", async ($, e, next) => {
-    const done = await next(e);
-    if (!e.agentId) rt.isTurnRunning = false;
-    return done;
   });
 
   // invariant: only main-conversation requests move the entry; subagents cache prefixes of their own
   on("turn.step", async function* ($, e, next) {
     const startedAt = e.agentId ? 0 : await $.clock.now();
-    const result = yield* next(e);
+    if (!e.agentId) rt.isRequesting = true;
+    let result;
+    try {
+      result = yield* next(e);
+    } finally {
+      if (!e.agentId) rt.isRequesting = false;
+    }
     const u = result.usage;
     if (
       !e.agentId &&

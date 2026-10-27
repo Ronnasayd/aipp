@@ -41,7 +41,10 @@ async function boot($: Engine, on: On, transcriptTail = "") {
     notices.push({ text: e.text, title: e.title });
     return { value: { isSent: true, channel: "terminal_bell" } } as never;
   });
+  // why: a test holds a main request in flight by setting `inflight.until`
+  const inflight = { until: null as Promise<void> | null };
   on("turn.step", async function* (_$, e) {
+    if (inflight.until) await inflight.until;
     return {
       turnId: e.turnId,
       index: e.index,
@@ -111,7 +114,17 @@ async function boot($: Engine, on: On, transcriptTail = "") {
     $.command.run({ command: "cache-warmup", args } as never) as Promise<{
       text?: string;
     }>;
-  return { clock, toasts, notices, notify, fork, lookups, request, command };
+  return {
+    clock,
+    toasts,
+    notices,
+    notify,
+    fork,
+    lookups,
+    inflight,
+    request,
+    command
+  };
 }
 
 fiveMinute(
@@ -139,22 +152,33 @@ fiveMinute("a subagent request does not arm the warmer", async ($, on) => {
 });
 
 fiveMinute(
-  "waits for a running turn, then pings once it ends",
+  "waits for an in-flight main request, then pings once it ends",
   async ($, on) => {
-    const { clock, fork, request } = await boot($, on);
+    const { clock, fork, inflight, request } = await boot($, on);
     await request();
-    await $.turn.start({ text: "go on", turnId: "t2" });
+    let release = () => {};
+    inflight.until = new Promise((resolve) => (release = resolve));
+    const pending = request();
     await clock.advance(280 * SECOND);
     expect(fork.calls).toBe(0);
-    await $.turn.complete({
-      answer: "done",
-      durationMs: 1000,
-      isAborted: false,
-      turnId: "t2",
-      reason: "answer",
-      usage: null
-    } as never);
+    inflight.until = null;
+    release();
+    await pending;
+    // why: the entry dates from when the held request started, so it is near its end once released
     await clock.advance(2 * SECOND);
+    expect(fork.calls).toBe(1);
+  }
+);
+
+// why: a main turn waiting on a long subagent sends no request of its own, so its entry would lapse
+fiveMinute(
+  "keeps the cache warm while the main turn waits on a subagent",
+  async ($, on) => {
+    const { clock, fork, request } = await boot($, on);
+    await $.turn.start({ text: "delegate", turnId: "t2" });
+    await request();
+    await request({ agentId: "agent-1" });
+    await clock.advance(265 * SECOND);
     expect(fork.calls).toBe(1);
   }
 );
