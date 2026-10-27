@@ -58,14 +58,12 @@ Prefer dry-run plans and local queue files before enabling recurring or event-dr
 
 Use Claude Code's built-in memory system enhanced with MCP memory server for structured data.
 
-**Built-in memory** (`$CLAUDE_CONFIG_DIR/projects/*/memory/`):
-
+**Built-in memory** (`~/.claude/projects/*/memory/`):
 - User preferences, feedback, project context
 - Stored as markdown files with frontmatter
 - Automatically loaded at session start
 
 **MCP memory server** (structured knowledge graph):
-
 - Entities, relations, observations
 - Queryable graph structure
 - Cross-session persistence
@@ -77,7 +75,7 @@ Use Claude Code's built-in memory system enhanced with MCP memory server for str
 Use TodoWrite for in-session task tracking
 
 # Medium-term: project memory files
-Write to $CLAUDE_CONFIG_DIR/projects/*/memory/ for cross-session recall
+Write to ~/.claude/projects/*/memory/ for cross-session recall
 
 # Long-term: MCP knowledge graph
 Use mcp__memory__create_entities for permanent structured data
@@ -106,13 +104,13 @@ Use an OS scheduler or CI schedule to invoke that command repeatedly when no int
 
 **Useful cron patterns:**
 
-| Pattern        | Schedule       | Use Case                              |
-| -------------- | -------------- | ------------------------------------- |
-| Daily standup  | `0 9 * * 1-5`  | Review PRs, issues, deploy status     |
-| Weekly review  | `0 10 * * 1`   | Code quality metrics, test coverage   |
-| Hourly monitor | `0 * * * *`    | Production health, error rate checks  |
-| Nightly build  | `0 2 * * *`    | Run full test suite, security scan    |
-| Pre-meeting    | `*/30 * * * *` | Prepare context for upcoming meetings |
+| Pattern | Schedule | Use Case |
+|---------|----------|----------|
+| Daily standup | `0 9 * * 1-5` | Review PRs, issues, deploy status |
+| Weekly review | `0 10 * * 1` | Code quality metrics, test coverage |
+| Hourly monitor | `0 * * * *` | Production health, error rate checks |
+| Nightly build | `0 2 * * *` | Run full test suite, security scan |
+| Pre-meeting | `*/30 * * * *` | Prepare context for upcoming meetings |
 
 ### 3. Dispatch / Remote Agents
 
@@ -136,13 +134,11 @@ claude -p "Analyze the output of the security scan and create issues for finding
 Computer control needs a separately configured integration. Anthropic's [computer-use tool and reference environment](https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool) require an application to execute tool calls in an isolated desktop environment. Adding an MCP package name does not supply that environment.
 
 **Capabilities:**
-
 - Browser automation (navigate, click, fill forms, screenshot)
 - Desktop control (open apps, type, mouse control)
 - File system operations beyond CLI
 
 **Use cases within the harness:**
-
 - Automated testing of web UIs
 - Form filling and data entry
 - Screenshot-based monitoring
@@ -156,7 +152,7 @@ Manage a persistent queue of tasks that survive session boundaries.
 
 ```
 # Task persistence via memory
-Write task queue to $CLAUDE_CONFIG_DIR/projects/*/memory/task-queue.md
+Write task queue to ~/.claude/projects/*/memory/task-queue.md
 
 # Task format
 ---
@@ -176,15 +172,15 @@ description: Persistent task queue for autonomous operation
 
 ## Replacing Hermes
 
-| Hermes Component | ECC Equivalent                    | How                                                   |
-| ---------------- | --------------------------------- | ----------------------------------------------------- |
-| Gateway/Router   | CLI + external scheduler          | An authenticated runner starts agent sessions         |
-| Memory System    | Claude memory + MCP memory server | Built-in persistence + knowledge graph                |
-| Tool Registry    | MCP servers                       | Dynamically loaded tool providers                     |
-| Orchestration    | ECC skills + agents               | Skill definitions direct agent behavior               |
-| Computer Use     | Separately configured integration | Browser or desktop control in an isolated environment |
-| Context Manager  | Session management + memory       | ECC 2.0 session lifecycle                             |
-| Task Queue       | Memory-persisted task list        | TodoWrite + memory files                              |
+| Hermes Component | ECC Equivalent | How |
+|------------------|---------------|-----|
+| Gateway/Router | CLI + external scheduler | An authenticated runner starts agent sessions |
+| Memory System | Claude memory + MCP memory server | Built-in persistence + knowledge graph |
+| Tool Registry | MCP servers | Dynamically loaded tool providers |
+| Orchestration | ECC skills + agents | Skill definitions direct agent behavior |
+| Computer Use | Separately configured integration | Browser or desktop control in an isolated environment |
+| Context Manager | Session management + memory | ECC 2.0 session lifecycle |
+| Task Queue | Memory-persisted task list | TodoWrite + memory files |
 
 ## Setup Guide
 
@@ -192,7 +188,7 @@ description: Persistent task queue for autonomous operation
 
 Memory MCP is optional. The [MCP reference memory server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) is published as `@modelcontextprotocol/server-memory`; version `2026.8.31` was verified on the public npm registry on 2026-09-07. It is a reference implementation, not an ECC-bundled service.
 
-After reviewing that package and approving its use, merge this entry into the user-scoped MCP configuration in `$CLAUDE_CONFIG_DIR/.claude.json`, preserving existing settings. Replace `MEMORY_FILE_PATH` with an absolute path in a private directory you own. See [Claude Code MCP configuration](https://code.claude.com/docs/en/mcp) for CLI registration and Windows `cmd /c npx` configuration.
+After reviewing that package and approving its use, merge this entry into the user-scoped MCP configuration in `~/.claude.json`, preserving existing settings. Replace `MEMORY_FILE_PATH` with an absolute path in a private directory you own. See [Claude Code MCP configuration](https://code.claude.com/docs/en/mcp) for CLI registration and Windows `cmd /c npx` configuration.
 
 ```json
 {
@@ -234,7 +230,6 @@ Follow the computer-use reference environment linked above, or the documentation
 ## Example Workflows
 
 ### Autonomous PR Reviewer
-
 ```
 Cron: every 30 min during work hours
 1. Check for new PRs on watched repos
@@ -247,7 +242,6 @@ Cron: every 30 min during work hours
 ```
 
 ### Personal Research Agent
-
 ```
 Cron: daily at 6 AM
 1. Check saved search queries in memory
@@ -259,7 +253,6 @@ Cron: daily at 6 AM
 ```
 
 ### Meeting Prep Agent
-
 ```
 Trigger: 30 min before each calendar event
 1. Read calendar event details

@@ -696,7 +696,12 @@
   },
   "domain-modeling": {
     "skill_md": "mattpocock/engineering/domain-modeling/SKILL.md",
-    "files": ["ADR-FORMAT.md", "CONTEXT-FORMAT.md", "agents/openai.yaml"]
+    "files": [
+      "ADR-FORMAT.md",
+      "CONTEXT-FORMAT.md",
+      "GLOSSARY-FORMAT.md",
+      "agents/openai.yaml"
+    ]
   },
   "grill-with-docs": {
     "skill_md": "mattpocock/engineering/grill-with-docs/SKILL.md",
@@ -1189,15 +1194,40 @@
   "tlc-implement": {
     "skill_md": "tech-leads-club/tlc-implement/SKILL.md",
     "files": [
+      "references/build.md",
       "references/checklist-format.md",
+      "references/checks.md",
+      "references/memory.md",
       "references/screens.md",
       "references/test-policy.md",
-      "references/verify.md"
+      "references/verify-screens.md",
+      "references/verify.md",
+      "scripts/check_commit.py",
+      "scripts/check_proofs.py",
+      "scripts/fixtures/checks.md",
+      "scripts/fixtures/plan.md",
+      "scripts/fixtures/proofs.md",
+      "scripts/fixtures/verification.md",
+      "scripts/lean_config.py",
+      "scripts/lessons.py",
+      "scripts/mutate.py",
+      "scripts/runners.py",
+      "scripts/selftest.py",
+      "scripts/validate_checks.py",
+      "scripts/validate_verification.py"
     ]
   },
   "tlc-plan": {
     "skill_md": "tech-leads-club/tlc-plan/SKILL.md",
-    "files": ["references/document-format.md"]
+    "files": [
+      "references/document-format.md",
+      "references/plan.md",
+      "scripts/fixtures/plan.md",
+      "scripts/lean_config.py",
+      "scripts/lessons.py",
+      "scripts/selftest.py",
+      "scripts/validate_plan.py"
+    ]
   },
   "tlc-spec-driven": {
     "skill_md": "tech-leads-club/tlc-spec-driven/SKILL.md",
@@ -1222,11 +1252,22 @@
       "references/sub-agents.md",
       "references/tasks.md",
       "references/validate.md",
+      "references/verify-screens.md",
       "scripts/check_commit.py",
+      "scripts/check_proofs.py",
+      "scripts/fixtures/checks.md",
+      "scripts/fixtures/plan.md",
+      "scripts/fixtures/proofs.md",
+      "scripts/fixtures/verification.md",
+      "scripts/lean_config.py",
       "scripts/lessons.py",
+      "scripts/mutate.py",
+      "scripts/runners.py",
+      "scripts/selftest.py",
       "scripts/validate_spec.py",
       "scripts/validate_state.py",
-      "scripts/validate_tasks.py"
+      "scripts/validate_tasks.py",
+      "scripts/validate_verification.py"
     ]
   },
   "tlc-spec-lean": {
@@ -1236,12 +1277,18 @@
       "references/checks.md",
       "references/memory.md",
       "references/plan.md",
+      "references/verify-screens.md",
       "references/verify.md",
       "scripts/check_commit.py",
+      "scripts/check_proofs.py",
       "scripts/fixtures/checks.md",
       "scripts/fixtures/plan.md",
+      "scripts/fixtures/proofs.md",
       "scripts/fixtures/verification.md",
+      "scripts/lean_config.py",
       "scripts/lessons.py",
+      "scripts/mutate.py",
+      "scripts/runners.py",
       "scripts/selftest.py",
       "scripts/validate_checks.py",
       "scripts/validate_plan.py",

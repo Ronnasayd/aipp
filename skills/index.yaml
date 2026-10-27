@@ -213,7 +213,7 @@ skills:
 - name:
   - domain-modeling
   description: Build and sharpen a project's domain model. Use when discussing codebase
-    terminology, writing or editing a CONTEXT.md, or recording or editing an ADR.
+    terminology, writing or editing a GLOSSARY.md, or recording or editing an ADR.
 - name:
   - diagnosing-bugs
   description: Diagnosis loop for hard bugs and performance regressions. Use when
@@ -521,10 +521,12 @@ skills:
     provisioning.
 - name:
   - tlc-implement
-  description: 'Implement a work already planned: extracts a checklist, builds it,
-    and proves every check with an independent verifier. Use when the user says "extract
-    a checklist", "build this ticket", "implement this spec", or "tlc-implement".
-    Do NOT use when nobody has decided what to build, or to design the work.'
+  description: Implements work already planned - a plan.md from tlc-plan, or a small
+    ticket - by freezing it into checks with proofs, building, and proving every check
+    with a script and an independent Verifier before declaring done. Use when the
+    user says "implement this plan", "build this ticket", "implement this spec", "write
+    the checks", "verify work", or "tlc-implement". Do NOT use when nobody has decided
+    what to build, or to plan a feature that needs one (that is tlc-plan).
 - name:
   - frontend-blueprint
   description: AI frontend specialist and design consultant that guides users through
@@ -540,12 +542,13 @@ skills:
 - name:
   - tlc-spec-driven
   description: Feature planning and implementation with 4 adaptive phases (Specify,
-    Design, Tasks, Execute). Auto-sizes depth by complexity. Writes testable requirements
-    in EARS notation, atomic tasks, atomic Conventional Commits, and requirement traceability.
-    Ships deterministic Python validation scripts so structural gates are enforced
-    by code, not memory. Features an independent Verifier (author != verifier, evidence-or-zero),
-    a discrimination sensor, a decision log (STATE.md), a test-coverage matrix, and
-    a self-improving lessons layer. Stack-agnostic and tool-agnostic. Use when (1)
+    Design, Tasks, Execute). Auto-sizes depth by complexity. Asks every product decision
+    before the spec is approved, writes testable requirements in EARS notation, atomic
+    tasks with a gate and a commit each, and one check per criterion with the test
+    that proves it. Captures that come with the request bind, and each screen is judged
+    against them. Ships deterministic Python scripts so the gates are enforced by
+    code, not memory; the proofs run once at the end, and an independent Verifier
+    (author != verifier) spends its time on mutations and judgement. Use when (1)
     planning features, (2) implementing with verification and atomic commits, (3)
     validating an implementation against a spec. Triggers on "specify feature", "discuss
     feature", "design", "tasks", "implement", "validate", "verify work", "UAT", "record
@@ -726,16 +729,15 @@ skills:
     planning (use technical-design-doc-creator), or for general documentation.
 - name:
   - tlc-plan
-  description: Turns decided work — a PRD, design doc, RFC, or thread — into tasks
-    a builder can act on without guessing. Finds slices that each prove something,
-    grounds them in the code, and writes intent, observable criteria with concrete
-    values, the boundary, what the change disturbs, and only the decisions that are
-    hard to reverse. Walks every surface the work exposes and sweeps the nine unwritten
-    requirements, recording each landing as a criterion already in the source, existing
-    behaviour, n/a, or Unresolved — never as a criterion the walk invented. Defaults
-    to one task per source. Use when the user says "write the task", "cut this PRD
-    into tasks", "turn this design doc into work", or "tlc-plan". Do NOT use for discovery
-    itself or to implement — a one-line ticket is a decision; a blank wish is not.
+  description: 'Turns a request, ticket, PRD, design or thread into one plan a human
+    approves and a builder can act on without the conversation: asks every gray area
+    until no product decision is left to the builder, then writes the problem, EARS
+    criteria with concrete values, the path and the data it touches (drawn in mermaid),
+    the interface, and only the decisions that are hard to reverse. Captures that
+    come with the request bind. Use when the user says "plan this", "plan feature",
+    "specify feature", "write the plan", "cut this PRD into tasks", or "tlc-plan".
+    Do NOT use to implement (that is tlc-implement), for a standalone design document,
+    or when nobody has decided what to build.'
 - name:
   - the-judge
   description: Evidence-first pull request judge that reviews a PR and posts one consolidated
@@ -1135,14 +1137,20 @@ skills:
     specific improvement suggestions.
 - name:
   - database-migrations
-  description: Database migration best practices for schema changes, data migrations,
-    rollbacks, and zero-downtime deployments across PostgreSQL, MySQL, and common
-    ORMs (Prisma, Drizzle, Kysely, Django, TypeORM, golang-migrate). Use when writing
-    a schema or data migration, planning a rollback, or aiming for zero-downtime deployment.
+  description: 'Safe, reversible database migration patterns: forward-only production
+    changes, expand-contract zero-downtime renames, concurrent indexes, batched backfills,
+    and per-tool workflows for PostgreSQL, Prisma, Drizzle, Kysely, Django, and golang-migrate.
+    Use when writing a schema or data migration, adding a column or index to a large
+    table, planning a rollback, or preparing a zero-downtime deploy.'
 - name:
   - browser-qa
-  description: Use this skill to automate visual testing and UI interaction verification
-    using browser automation after deploying features.
+  description: 'Run automated post-deploy UI verification with a browser automation
+    MCP (claude-in-chrome, Playwright, or Puppeteer): console-error and Core Web Vitals
+    smoke checks, form and auth-flow interaction tests, screenshot visual regression
+    across three breakpoints, and axe-core accessibility audits ending in a SHIP /
+    DO-NOT-SHIP verdict. Use when testing a deployed feature on staging or preview,
+    before shipping frontend changes, reviewing a frontend PR, or checking responsive
+    layout and accessibility.'
 - name:
   - postgres-patterns
   description: PostgreSQL database patterns for query optimization, schema design,
@@ -1155,11 +1163,11 @@ skills:
     or MariaDB schemas and indexes, or when a query, transaction, or replica lags.
 - name:
   - frontend-a11y
-  description: 'Accessibility patterns for React and Next.js — semantic HTML, ARIA
+  description: Accessibility patterns for React and Next.js — semantic HTML, ARIA
     attributes, form labeling, keyboard navigation, focus management, and screen reader
-    support. Use when building any interactive UI component or form.
-
-    '
+    support. Use when building or reviewing forms, modals, dropdowns, tooltips, or
+    tabs, fixing a11y lint or code-review findings, or wiring up keyboard navigation
+    and focus management.
 - name:
   - autonomous-agent-harness
   description: Transform Claude Code into a fully autonomous agent system with persistent
@@ -1170,9 +1178,11 @@ skills:
 - name:
   - git-workflow
   description: Git workflow patterns including branching strategies, commit conventions,
-    merge vs rebase, conflict resolution, and collaborative development best practices
-    for teams of all sizes. Use when choosing a branching strategy, writing commit
-    conventions, deciding merge versus rebase, or resolving conflicts.
+    keeping history clean and readable, tidying local commits before merging, merge
+    vs rebase, conflict resolution, and collaborative development best practices for
+    teams of all sizes. Use when choosing a branching strategy, writing commit conventions,
+    cleaning up history before a pull request, deciding merge versus rebase, or resolving
+    conflicts.
 - name:
   - python-patterns
   description: Pythonic idioms, PEP 8 standards, type hints, and best practices for
@@ -1246,8 +1256,11 @@ skills:
     pagination, or versioning.
 - name:
   - team-builder
-  description: Interactive agent picker for composing and dispatching parallel teams.
-    Use when composing and dispatching a parallel team of agents for a task.
+  description: Interactive picker that discovers available agent personas via the
+    claude agents command and agents/ markdown globs, groups them into domains, has
+    the user select up to five, dispatches them in parallel on one task, and synthesizes
+    agreements and conflicts into a unified report. Use when composing a team of agents,
+    browsing available agent personas, or running several specialist agents in parallel.
 - name:
   - kubernetes-patterns
   description: Kubernetes workload patterns, resource management, RBAC, probes, autoscaling,
@@ -1266,9 +1279,11 @@ skills:
     vulnerabilities in a repository.
 - name:
   - deep-research
-  description: Multi-source deep research using firecrawl and exa MCPs. Searches the
-    web, synthesizes findings, and delivers cited reports with source attribution.
-    Use when the user wants thorough research on any topic with evidence and citations.
+  description: Produce cited research reports from multiple web sources using firecrawl
+    and exa MCP tools — plan sub-questions, search and deep-read sources, then synthesize
+    findings with inline citations and confidence levels. Use when the user asks to
+    research a topic in depth, run a deep dive or investigation, or do competitive
+    analysis, technology evaluation, market sizing, or due diligence on a company.
 - name:
   - cpp-coding-standards
   description: C++ coding standards based on the C++ Core Guidelines (isocpp.github.io).
@@ -1295,19 +1310,18 @@ skills:
     user-facing failure messages in TypeScript, Python, or Go.
 - name:
   - tdd-workflow
-  description: Use this skill when writing new features, fixing bugs, or refactoring
-    code. Enforces test-driven development with 80%+ coverage including unit, integration,
-    and E2E tests.
+  description: 'Test-driven development workflow: write a failing test first, watch
+    it fail, implement the smallest change to green, then refactor with 80%+ coverage
+    across unit, integration, and E2E tests. Use when writing a new feature, fixing
+    a bug, refactoring, or when told to write failing tests first.'
 - name:
   - blueprint
   description: 'Turn a one-line objective into a step-by-step construction plan for
-    multi-session, multi-agent engineering projects. Each step has a self-contained
-    context brief so a fresh agent can execute it cold. Includes adversarial review
-    gate, dependency graph, parallel step detection, anti-pattern catalog, and plan
-    mutation protocol. TRIGGER when: user requests a plan, blueprint, or roadmap for
-    a complex multi-PR task, or describes work that needs multiple sessions. DO NOT
-    TRIGGER when: task is completable in a single PR or fewer than 3 tool calls, or
-    user says "just do it".'
+    multi-session, multi-agent engineering projects: one-PR-sized steps with self-contained
+    context briefs, dependency graph with parallel-step detection, adversarial review
+    gate, and plan mutation protocol. Use when planning a large feature, refactor,
+    or roadmap that spans multiple PRs or sessions; not for single-PR tasks or when
+    the user says "just do it".'
 - name:
   - dmux-workflows
   description: Multi-agent orchestration using dmux (tmux pane manager for AI agents).
@@ -1322,8 +1336,11 @@ skills:
     or fixing tests for React components, hooks, or pages.
 - name:
   - regex-vs-llm-structured-text
-  description: Decision framework for choosing between regex and LLM when parsing
-    structured text — start with regex, add LLM only for low-confidence edge cases.
+  description: Decision framework for parsing structured text (quizzes, forms, invoices,
+    receipts, tables) with a hybrid regex-first pipeline — regex extraction handles
+    95%+ cheaply, a confidence scorer flags low-confidence items, and an LLM validator
+    fixes only the edge cases. Use when choosing between regex and LLM for text extraction,
+    building a cheap document parser, or optimizing extraction cost and accuracy.
 - name:
   - github-ops
   description: GitHub repository operations, automation, and management. Issue triage,
@@ -1371,10 +1388,10 @@ skills:
     connection limits.
 - name:
   - architecture-decision-records
-  description: Capture architectural decisions made during Claude Code sessions as
-    structured ADRs. Auto-detects decision moments, records context, alternatives
-    considered, and rationale. Maintains an ADR log so future developers understand
-    why the codebase is shaped the way it is.
+  description: Capture architectural decisions as numbered ADR markdown files in docs/adr/
+    with context, alternatives considered, consequences, and an index README. Use
+    when the user says 'record this decision' or 'ADR this', chooses between frameworks
+    or databases, discusses trade-offs, or asks why the codebase is shaped this way.
 - name:
   - codebase-onboarding
   description: Analyze an unfamiliar codebase and generate a structured onboarding
@@ -1422,9 +1439,12 @@ skills:
     Activate when working with vite.config.ts, Vite plugins, or Vite-based projects.
 - name:
   - parallel-execution-optimizer
-  description: Use when the user wants a task done much faster through parallel work,
-    concurrent agents, batched tool calls, isolated worktrees, or many independent
-    verification lanes without losing correctness.
+  description: Speed up a task by turning it into a dependency graph of parallel lanes
+    with a lane matrix, batched reads and checks, write surfaces isolated by file,
+    worktree, branch, or service, and a final verification table. Use when the user
+    wants a task done much faster through parallel work, concurrent agents, batched
+    tool calls, isolated worktrees, or many independent verification lanes without
+    losing correctness.
 - name:
   - content-hash-cache-pattern
   description: Cache expensive file processing results using SHA-256 content hashes
