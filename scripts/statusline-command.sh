@@ -325,11 +325,9 @@ if [ -n "$duration_ms" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
     dur_m=$(( (dur_s % 3600) / 60 ))
     dur_sec=$(( dur_s % 60 ))
     if [ "$dur_h" -gt 0 ]; then
-        dur_fmt=$(printf "%dh%02dm" "$dur_h" "$dur_m")
-    elif [ "$dur_m" -gt 0 ]; then
-        dur_fmt=$(printf "%dm%02ds" "$dur_m" "$dur_sec")
+        dur_fmt=$(printf "%02d:%02d:%02d" "$dur_h" "$dur_m" "$dur_sec")
     else
-        dur_fmt="${dur_sec}s"
+        dur_fmt=$(printf "%02d:%02d" "$dur_m" "$dur_sec")
     fi
     dur_info="${SEP}${C_TEAL}${ICON_DURATION} ${dur_fmt}${RESET}"
 fi
