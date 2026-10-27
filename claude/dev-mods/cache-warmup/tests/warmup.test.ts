@@ -73,8 +73,10 @@ async function boot($: Engine, on: On, transcriptTail = "") {
   });
   on("session.id", () => ({ value: "session-1" }) as never);
   on("env.get", () => ({ value: undefined }) as never);
+  const lookups = { finds: 0 };
   on("process.run", (_$, e) => {
     const isFind = e.argv[0] === "/usr/bin/find";
+    if (isFind) lookups.finds += 1;
     return {
       value: {
         exitCode: 0,
@@ -110,7 +112,7 @@ async function boot($: Engine, on: On, transcriptTail = "") {
     $.command.run({ command: "cache-warmup", args } as never) as Promise<{
       text?: string;
     }>;
-  return { clock, toasts, notices, notify, fork, request, command };
+  return { clock, toasts, notices, notify, fork, lookups, request, command };
 }
 
 fiveMinute(
@@ -254,6 +256,22 @@ auto("on auto, the cache length is read from the transcript", async ($, on) => {
   await clock.advance(265 * SECOND);
   expect(fork.calls).toBe(1);
 });
+
+auto(
+  "after a /clear the transcript is looked up again for the new session",
+  async ($, on) => {
+    const { clock, lookups, request } = await boot($, on);
+    await request();
+    await clock.advance(SECOND);
+    expect(lookups.finds).toBe(1);
+    await $.session.end({ reason: "clear", sessionId: "session-1" } as never);
+    // why: past the recheck window so the throttle does not hide a stale path
+    await clock.advance(11 * MINUTE);
+    await request();
+    await clock.advance(SECOND);
+    expect(lookups.finds).toBe(2);
+  }
+);
 
 test("parseTtl reads the newest cache write split", () => {
   const line = (h: number, m: number) =>

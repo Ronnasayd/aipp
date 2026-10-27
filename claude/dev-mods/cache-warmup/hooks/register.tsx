@@ -268,6 +268,8 @@ export const register: Register = (on, options: PluginOptions) => {
 
   on("session.end", async ($, e, next) => {
     rt.isTurnRunning = false;
+    // why: classic.SessionStart can be cut short by an earlier plugin, so reset here where the old session id ends
+    rt.lookup.path = "";
     if (e.reason === "clear") rt.startedAt = 0;
     return next(e);
   });
