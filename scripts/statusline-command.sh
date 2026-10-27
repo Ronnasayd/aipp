@@ -341,6 +341,8 @@ if [ -n "$cost" ]; then
     # why: statusline re-renders without new API calls; keep last two distinct costs so delta = last request's cost
     cost_state="/tmp/claude-statusline-cost-${session_id:-default}"
     read -r last_cost prev_cost req_count 2>/dev/null < "$cost_state"
+    # why: no state yet means baseline cost 0, so a 0 first render is not counted as a request
+    last_cost="${last_cost:-0}"
     if [ "$cost" != "$last_cost" ]; then
         prev_cost="${last_cost:-$cost}"
         req_count=$(( ${req_count:-0} + 1 ))
@@ -350,7 +352,7 @@ if [ -n "$cost" ]; then
     cost_avg=$(LC_NUMERIC=C awk -v a="$cost" -v n="${req_count:-1}" 'BEGIN{printf "%.3f", (n>0 ? a/n : a)}')
     cost=$(LC_NUMERIC=C printf "%.3f" "$cost")
     cost_color="$C_GREEN"
-    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost (+\$${cost_delta} avg \$${cost_avg})${RESET}"
+    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost (+\$${cost_delta} / \$${cost_avg})${RESET}"
 
 fi
 
