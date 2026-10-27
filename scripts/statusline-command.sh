@@ -350,7 +350,7 @@ if [ -n "$cost" ]; then
     cost_avg=$(LC_NUMERIC=C awk -v a="$cost" -v n="${req_count:-1}" 'BEGIN{printf "%.3f", (n>0 ? a/n : a)}')
     cost=$(LC_NUMERIC=C printf "%.3f" "$cost")
     cost_color="$C_GREEN"
-    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost (+\$${cost_delta} / \$${cost_avg})${RESET}"
+    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost (+\$${cost_delta} / \$${cost_avg} / ↓${req_count:-0})${RESET}"
 
 fi
 
