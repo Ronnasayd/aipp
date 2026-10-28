@@ -12,9 +12,11 @@ const OUTPUT_DIR = "/tmp/tool-history";
 const calls = atom({ plugin: "tool-history", key: "calls" } as const, []);
 const messages = atom({ plugin: "tool-history", key: "messages" } as const, []);
 const isOpen = atom({ plugin: "tool-history", key: "isOpen" } as const, false);
+// why: the session starts collapsed so the band shows the reopen button
+// without the pane taking dock space until it is clicked.
 const isCollapsed = atom(
   { plugin: "tool-history", key: "isCollapsed" } as const,
-  false
+  true
 );
 const activeTab = atom(
   { plugin: "tool-history", key: "activeTab" } as const,
@@ -164,19 +166,19 @@ export const register: Register = (on) => {
     return next(e);
   });
 
+  // why: `/clear` keeps the process (and these atoms) alive and fires no
+  // session.start, so the new session would inherit an open pane.
+  on("session.end", async ($, e, next) => {
+    if (e.reason === "clear") await setCollapsed($, true);
+    return next(e);
+  });
+
   on("command.run", { command: "tool-history" }, async ($) => {
     const open = await read($, isOpen);
-    if (open) {
-      await $.ui.close({ id: PANE });
-      await update($, isOpen, () => false);
-      return { text: "Tool calls pane closed." };
-    }
-
-    await update($, isCollapsed, () => false);
-    await $.ui.open({ id: PANE, title: "Tool calls" });
-    await update($, isOpen, () => true);
-    scrollToEnd($);
-    return { text: "Tool calls pane opened." };
+    await setCollapsed($, open);
+    return {
+      text: open ? "Tool calls pane closed." : "Tool calls pane opened."
+    };
   });
 
   on(

@@ -32,11 +32,12 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_5H=$'\u23F1'
     ICON_DURATION=$'\U000F0954'
     ICON_SESSION=$'\U000025B2'
+    ICON_MEAN=$'\U000003BC'
 else
     ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙"
     ICON_EMAIL="📧" ICON_SERENA="🧭" ICON_MEMORY="💾" ICON_RAGRAT="🐀" ICON_COST="💰"
     ICON_WEEK="📅" ICON_FOLDER="📁" ICON_BRANCH="🌿" ICON_MODEL="🤖" ICON_CTX="📚"
-    ICON_CACHE="📦" ICON_TOKEN="🎟" ICON_5H="⏱" ICON_DURATION="⌛" ICON_SESSION="👤"
+    ICON_CACHE="📦" ICON_TOKEN="🎟" ICON_5H="⏱" ICON_DURATION="⌛" ICON_SESSION="👤" ICON_MEAN="📚"
 fi
 
 # Read JSON input from stdin
@@ -350,7 +351,7 @@ if [ -n "$cost" ]; then
     cost_avg=$(LC_NUMERIC=C awk -v a="$cost" -v n="${req_count:-1}" 'BEGIN{printf "%.3f", (n>0 ? a/n : a)}')
     cost=$(LC_NUMERIC=C printf "%.3f" "$cost")
     cost_color="$C_GREEN"
-    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost (+\$${cost_delta} / \$${cost_avg} / ↓${req_count:-0})${RESET}"
+    cost_info="${SEP}${cost_color}${ICON_COST} \$$cost (+\$${cost_delta} / ${ICON_MEAN}\$${cost_avg} / ↓${req_count:-0})${RESET}"
 
 fi
 
