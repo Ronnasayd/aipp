@@ -446,7 +446,19 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
     fi
     five_sess=$(( five_int - five_base ))
 
-    rate_info="(${ICON_5H} 5h ${five_color}${five_int}%${RESET} -${time_left} / ${C_MAUVE}${ICON_SESSION}+${five_sess}%${RESET} / ${pace_info})${SEP}(${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} ${reset_label})"
+    # why: burn-rate multiplier vs. baseline 20%/60min; >1 means session drains 5h window faster than normal
+    mult_info=""
+    if [ -n "$duration_ms" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
+        mult=$(LC_NUMERIC=C awk -v p="$five_sess" -v ms="$duration_ms" 'BEGIN{printf "%.2f", (p / (ms / 60000)) / (20 / 60)}')
+        if LC_NUMERIC=C awk -v m="$mult" 'BEGIN{exit !(m > 1)}'; then
+            mult_color="$C_RED"
+        else
+            mult_color="$C_GREEN"
+        fi
+        mult_info=" / ${mult_color}×${mult}${RESET}"
+    fi
+
+    rate_info="(${ICON_5H} 5h ${five_color}${five_int}%${RESET} -${time_left} / ${C_MAUVE}${ICON_SESSION}+${five_sess}%${RESET}${mult_info} / ${pace_info})${SEP}(${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} ${reset_label})"
 fi
 
 # Output the complete status line
