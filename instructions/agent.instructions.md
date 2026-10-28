@@ -34,22 +34,12 @@ applyTo: "**/*"
 
 - Vertical slices only: implement thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice testable and validated before next.
 
-## Commonly used skills
+## Mandatory rules for hallucination protection mechanisms
 
-| When                                                   | Use                                          |
-| ------------------------------------------------------ | -------------------------------------------- |
-| New skill's description doesn't trigger reliably       | `skill-description-generator`                |
-| Writing a commit message                               | `semantic-commit-message` / `caveman-commit` |
-| Opening a PR                                           | `generate-pr-description`                    |
-| Unsure about git workflow (rebase, branch strategy)    | `git-guide` / `git-workflow`                 |
-| Break big/complex problem into sub-problems            | `dynamic-programming-analysis`               |
-| Generate/update project docs from code or diff         | `generate-docs`                              |
-| Write PR description from diff/commits                 | `generate-pr-description`                    |
-| Review a PR                                            | `pr-review`                                  |
-| Judge PR w/ evidence-first review + inline GH comments | `the-judge`                                  |
-| Resolve merge conflicts                                | `resolve-merge-conflicts`                    |
-| Execute tasks for a spec-driven feature (taskmaster)   | `sd-execute`                                 |
-| Generate a plan step-by-step                           | `sd-planning`                                |
-| Build requirements review table from spec/design/tasks | `spec-to-requirements-table`                 |
-| Pick between technical options (pros/cons)             | `technical-decision-helper`                  |
-| Map files/deps/tests a task touches before changing    | `context-map`                                |
+- Allowed to say "I don't know": when uncertain or information is missing, state it explicitly (e.g. "I don't have enough information to confidently assess this"). Never fill gaps with guesses.
+
+- Quote before analyzing: for long documents (>20k tokens), first extract word-for-word quotes relevant to the task, then base the analysis only on those quotes, referencing them by number. If none found, say "No relevant quotes found"
+
+- Cite every factual claim: each claim about code, docs, or external sources must carry its source (`path:line`, command output, URL, or direct quote) so it can be audited.
+
+- Verify after generating: review each claim in the response and find a supporting quote/source. If none can be found, retract the claim (mark removal with `[]` when editing a document).

@@ -35,12 +35,20 @@
 
 - Avoid reading entire files unless necessary; prefer reading only relevant excerpts.
 
-- Use `grilling` to request clarification from the user when necessary.
-
 - If a task is complex, use `sequentialthinking` to break it down into smaller tasks.
 
 - In any time evaluate whether there is anything worth saving as permanent memory. Save as permanent memory only what the next session will need and cannot rediscover by reading the code, Git, or CLAUDE.md—such as the _reason_ behind a decision, a non-obvious invariant, or a user preference; if it is already in the repo or only matters for this specific conversation, do not save it. Use the `ai-memory-durable-pages` skill to persist it.
 
 ## Documentation Language
 
-Markdown files under `docs/`, `.specs/` (and nested dirs of those) must be in $MD_LANGUAGE.
+Markdown files under `docs/`, `.specs/` (and nested dirs of those) must be in English
+
+## Mandatory rules for hallucination protection mechanisms
+
+- Allowed to say "I don't know": when uncertain or information is missing, state it explicitly (e.g. "I don't have enough information to confidently assess this"). Never fill gaps with guesses.
+
+- Quote before analyzing: for long documents (>20k tokens), first extract word-for-word quotes relevant to the task, then base the analysis only on those quotes, referencing them by number. If none found, say "No relevant quotes found"
+
+- Cite every factual claim: each claim about code, docs, or external sources must carry its source (`path:line`, command output, URL, or direct quote) so it can be audited.
+
+- Verify after generating: review each claim in the response and find a supporting quote/source. If none can be found, retract the claim (mark removal with `[]` when editing a document).
