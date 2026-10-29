@@ -242,6 +242,7 @@ git_exclude \
     "$DEFAULT_FOLDER/$DEFAULT_LOCAL_AGENTS/*" \
     "$DEFAULT_FOLDER/hooks/*" \
     "$DEFAULT_FOLDER/context-refs.json" \
+    "$DEFAULT_FOLDER/readonly" \
     "skills.db" \
     "skills.db.sha256" \
     ".mcp.json" \
