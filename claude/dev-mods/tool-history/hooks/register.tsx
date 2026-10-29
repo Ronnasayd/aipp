@@ -352,51 +352,32 @@ export const register: Register = (on) => {
 
     if (tab === "messages") {
       const list = await read($, messages);
-      const groups: { agentLabel: string; messages: AgentMessageRecord[] }[] =
-        [];
-      for (const msg of list) {
-        const lastGroup = groups[groups.length - 1];
-        if (lastGroup && lastGroup.agentLabel === msg.agentLabel) {
-          lastGroup.messages.push(msg);
-        } else {
-          groups.push({ agentLabel: msg.agentLabel, messages: [msg] });
-        }
-      }
       return (
         <Box key="root" flexDirection="column">
           <Box key="list" flexDirection="column" gap={1}>
             {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
-            {groups.map((group, groupIndex) => (
+            {list.map((msg) => (
               <Box
-                key={`${group.agentLabel}-${groupIndex}`}
+                key={msg.id}
                 flexDirection="column"
+                borderStyle="round"
+                paddingX={1}
+                borderColor={
+                  msg.kind === "user"
+                    ? "green"
+                    : msg.agentId
+                      ? "yellow"
+                      : msg.kind === "thinking"
+                        ? "subtle"
+                        : "claude"
+                }
               >
                 <Text bold dimColor>
-                  ── {group.agentLabel} ──
+                  {msg.kind === "user"
+                    ? "User"
+                    : `${msg.agentLabel} - ${msg.kind}`}
                 </Text>
-                {group.messages.map((msg) => (
-                  <Box
-                    key={msg.id}
-                    flexDirection="column"
-                    borderStyle="round"
-                    paddingX={1}
-                    borderColor={
-                      msg.kind === "user"
-                        ? "green"
-                        : msg.kind === "thinking"
-                          ? "subtle"
-                          : "claude"
-                    }
-                  >
-                    <Text bold dimColor>
-                      {msg.kind === "user" ? "User" : msg.kind}
-                    </Text>
-                    <Markdown
-                      text={msg.text}
-                      dimColor={msg.kind === "thinking"}
-                    />
-                  </Box>
-                ))}
+                <Markdown text={msg.text} dimColor={msg.kind === "thinking"} />
               </Box>
             ))}
           </Box>
@@ -406,69 +387,52 @@ export const register: Register = (on) => {
 
     const list = await read($, calls);
     const results = await read($, fullResults);
-    const groups: { agentLabel: string; calls: ToolCallRecord[] }[] = [];
-    for (const call of list) {
-      const lastGroup = groups[groups.length - 1];
-      if (lastGroup && lastGroup.agentLabel === call.agentLabel) {
-        lastGroup.calls.push(call);
-      } else {
-        groups.push({ agentLabel: call.agentLabel, calls: [call] });
-      }
-    }
 
     return (
       <Box key="root" flexDirection="column">
         <Box key="list" flexDirection="column" gap={1}>
           {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
-          {groups.map((group, groupIndex) => (
-            <Box
-              key={`${group.agentLabel}-${groupIndex}`}
-              flexDirection="column"
-            >
-              <Text bold dimColor>
-                ── {group.agentLabel} ──
-              </Text>
-              {group.calls.map((call) => {
-                const isBash = call.tool === "Bash";
-                const icon = call.isDone ? (isBash ? "$" : "✓") : "⚙";
-                const borderColor = call.isError
-                  ? "danger"
-                  : call.isDone
-                    ? "subtle"
-                    : "claude";
-                return (
-                  <Box
-                    key={call.id}
-                    flexDirection="column"
-                    borderStyle="round"
-                    paddingX={1}
-                    borderColor={borderColor}
-                  >
-                    <Box flexDirection="row" gap={1}>
-                      <Text bold color={borderColor}>
-                        {icon} {call.tool.toUpperCase()}
-                      </Text>
-                      {results[call.id] && (
-                        <Button
-                          key={`open-${call.id}`}
-                          plain
-                          onPress={() => openFullResult($, call)}
-                        >
-                          [{call.id.slice(-8)}]
-                        </Button>
-                      )}
-                    </Box>
-                    {call.summary && <Text color="yellow">{call.summary}</Text>}
-                    {call.resultText && (
-                      <Text color="cyan" dimColor={call.isDone}>
-                        {call.resultText}
-                      </Text>
-                    )}
-                  </Box>
-                );
-              })}
-            </Box>
-          ))}
+          {list.map((call) => {
+            const isBash = call.tool === "Bash";
+            const icon = call.isDone ? (isBash ? "$" : "✓") : "⚙";
+            const borderColor = call.isError
+              ? "danger"
+              : call.agentId
+                ? "yellow"
+                : call.isDone
+                  ? "subtle"
+                  : "claude";
+            return (
+              <Box
+                key={call.id}
+                flexDirection="column"
+                borderStyle="round"
+                paddingX={1}
+                borderColor={borderColor}
+              >
+                <Box flexDirection="row" gap={1}>
+                  <Text bold color={borderColor}>
+                    {`${call.agentLabel} - ${icon} ${call.tool.toUpperCase()}`}
+                  </Text>
+                  {results[call.id] && (
+                    <Button
+                      key={`open-${call.id}`}
+                      plain
+                      onPress={() => openFullResult($, call)}
+                    >
+                      [{call.id.slice(-8)}]
+                    </Button>
+                  )}
+                </Box>
+                {call.summary && <Text color="yellow">{call.summary}</Text>}
+                {call.resultText && (
+                  <Text color="cyan" dimColor={call.isDone}>
+                    {call.resultText}
+                  </Text>
+                )}
+              </Box>
+            );
+          })}
         </Box>
       </Box>
     );
