@@ -393,6 +393,22 @@ def communication_lang() -> str:
     return f"MANDATORY: Communicate with the user in {lang}."
 
 
+def documentation_lang() -> str:
+    """Render a markdown section stating the required docs language.
+
+    Honors MD_LANGUAGE, defaulting to English like md_language_check.py.
+
+    Returns:
+        Markdown section stating the language for docs/ and .specs/ markdown.
+    """
+    lang = os.environ.get("MD_LANGUAGE", "").strip() or "English"
+    return (
+        "## Documentation Language\n\n"
+        "Markdown files under `docs/`, `.specs/` (and nested dirs of those) "
+        f"must be in {lang}"
+    )
+
+
 def main() -> None:
     """Assemble session-start context sections and emit the hook output."""
     try:
@@ -410,7 +426,7 @@ def main() -> None:
         if count % CONTEXT_EMIT_EVERY != 0:
             sys.exit(0)
 
-    additional_context = f"{RULES}\n\n{communication_lang()}"
+    additional_context = f"{RULES}\n\n{documentation_lang()}\n\n{communication_lang()}"
     package_text = package_json(payload)
     if package_text:
         additional_context += f"\n\n{package_text}"
