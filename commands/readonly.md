@@ -1,8 +1,8 @@
 ---
-description: Toggle readonly mode (blocks Write/Edit/MultiEdit/NotebookEdit)
+description: Toggle readonly mode (blocks Write/Edit/MultiEdit/NotebookEdit, write-capable Bash commands and serena edit tools)
 allowed-tools: Bash(f=*)
 ---
 
-!`f="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}/.claude/readonly"; if [ -f "$f" ]; then rm "$f" && echo "readonly OFF"; else touch "$f" && echo "readonly ON"; fi`
+!`f="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}/.claude"; s="$f/settings.local.json"; w='["Write","Edit","MultiEdit","NotebookEdit","Bash(rm:*)","Bash(mv:*)","Bash(cp:*)","Bash(touch:*)","Bash(mkdir:*)","Bash(chmod:*)","Bash(tee:*)","Bash(sed -i:*)","Bash(git commit:*)","Bash(git add:*)","Bash(git checkout:*)","Bash(git switch:*)","Bash(git stash:*)","Bash(git apply:*)","Bash(python:*)","Bash(python3:*)","Bash(node:*)","Bash(uv run:*)","Bash(npm:*)","Bash(pnpm:*)","Bash(yarn:*)","Bash(perl:*)","Bash(awk:*)","Bash(echo:*)"]'; hc="jq -e '.tool_input|.server==\"serena\" and (.tool_name|test(\"^(replace_|insert_|rename_|safe_delete_|write_memory|edit_memory|delete_memory)\"))' >/dev/null && { printf 'readonly: serena edit tools blocked\n' >&2; exit 2; }; exit 0"; p='{matcher:"mcp__aipp_mcp-manager__call_tool",hooks:[{type:"command",command:$hc}]} as $h | '; [ -f "$s" ] || printf '{}\n' > "$s"; if [ -f "$f/readonly" ]; then find "$f" -maxdepth 1 -name readonly -delete; m=OFF; q=$p'.permissions.deny = ((.permissions.deny // []) - $w) | if .permissions.deny == [] then del(.permissions.deny) else . end | if .permissions == {} then del(.permissions) else . end | .hooks.PreToolUse = ((.hooks.PreToolUse // []) - [$h]) | if .hooks.PreToolUse == [] then del(.hooks.PreToolUse) else . end | if .hooks == {} then del(.hooks) else . end'; else : > "$f/readonly"; m=ON; q=$p'.permissions.deny = ((.permissions.deny // []) + $w | unique) | .hooks.PreToolUse = ((.hooks.PreToolUse // []) - [$h] + [$h])'; fi; c=$(jq --argjson w "$w" --arg hc "$hc" "$q" "$s") && printf '%s\n' "$c" > "$s" && printf 'readonly %s\n' "$m"`
 
 Only confirm the state above to the user. Do nothing else.
