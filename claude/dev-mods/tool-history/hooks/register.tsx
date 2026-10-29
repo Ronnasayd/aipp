@@ -198,7 +198,8 @@ export const register: Register = (on) => {
       summary: summarize(e as unknown as Record<string, unknown>),
       isDone: false,
       agentId: e.agentId,
-      agentLabel: await resolveAgentLabel($, e.agentId)
+      agentLabel: await resolveAgentLabel($, e.agentId),
+      at: Date.now()
     };
     await update($, calls, (list) => [...list, record].slice(-200));
     const args = e as unknown as Record<string, unknown>;
@@ -208,7 +209,8 @@ export const register: Register = (on) => {
         kind: "agent",
         text: `**${args.subagent_type ?? "agent"}** — ${args.description ?? ""}\n\n${args.prompt}`,
         agentId: e.agentId,
-        agentLabel: record.agentLabel
+        agentLabel: record.agentLabel,
+        at: record.at
       };
       await update($, messages, (list) => [...list, delegation].slice(-200));
     }
@@ -249,7 +251,8 @@ export const register: Register = (on) => {
         id: `user-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         kind: "user",
         text: e.text,
-        agentLabel: "Main"
+        agentLabel: "Main",
+        at: Date.now()
       };
       await update($, messages, (list) => [...list, record].slice(-200));
     }
@@ -260,7 +263,7 @@ export const register: Register = (on) => {
     const agentLabel = await resolveAgentLabel($, e.agentId);
     const buffers = new Map<
       number,
-      { kind: "text" | "thinking"; text: string }
+      { kind: "text" | "thinking"; text: string; at: number }
     >();
 
     const stream = next(e);
@@ -268,7 +271,14 @@ export const register: Register = (on) => {
       if (chunk.kind === "text" || chunk.kind === "thinking") {
         const buf = buffers.get(chunk.index);
         if (buf && buf.kind === chunk.kind) buf.text += chunk.text;
-        else buffers.set(chunk.index, { kind: chunk.kind, text: chunk.text });
+        // why: tools run mid-stream; stamping at step end would sort the
+        // text after the calls it introduced in the all tab.
+        else
+          buffers.set(chunk.index, {
+            kind: chunk.kind,
+            text: chunk.text,
+            at: Date.now()
+          });
       }
       yield chunk;
     }
@@ -283,14 +293,15 @@ export const register: Register = (on) => {
         kind: buf.kind,
         text: buf.text,
         agentId: e.agentId,
-        agentLabel
+        agentLabel,
+        at: buf.at
       }));
 
     if (newRecords.length > 0) {
       await update($, messages, (list) => [...list, ...newRecords].slice(-200));
       if (
         (await read($, isOpen)) &&
-        (await read($, activeTab)) === "messages" &&
+        (await read($, activeTab)) !== "calls" &&
         (await read($, isAtBottom))
       ) {
         scrollToEnd($);
@@ -345,6 +356,14 @@ export const register: Register = (on) => {
         >
           💬
         </Button>
+        <Button
+          key="all"
+          plain
+          variant={tab === "all" ? "primary" : "secondary"}
+          onPress={selectTab("all")}
+        >
+          🔀
+        </Button>
         <Button key="collapse" plain onPress={() => setCollapsed($, true)}>
           📋
         </Button>
@@ -360,88 +379,95 @@ export const register: Register = (on) => {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button, Markdown } = $.ui.resolve(e);
     const tab = await read($, activeTab);
+    const msgs = tab === "calls" ? [] : await read($, messages);
+    const callList = tab === "messages" ? [] : await read($, calls);
+    const results = await read($, fullResults);
 
-    if (tab === "messages") {
-      const list = await read($, messages);
+    const messageCard = (msg: AgentMessageRecord) => (
+      <Box
+        key={msg.id}
+        flexDirection="column"
+        borderStyle="round"
+        paddingX={1}
+        borderColor={
+          msg.kind === "user"
+            ? "green"
+            : msg.agentId
+              ? "yellow"
+              : msg.kind === "thinking"
+                ? "subtle"
+                : "claude"
+        }
+      >
+        <Text bold dimColor>
+          {msg.kind === "user" ? "User" : `${msg.agentLabel} - ${msg.kind}`}
+        </Text>
+        <Markdown text={msg.text} dimColor={msg.kind === "thinking"} />
+      </Box>
+    );
+
+    const callCard = (call: ToolCallRecord) => {
+      const isBash = call.tool === "Bash";
+      const icon = call.isDone ? (isBash ? "$" : "✓") : "⚙";
+      const borderColor = call.isError
+        ? "danger"
+        : call.isDone
+          ? "subtle"
+          : "claude";
       return (
-        <Box key="root" flexDirection="column">
-          <Box key="list" flexDirection="column" gap={0}>
-            {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
-            {list.map((msg) => (
-              <Box
-                key={msg.id}
-                flexDirection="column"
-                borderStyle="round"
-                paddingX={1}
-                borderColor={
-                  msg.kind === "user"
-                    ? "green"
-                    : msg.agentId
-                      ? "yellow"
-                      : msg.kind === "thinking"
-                        ? "subtle"
-                        : "claude"
-                }
+        <Box
+          key={call.id}
+          flexDirection="column"
+          borderStyle="round"
+          paddingX={1}
+          borderColor={borderColor}
+        >
+          <Box flexDirection="row" gap={1}>
+            <Text bold color={borderColor}>
+              {`${call.agentLabel} - ${icon} ${call.tool.toUpperCase()}`}
+            </Text>
+            {results[call.id] && (
+              <Button
+                key={`open-${call.id}`}
+                plain
+                onPress={() => openFullResult($, call)}
               >
-                <Text bold dimColor>
-                  {msg.kind === "user"
-                    ? "User"
-                    : `${msg.agentLabel} - ${msg.kind}`}
-                </Text>
-                <Markdown text={msg.text} dimColor={msg.kind === "thinking"} />
-              </Box>
-            ))}
+                [{call.id.slice(-8)}]
+              </Button>
+            )}
           </Box>
+          {call.summary && <Text color="yellow">{call.summary}</Text>}
+          {call.resultText && (
+            <Text color="cyan" dimColor={call.isDone}>
+              {call.resultText}
+            </Text>
+          )}
         </Box>
       );
-    }
+    };
 
-    const list = await read($, calls);
-    const results = await read($, fullResults);
+    // invariant: stable sort keeps a step's messages ahead of the tool calls
+    // it spawned when both carry the same `at`.
+    const items = [
+      ...msgs.map((msg) => ({ at: msg.at ?? 0, card: () => messageCard(msg) })),
+      ...callList.map((call) => ({
+        at: call.at ?? 0,
+        card: () => callCard(call)
+      }))
+    ].sort((a, b) => a.at - b.at);
+
+    const empty =
+      tab === "calls"
+        ? "No tool calls yet."
+        : tab === "messages"
+          ? "No agent messages yet."
+          : "Nothing yet.";
 
     return (
       <Box key="root" flexDirection="column">
         <Box key="list" flexDirection="column" gap={0}>
-          {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
-          {list.map((call) => {
-            const isBash = call.tool === "Bash";
-            const icon = call.isDone ? (isBash ? "$" : "✓") : "⚙";
-            const borderColor = call.isError
-              ? "danger"
-              : call.isDone
-                ? "subtle"
-                : "claude";
-            return (
-              <Box
-                key={call.id}
-                flexDirection="column"
-                borderStyle="round"
-                paddingX={1}
-                borderColor={borderColor}
-              >
-                <Box flexDirection="row" gap={1}>
-                  <Text bold color={borderColor}>
-                    {`${call.agentLabel} - ${icon} ${call.tool.toUpperCase()}`}
-                  </Text>
-                  {results[call.id] && (
-                    <Button
-                      key={`open-${call.id}`}
-                      plain
-                      onPress={() => openFullResult($, call)}
-                    >
-                      [{call.id.slice(-8)}]
-                    </Button>
-                  )}
-                </Box>
-                {call.summary && <Text color="yellow">{call.summary}</Text>}
-                {call.resultText && (
-                  <Text color="cyan" dimColor={call.isDone}>
-                    {call.resultText}
-                  </Text>
-                )}
-              </Box>
-            );
-          })}
+          {items.length === 0 && <Text dimColor>{empty}</Text>}
+          {items.map((item) => item.card())}
         </Box>
       </Box>
     );

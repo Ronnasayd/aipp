@@ -24,3 +24,11 @@
   (key `agent-call-<tool_use_id>`): `subagent_type`, `description` and the
   full `prompt`. Border follows the caller (yellow only if a subagent spawned
   it). `tests/agent-call-message.test.tsx` asserts this.
+
+## All tab (🔀)
+
+- Third tab mixes messages and tool calls in one list, sorted by each
+  record's `at` (ms when it entered). Cards reuse the same renderers as the
+  other tabs. `tests/all-tab.test.tsx` asserts the interleaved order.
+- Text/thinking get `at` from their first streamed chunk, not step end:
+  tools run mid-stream, so an end stamp sorts text after its own calls.

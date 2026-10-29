@@ -7,6 +7,7 @@ export type ToolCallRecord = {
   isError?: boolean;
   agentId?: string;
   agentLabel: string;
+  at?: number;
 };
 
 export type AgentMessageRecord = {
@@ -16,9 +17,10 @@ export type AgentMessageRecord = {
   text: string;
   agentId?: string;
   agentLabel: string;
+  at?: number;
 };
 
-export type ToolHistoryTab = "calls" | "messages";
+export type ToolHistoryTab = "calls" | "messages" | "all";
 
 declare module "claude-code" {
   interface PluginState {
