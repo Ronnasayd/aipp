@@ -1,7 +1,7 @@
 import { expect, test } from "claude-code/testing";
 import { PANE, setupHooks } from "./helpers";
 
-test("subagent tool calls get a yellow border, main ones do not", async ($, on) => {
+test("tool calls never get the yellow subagent border", async ($, on) => {
   setupHooks(on);
   on("ui.open", () => ({ value: { isPlaced: true } }));
   on("tool.call", () => ({ result: { text: "ok" } }) as never);
@@ -26,8 +26,9 @@ test("subagent tool calls get a yellow border, main ones do not", async ($, on) 
 
     const sub = await pane.find({ type: "Box", key: `sub-${surface}` });
     const main = await pane.find({ type: "Box", key: `main-${surface}` });
-    expect(sub?.props?.borderColor).toBe("yellow");
-    expect(main?.props?.borderColor).not.toBe("yellow");
+    // why: yellow marks subagents only in the messages tab; call cards keep status colors.
+    expect(sub?.props?.borderColor).not.toBe("yellow");
+    expect(sub?.props?.borderColor).toBe(main?.props?.borderColor);
     // why: the agent is named inside each card, not in a "── Main ──" divider.
     expect(main?.text).toBe("Main - $ BASHls");
     expect(sub?.text).toBe("a1 - $ BASHls");

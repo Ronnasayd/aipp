@@ -37,7 +37,7 @@ test("collapse closes the pane and the band reopens it", async ($, on) => {
     expect(toolbar?.props?.borderStyle).toBe("round");
     expect(toolbar?.props?.paddingX).toBe(1);
     expect(await pane.find({ type: "Box", key: "calls-frame" })).toBeFalsy();
-    expect((await pane.find({ type: "Box", key: "list" }))?.props?.gap).toBe(1);
+    expect((await pane.find({ type: "Box", key: "list" }))?.props?.gap).toBe(0);
 
     await band.press({ key: "messages" });
     expect(

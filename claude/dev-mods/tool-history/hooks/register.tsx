@@ -201,6 +201,17 @@ export const register: Register = (on) => {
       agentLabel: await resolveAgentLabel($, e.agentId)
     };
     await update($, calls, (list) => [...list, record].slice(-200));
+    const args = e as unknown as Record<string, unknown>;
+    if (e.tool === "Agent" && typeof args.prompt === "string") {
+      const delegation: AgentMessageRecord = {
+        id: `agent-call-${e.tool_use_id}`,
+        kind: "agent",
+        text: `**${args.subagent_type ?? "agent"}** — ${args.description ?? ""}\n\n${args.prompt}`,
+        agentId: e.agentId,
+        agentLabel: record.agentLabel
+      };
+      await update($, messages, (list) => [...list, delegation].slice(-200));
+    }
     const ran = await next(e);
     const rawText = "text" in ran ? ran.text : undefined;
     const resultText = trimResult(rawText);
@@ -354,7 +365,7 @@ export const register: Register = (on) => {
       const list = await read($, messages);
       return (
         <Box key="root" flexDirection="column">
-          <Box key="list" flexDirection="column" gap={1}>
+          <Box key="list" flexDirection="column" gap={0}>
             {list.length === 0 && <Text dimColor>No agent messages yet.</Text>}
             {list.map((msg) => (
               <Box
@@ -390,18 +401,16 @@ export const register: Register = (on) => {
 
     return (
       <Box key="root" flexDirection="column">
-        <Box key="list" flexDirection="column" gap={1}>
+        <Box key="list" flexDirection="column" gap={0}>
           {list.length === 0 && <Text dimColor>No tool calls yet.</Text>}
           {list.map((call) => {
             const isBash = call.tool === "Bash";
             const icon = call.isDone ? (isBash ? "$" : "✓") : "⚙";
             const borderColor = call.isError
               ? "danger"
-              : call.agentId
-                ? "yellow"
-                : call.isDone
-                  ? "subtle"
-                  : "claude";
+              : call.isDone
+                ? "subtle"
+                : "claude";
             return (
               <Box
                 key={call.id}
