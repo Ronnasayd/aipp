@@ -111,6 +111,8 @@ EOF
 fi
 
 ########################################################################################
+# why: SKIP_MCP_MERGE=1 keeps an existing project .mcp.json untouched (no merge, no relink).
+if [[ "${SKIP_MCP_MERGE:-}" != "1" ]] || [[ ! -e "$LOCAL/.mcp.json" && ! -L "$LOCAL/.mcp.json" ]]; then
 if [ -L "$LOCAL/.mcp.json" ] || [ -d "$LOCAL/.mcp.json" ]; then
 rm -rf $LOCAL/.mcp.json
 fi
@@ -118,6 +120,7 @@ if [ -f "$LOCAL/.mcp.json" ]; then
     python3 "$SOURCE/scripts/merge_config.py" "$SOURCE/claude/.mcp.json" "$LOCAL/.mcp.json" "$LOCAL/.mcp.json"
 else
     ln -s "$SOURCE/claude/.mcp.json" "$LOCAL/.mcp.json"
+fi
 fi
 ########################################################################################
 mkdir -p "$HOME/$DEFAULT_FOLDER"
