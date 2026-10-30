@@ -3,6 +3,7 @@
 # Bypass: `git commit --no-verify` (see lefthook/scripts/commit-msg.py for why this exists).
 
 pre-commit:
+  follow: true
   commands:
     format-staged:
       run: uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/format_staged.py
@@ -18,6 +19,7 @@ pre-commit:
       run:
         uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/comment_policy_check.py
 commit-msg:
+  follow: true
   commands:
     conventional-commits:
       run:
@@ -38,6 +40,7 @@ commit-msg:
 # why: rag-rat-maintenance runs detached (nohup + redirected fds) so git returns
 # immediately; lefthook would otherwise wait on the open stdout/stderr pipes.
 post-commit:
+  follow: true
   commands:
     semantic-version-bump:
       run:
@@ -65,6 +68,7 @@ post-rewrite:
         test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-rewrite
         > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 pre-push:
+  follow: true
   commands:
     jest:
       run: $AI_PROJECT_ROOT_DIR/lefthook/scripts/pre-push-jest
