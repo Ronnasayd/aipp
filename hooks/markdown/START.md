@@ -1,52 +1,45 @@
-## Mandatory rules that must always be followed
+## Mandatory rules — always follow
 
-- Every user question → interactive tool, never plain text. Claude:
-  `AskUserQuestion`. Multiple questions: `grilling` skill.
+- User question → interactive tool, never plain text. Claude: `AskUserQuestion`. Many questions: `grilling` skill.
 
-- `AskUserQuestion` questions must be fully contextualized, never terse. Each
-  question's body must explain _why_ it's being asked (what was found in the
-  code, what trade-off is at stake) before stating the choice. Each option's
-  `description` must explain what picking it actually does/causes — not just
-  restate the label. Never submit a question or option whose text would be
-  truncated or cut short; write the full explanation every time.
+- `AskUserQuestion` must be fully contextualized, never terse. Question body: explain _why_ asked (what found in code, what trade-off) before choice. Option `description`: what picking it does/causes — not label restated. No truncated question/option text; full explanation every time.
 
-- When user asks a question → answer only. Do not modify code without user's
-  explicit authorization first.
+- User asks question → answer only. No code change without explicit user authorization.
 
-- When task list exists (multi-step work), use `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate` to give user feedback. Mark tasks complete as done, don't batch.
+- Multi-step work → use `TaskCreate`, `TaskGet`, `TaskList`, `TaskUpdate` for feedback. Mark each task complete when done, no batching.
 
-- Whenever you modify a component or screen → run tests using Playwright (or a similar E2E tool) before finalizing.
+- Modify component/screen → run Playwright (or similar E2E) tests before finalizing.
 
-- Whenever lint, type, or test errors are reported in files you have touched, fix them — even if they were not caused by your own changes.
+- Lint/type/test errors in touched files → fix, even if not caused by you.
 
-- Never treat documentation (`markdown files`,`memories`) as absolute truth. Only the implemented code should be treated as the truth.
+- Docs (`markdown files`, `memories`) not absolute truth. Only implemented code = truth.
 
-- Never assume the code is correct without tests to validate it.
+- No code assumed correct without tests validating it.
 
-- TDD mandatory when repo/project already adopts tests (existing test suite/framework present): write failing test first (Red), then minimal code to pass (Green), then refactor. No large unverified code blocks — small loops only. If repo has no test setup, don't impose one unprompted.
+- TDD mandatory when repo already has tests (suite/framework present): failing test first (Red), minimal code to pass (Green), then refactor. Small loops only, no big unverified blocks. No test setup in repo → don't impose one unprompted.
 
-- Evidence over trust: before asking human review, provide proof change works — passing test logs, screenshots/recordings of E2E or visual tests. No "should work" claims.
+- Evidence over trust: before human review, give proof change works — passing test logs, screenshots/recordings of E2E or visual tests. No "should work" claims.
 
-- Vertical slices only: implement thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice testable and validated before next.
+- Vertical slices only: thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice tested and validated before next.
 
-- Whenever you create sub-agents, specify that they must use `caveman` in _full mode_.
+- Sub-agents created → tell them use `caveman` in _full mode_.
 
-- For sub-agents with simple tasks, use the `Haiku` model, and for medium tasks, use `Sonnet`.
+- Sub-agents: simple task → `Haiku` model; medium task → `Sonnet`.
 
-- Avoid reading entire files unless necessary; prefer reading only relevant excerpts.
+- Avoid reading whole files unless needed; read relevant excerpts.
 
-- If a task is complex, use `sequentialthinking` to break it down into smaller tasks.
+- Complex task → use `sequentialthinking` to split into smaller tasks.
 
-- Whenever you complete a task (such as testing, execution, or building), immediately terminate all background processes and servers that were started, and delete any temporary directories that were generated.
+- Task done (testing, execution, build) → kill all background processes/servers started, delete temp dirs generated.
 
-- In any time evaluate whether there is anything worth saving as permanent memory. Save as permanent memory only what the next session will need and cannot rediscover by reading the code, Git, or CLAUDE.md—such as the _reason_ behind a decision, a non-obvious invariant, or a user preference; if it is already in the repo or only matters for this specific conversation, do not save it. Use the `ai-memory-durable-pages` skill to persist it.
+- Anytime: evaluate what worth saving as permanent memory. Save only what next session needs and can't rediscover from code, Git, or CLAUDE.md — _reason_ behind decision, non-obvious invariant, user preference. Already in repo or only relevant to this conversation → don't save. Persist via `ai-memory-durable-pages` skill.
 
-## Mandatory rules for hallucination protection mechanisms
+## Mandatory rules — hallucination protection
 
-- Allowed to say "I don't know": when uncertain or information is missing, state it explicitly (e.g. "I don't have enough information to confidently assess this"). Never fill gaps with guesses.
+- "I don't know" allowed: uncertain or info missing → say so explicitly (e.g. "I don't have enough information to confidently assess this"). Never fill gaps with guesses.
 
-- Quote before analyzing: for long documents (>20k tokens), first extract word-for-word quotes relevant to the task, then base the analysis only on those quotes, referencing them by number. If none found, say "No relevant quotes found"
+- Quote before analyzing: long docs (>20k tokens) → first extract word-for-word quotes relevant to task, base analysis only on them, reference by number. None found → say "No relevant quotes found".
 
-- Cite every factual claim: each claim about code, docs, or external sources must carry its source (`path:line`, command output, URL, or direct quote) so it can be audited.
+- Cite every factual claim: each claim about code, docs, external sources carries source (`path:line`, command output, URL, direct quote) for audit.
 
-- Verify after generating: review each claim in the response and find a supporting quote/source. If none can be found, retract the claim (mark removal with `[]` when editing a document).
+- Verify after generating: check each claim in response has supporting quote/source. None → retract claim (mark removal with `[]` when editing document).
