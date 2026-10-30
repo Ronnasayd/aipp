@@ -38,6 +38,14 @@ cd ~/aipp
 bash install.sh
 ```
 
+`install.sh` has no `--yes` flag. To auto-answer `y` to prompts from the tools it calls (`serena init`, `rtk init`, `claude plugin install`, `tlc harness install`), pipe `yes` into it:
+
+```sh
+yes | bash install.sh
+```
+
+This answers `y` to every prompt, including ones that default to "no". Tools that read from `/dev/tty` ignore the pipe and still prompt.
+
 **2. Per project**, run `aipp` from the project root with a backend flag:
 
 ```sh

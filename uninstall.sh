@@ -37,5 +37,6 @@ strip_lines() {
 
 strip_lines ~/.bashrc
 strip_lines ~/.zshrc
+rm $HOME/.aipp.alias.zshrc
 
 echo "Uninstall complete."
