@@ -31,8 +31,16 @@
   "mode": "solo",
   "grind": {
     "enabled": true,
-    "lintCommand": ["sh", "-c", "[ \"$SKIP_LINT\" = 1 ] || exec uv run .claude/hooks/scripts/lint_changed.py"],
-    "testCommand": ["sh", "-c", "[ \"$SKIP_TESTS\" = 1 ] || exec uv run .claude/hooks/scripts/test_changed.py"],
+    "lintCommand": [
+      "sh",
+      "-c",
+      "[ \"$SKIP_LINT\" = 1 ] || exec uv run .claude/hooks/scripts/lint_changed.py"
+    ],
+    "testCommand": [
+      "sh",
+      "-c",
+      "[ \"$SKIP_TESTS\" = 1 ] || exec uv run .claude/hooks/scripts/test_changed.py"
+    ],
     "maxLoops": 5
   },
   "comments": {

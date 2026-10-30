@@ -86,6 +86,10 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 
 - Vertical slices only: implement thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice testable and validated before next.
 
+- Whenever you complete a task (such as testing, execution, or building), immediately terminate all background processes and servers that were started, and delete any temporary directories that were generated.
+
+- In any time evaluate whether there is anything worth saving as permanent memory. Save as permanent memory only what the next session will need and cannot rediscover by reading the code, Git, or CLAUDE.md—such as the _reason_ behind a decision, a non-obvious invariant, or a user preference; if it is already in the repo or only matters for this specific conversation, do not save it. Use the `ai-memory-durable-pages` skill to persist it.
+
 ## Mandatory rules for hallucination protection mechanisms
 
 - Allowed to say "I don't know": when uncertain or information is missing, state it explicitly (e.g. "I don't have enough information to confidently assess this"). Never fill gaps with guesses.
