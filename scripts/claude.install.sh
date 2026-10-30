@@ -255,8 +255,9 @@ cp "$SOURCE/tlc-harness-toolkit/config.json" "$LOCAL/.tlc/harness/config.json"
 # why: harness codePaths only matches relative prefixes (no "." / globs), so list every top-level entry of the repo.
 CODE_PATHS="$(ls -A "$LOCAL" | grep -vE '^(\.git|node_modules|\.venv|dist)$' | jq -R . | jq -sc .)"
 # why: target repo has no .claude/hooks/scripts nor numpy; run the toolkit's script under the toolkit's own uv project (cwd stays the target repo).
+# why: SKIP_LINT=1 / SKIP_TESTS=1 at claude launch skips the grind gate, like LEFTHOOK=0; $src goes in as sh's $0 so paths need no quoting.
 jq --argjson cp "$CODE_PATHS" --arg src "$SOURCE" \
-  '.codePaths = $cp | .grind.lintCommand = ["uv", "run", "--project", $src, ($src + "/hooks/scripts/lint_changed.py")] | .grind.testCommand = ["uv", "run", "--project", $src, ($src + "/hooks/scripts/test_changed.py")]' \
+  '.codePaths = $cp | .grind.lintCommand = ["sh", "-c", "[ \"$SKIP_LINT\" = 1 ] || exec uv run --project \"$0\" \"$0/hooks/scripts/lint_changed.py\"", $src] | .grind.testCommand = ["sh", "-c", "[ \"$SKIP_TESTS\" = 1 ] || exec uv run --project \"$0\" \"$0/hooks/scripts/test_changed.py\"", $src]' \
   "$LOCAL/.tlc/harness/config.json" > "$LOCAL/.tlc/harness/config.json.tmp" \
   && mv "$LOCAL/.tlc/harness/config.json.tmp" "$LOCAL/.tlc/harness/config.json"
 git_exclude ".tlc/"
