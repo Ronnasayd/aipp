@@ -412,6 +412,21 @@ for skill in "${SKILLS[@]}"; do
 done
 }
 
+get_skills_rea(){
+# rea
+BASE_URL="https://github.com/morluto/rea/tree/main/.agents/skills"
+SKILLS=(
+  "reverse-engineer-anything"
+)
+for skill in "${SKILLS[@]}"; do
+  ignore_name="rea:${skill}"
+  echo "━━━ ${skill} ━━━"
+  gghget "${BASE_URL}/${skill}" "skills/rea/${skill}"
+  python3 "$SOURCE/scripts/aipp_settings.py" register-if-absent "$SOURCE" skills "${ignore_name}" false
+  echo ""
+done
+}
+
 get_commands_awesome_claude_code_toolkit(){
 # awesome-claude-code-toolkit
 BASE_URL="https://github.com/rohitg00/awesome-claude-code-toolkit/tree/main/commands"
@@ -432,5 +447,6 @@ get_skills_ecc
 get_skills_mattpocock
 get_skills_agent-toolkit
 get_skills_skill-inspector
+get_skills_rea
 get_commands_awesome_claude_code_toolkit
 

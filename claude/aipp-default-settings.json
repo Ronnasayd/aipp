@@ -275,6 +275,7 @@
     "redis-patterns": false,
     "regex-vs-llm-structured-text": false,
     "resolve-merge-conflicts": true,
+    "reverse-engineer-anything": false,
     "safe-refactor": false,
     "scan-codebase-rules-ai-memory": false,
     "sd-execute": true,

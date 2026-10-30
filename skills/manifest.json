@@ -786,6 +786,18 @@
     "skill_md": "quality-gate/SKILL.md",
     "files": ["scripts/quality-gate.js", "scripts/quality-gate.test.js"]
   },
+  "reverse-engineer-anything": {
+    "skill_md": "rea/reverse-engineer-anything/SKILL.md",
+    "files": [
+      "references/android-applications.md",
+      "references/connection-and-recovery.md",
+      "references/environments.md",
+      "references/evidence-workflows.md",
+      "references/javascript-applications.md",
+      "references/native-and-artifacts.md",
+      "references/runtime-observation.md"
+    ]
+  },
   "resolve-merge-conflicts": {
     "skill_md": "resolve-merge-conflicts/SKILL.md",
     "files": [
