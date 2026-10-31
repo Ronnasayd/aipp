@@ -9,6 +9,10 @@ if [ -L "$LOCAL/.mcp.json" ]; then
   rm "$LOCAL/.mcp.json"
 fi
 ########################################################################################
+if [ -d "$LOCAL/.tlc" ]; then
+  rm -rf "$LOCAL/.tlc"
+fi
+########################################################################################
 if [ -L "$LOCAL/$DEFAULT_FOLDER/settings.local.json" ]; then
   rm "$LOCAL/$DEFAULT_FOLDER/settings.local.json"
 fi
