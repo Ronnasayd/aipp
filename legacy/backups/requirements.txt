@@ -83,7 +83,7 @@ protobuf==6.33.1
 psycopg2-binary==2.9.11
 publicsuffix2==2.20191221
 py_rust_stemmers==0.1.5
-pyasn1==0.6.1
+pyasn1==0.6.5
 pyasn1_modules==0.4.2
 pycparser==2.23
 pydantic==2.11.7
