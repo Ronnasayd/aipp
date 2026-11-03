@@ -283,12 +283,15 @@ Proof: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py -k "test_
 **C26** - A changed file inside a deleted directory is excluded before grouping and the gate does not crash (BLINT-12)
 Proof: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py -k "test_deleted_dir_excluded"`
 
+**C27** - Two project roots linted with failures in only one keep the flat `{tool: result}` shape, not the nested one (BLINT-02, AC 3 and the output-keying assumption)
+Proof: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py -k "test_single_failing_root_stays_flat"`
+
 ---
 
 ## Handoff
 
 **Settled mid-build:** none
-**Dispatched:** none
+**Dispatched:** Verifier at HEAD f24e7a8 (diff 186f7bd..f24e7a8) - returned; screens sub-agent not needed (no capture cited)
 **Walked:** none
 
 ---

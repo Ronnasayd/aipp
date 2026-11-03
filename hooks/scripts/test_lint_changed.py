@@ -830,3 +830,20 @@ def test_deleted_dir_excluded(
 
     assert _run_main(capsys) == (0, "")
     assert _py_args(repo.calls("ruff")) == [kept]
+
+
+def test_single_failing_root_stays_flat(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _dirty(repo, "a.py", "b/x.go")
+    repo.write("b/go.mod")
+    _install_python(repo)
+    _install_go(repo)
+    repo.fake("ruff", Fake(stdout='[{"code": "F401"}]', code=1))
+    repo.fake("npx")
+
+    code, out = _run_main(capsys)
+
+    assert len(repo.calls("gofmt")) == 1
+    assert code == 1
+    assert list(json.loads(out)) == ["ruff"]
