@@ -786,7 +786,8 @@
   "enabledPlugins": {
     "caveman@caveman": true,
     "rag-rat@rag-rat": true,
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "router@alexei-led-claude-router": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -805,6 +806,12 @@
       "source": {
         "source": "github",
         "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "alexei-led-claude-router": {
+      "source": {
+        "source": "github",
+        "repo": "alexei-led/claude-router"
       }
     }
   },
