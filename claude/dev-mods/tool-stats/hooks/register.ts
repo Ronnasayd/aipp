@@ -1,7 +1,21 @@
 import type { Register } from "claude-code";
 
-type Counts = { bash: number; read: number; write: number; mcp: number };
-const ZERO: Counts = { bash: 0, read: 0, write: 0, mcp: 0 };
+type Counts = {
+  bash: number;
+  read: number;
+  write: number;
+  mcp: number;
+  skill: number;
+  others: number;
+};
+const ZERO: Counts = {
+  bash: 0,
+  read: 0,
+  write: 0,
+  mcp: 0,
+  skill: 0,
+  others: 0
+};
 const WRITES = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit"]);
 
 // why: $.ui.status has no position and always draws first in the footer; the
@@ -9,16 +23,17 @@ const WRITES = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit"]);
 // One file per session so parallel sessions don't overwrite each other.
 export const statusFile = (sid: string) => `/tmp/claude-tool-stats-${sid}.txt`;
 
-export function bucket(tool: string): keyof Counts | undefined {
+export function bucket(tool: string): keyof Counts {
   if (tool === "Bash") return "bash";
   if (tool === "Read") return "read";
   if (WRITES.has(tool)) return "write";
   if (tool.startsWith("mcp__")) return "mcp";
-  return undefined;
+  if (tool === "Skill") return "skill";
+  return "others";
 }
 
 export function format(c: Counts): string {
-  return `Bash ${c.bash} · Read ${c.read} · Write ${c.write} · MCP ${c.mcp}`;
+  return `Bash ${c.bash} · Read ${c.read} · Write ${c.write} · MCP ${c.mcp} · Skill ${c.skill} · Others ${c.others}`;
 }
 
 export const register: Register = (on) => {
@@ -45,13 +60,13 @@ export const register: Register = (on) => {
 
   on("tool.call", async ($, e, next) => {
     const key = bucket(e.tool);
-    if (key) {
-      const id = await $.session.id();
-      const c = await current(id);
-      c[key]++;
-      queue = queue.then(() => $.fs.write(statusFile(id), format(c))).catch(() => {});
-      await queue;
-    }
+    const id = await $.session.id();
+    const c = await current(id);
+    c[key]++;
+    queue = queue
+      .then(() => $.fs.write(statusFile(id), format(c)))
+      .catch(() => {});
+    await queue;
     return next(e);
   });
 };
