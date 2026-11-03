@@ -11,6 +11,7 @@ Cross-platform (Windows, macOS, Linux)
 # why: identical import bootstrap in every lint hook (jscpd:ignore-start)
 import os
 from pathlib import Path
+import shlex
 import sys
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +19,7 @@ if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 from utils import (  # noqa: E402
+    LINT_TIMEOUT_S,
     find_project_root,
     get_hooks_logger,
     parse_json_output,
@@ -40,8 +42,8 @@ _PHP_EXTS = {".php"}
 
 def _exec(bin_: str, args: list[str], cwd: str | None = None) -> dict:
     """Wrapper for tool invocations."""
-    cmd = " ".join([bin_, *args])
-    return run_command_cwd(cmd, cwd=cwd)
+    cmd = shlex.join([bin_, *args])
+    return run_command_cwd(cmd, cwd=cwd, timeout=LINT_TIMEOUT_S)
 
 
 def _check_tool_installed(project_root: str) -> bool:
@@ -50,30 +52,34 @@ def _check_tool_installed(project_root: str) -> bool:
     return local_bin.exists()
 
 
-def _run_phpstan(resolved: Path, project_root: str) -> dict:
-    """Run PHPStan analyse. Returns {success, output, error, installed}.
+def _run_phpstan(resolved: list[Path], project_root: str) -> dict:
+    """Run PHPStan once over `resolved`. Returns {success, output, error, installed}.
 
     `output` is parsed from phpstan's `--error-format=json` since agents
     parse structured data far more reliably than the default text output.
     """
     if not _check_tool_installed(project_root):
-        logger.debug("phpstan not installed, skipping lint for %s", resolved)
+        logger.debug("phpstan not installed, skipping lint for %d files", len(resolved))
         return {"success": True, "output": "", "error": "", "installed": False}
 
     phpstan_bin = Path(project_root) / "vendor" / "bin" / "phpstan"
-    cmd = f"{phpstan_bin} analyse --error-format=json --no-progress {resolved!s}"
-    logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
+    logger.debug(
+        "Executing: %s analyse on %d files (cwd=%s)",
+        phpstan_bin,
+        len(resolved),
+        project_root,
+    )
     result = _exec(
         str(phpstan_bin),
-        ["analyse", "--error-format=json", "--no-progress", str(resolved)],
+        ["analyse", "--error-format=json", "--no-progress", *map(str, resolved)],
         cwd=project_root,
     )
     logger.debug("phpstan result: success=%s", result["success"])
     output = parse_json_output(result.get("output", ""), "PhpLint", "phpstan", logger)
     if result["success"]:
-        logger.debug("phpstan passed for %s", resolved)
+        logger.debug("phpstan passed for %d files", len(resolved))
     else:
-        logger.warning("phpstan found issues in %s:\n%s", resolved, output)
+        logger.warning("phpstan found issues:\n%s", output)
     if result.get("error"):
         logger.warning("phpstan stderr: %s", result.get("error", ""))
     output = truncate_large_output(output, "phpstan")
@@ -104,9 +110,7 @@ def maybe_run_php_lint(file_paths: list[str], jscpd: bool = True) -> dict:
     project_root = find_project_root(str(resolved[0].parent))
     logger.debug("Project root for %s: %s", resolved[0], project_root)
 
-    # hazard: phpstan still takes one file, so a call with several files lints
-    # only the first until it is batched; no caller passes several yet.
-    result["phpstan"] = _run_phpstan(resolved[0], project_root)
+    result["phpstan"] = _run_phpstan(resolved, project_root)
     if jscpd:
         result["jscpd"] = run_jscpd(resolved, project_root, logger, "PhpLint")
     return result

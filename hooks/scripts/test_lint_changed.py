@@ -382,6 +382,10 @@ def _install_typescript(repo: FakeRepo) -> None:
         repo.fake(tool, dest=bin_dir)
 
 
+def _install_php(repo: FakeRepo) -> None:
+    repo.fake("phpstan", dest=repo.root / "vendor" / "bin")
+
+
 LANGS = [
     Lang(
         "python",
@@ -398,6 +402,14 @@ LANGS = [
         "a b.ts",
         ("tsc-files", "eslint"),
         _install_typescript,
+    ),
+    Lang(
+        "php",
+        php_lint,
+        php_lint.maybe_run_php_lint,
+        "a b.php",
+        ("phpstan",),
+        _install_php,
     ),
 ]
 
@@ -512,3 +524,14 @@ def test_typescript_tools_called_once(repo: FakeRepo) -> None:
         calls = repo.calls(tool)
         assert len(calls) == 1
         assert calls[0][-2:] == files
+
+
+def test_phpstan_called_once(repo: FakeRepo) -> None:
+    files = [str(repo.write(f"{n}.php", "<?php\n").resolve()) for n in "ab"]
+    _install_php(repo)
+
+    php_lint.maybe_run_php_lint(files, jscpd=False)
+
+    calls = repo.calls("phpstan")
+    assert len(calls) == 1
+    assert calls[0][-2:] == files
