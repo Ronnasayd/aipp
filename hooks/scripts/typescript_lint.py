@@ -12,6 +12,7 @@ Cross-platform (Windows, macOS, Linux).
 # why: identical import bootstrap in every lint hook (jscpd:ignore-start)
 import os
 from pathlib import Path
+import shlex
 import sys
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +20,7 @@ if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 from utils import (  # noqa: E402
+    LINT_TIMEOUT_S,
     find_project_root,
     get_hooks_logger,
     parse_json_output,
@@ -41,8 +43,8 @@ _TS_JS_EXTS = {".ts", ".tsx"}
 
 def _exec(bin_: str, args: list[str], cwd: str | None = None) -> dict:
     """Wrapper for tool invocations."""
-    cmd = " ".join([bin_, *args])
-    return run_command_cwd(cmd, cwd=cwd)
+    cmd = shlex.join([bin_, *args])
+    return run_command_cwd(cmd, cwd=cwd, timeout=LINT_TIMEOUT_S)
 
 
 def _check_tool_installed(tool: str, project_root: str) -> bool:
@@ -51,26 +53,28 @@ def _check_tool_installed(tool: str, project_root: str) -> bool:
     return local_bin.exists()
 
 
-def _run_typescript(resolved: Path, project_root: str) -> dict:
-    """Run TypeScript type checking. Returns {success, output, error}."""
+def _run_typescript(resolved: list[Path], project_root: str) -> dict:
+    """Run tsc-files once over `resolved`. Returns {success, output, error}."""
     if not _check_tool_installed("tsc-files", project_root):
         logger.debug(
-            "t] tsc-files not installed, skipping type check for %s",
-            resolved,
+            "t] tsc-files not installed, skipping type check for %d files",
+            len(resolved),
         )
         return {"success": True, "output": "", "error": "", "installed": False}
 
     tsc_files_bin = Path(project_root) / "node_modules" / ".bin" / "tsc-files"
     logger.debug(
-        "t] Running: %s --noEmit %s (cwd=%s)",
+        "t] Running: %s --noEmit on %d files (cwd=%s)",
         tsc_files_bin,
-        resolved,
+        len(resolved),
         project_root,
     )
-    result = _exec(str(tsc_files_bin), ["--noEmit", str(resolved)], cwd=project_root)
-    logger.debug("t] tsc-files result for %s: %s", resolved, result)
+    result = _exec(
+        str(tsc_files_bin), ["--noEmit", *map(str, resolved)], cwd=project_root
+    )
+    logger.debug("t] tsc-files result: %s", result)
     if not result["success"]:
-        logger.debug("t] Type errors in %s:\n%s", resolved, result.get("error", ""))
+        logger.debug("t] Type errors:\n%s", result.get("error", ""))
     output = truncate_large_output(result.get("output", ""), "tsc")
     return {
         "success": result["success"],
@@ -80,35 +84,37 @@ def _run_typescript(resolved: Path, project_root: str) -> dict:
     }
 
 
-def _run_eslint(resolved: Path, project_root: str) -> dict:
-    """Run ESLint checks. Returns {success, output, error}.
+def _run_eslint(resolved: list[Path], project_root: str) -> dict:
+    """Run ESLint once over `resolved`. Returns {success, output, error}.
 
     `output` is parsed from ESLint's `--format json` (structured messages
     list) since agents parse structured data far more reliably than the
     default text output.
     """
     if not _check_tool_installed("eslint", project_root):
-        logger.debug("t] ESLint not installed, skipping lint for %s", resolved)
+        logger.debug(
+            "t] ESLint not installed, skipping lint for %d files", len(resolved)
+        )
         return {"success": True, "output": "", "error": "", "installed": False}
 
     eslint_bin = Path(project_root) / "node_modules" / ".bin" / "eslint"
     logger.debug(
-        "t] Running: %s --quiet --format json %s (cwd=%s)",
+        "t] Running: %s --quiet --format json on %d files (cwd=%s)",
         eslint_bin,
-        resolved,
+        len(resolved),
         project_root,
     )
     result = _exec(
         str(eslint_bin),
-        ["--quiet", "--format", "json", str(resolved)],
+        ["--quiet", "--format", "json", *map(str, resolved)],
         cwd=project_root,
     )
-    logger.debug("t] eslint result for %s: %s", resolved, result)
+    logger.debug("t] eslint result: %s", result)
     output = parse_json_output(
         result.get("output", ""), "TypeScriptLint", "eslint", logger
     )
     if not result["success"]:
-        logger.debug("t] Lint issues in %s:\n%s", resolved, output)
+        logger.debug("t] Lint issues:\n%s", output)
     output = truncate_large_output(output, "eslint")
     return {
         "success": result["success"],
@@ -137,10 +143,8 @@ def maybe_run_typescript_lint(file_paths: list[str], jscpd: bool = True) -> dict
     project_root = find_project_root(str(resolved[0].parent))
     logger.debug("t] Project root for %s: %s", resolved[0], project_root)
 
-    # hazard: the tools below still take one file, so a call with several files
-    # lints only the first until they are batched; no caller passes several yet.
-    result["typescript"] = _run_typescript(resolved[0], project_root)
-    result["eslint"] = _run_eslint(resolved[0], project_root)
+    result["typescript"] = _run_typescript(resolved, project_root)
+    result["eslint"] = _run_eslint(resolved, project_root)
     if jscpd:
         result["jscpd"] = run_jscpd(resolved, project_root, logger, "TypeScriptLint")
     return result

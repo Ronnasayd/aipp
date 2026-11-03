@@ -376,6 +376,12 @@ def _install_python(repo: FakeRepo) -> None:
         repo.fake(tool)
 
 
+def _install_typescript(repo: FakeRepo) -> None:
+    bin_dir = repo.root / "node_modules" / ".bin"
+    for tool in ("tsc-files", "eslint"):
+        repo.fake(tool, dest=bin_dir)
+
+
 LANGS = [
     Lang(
         "python",
@@ -384,6 +390,14 @@ LANGS = [
         "a b.py",
         ("mypy", "ruff", "pylint"),
         _install_python,
+    ),
+    Lang(
+        "typescript",
+        typescript_lint,
+        typescript_lint.maybe_run_typescript_lint,
+        "a b.ts",
+        ("tsc-files", "eslint"),
+        _install_typescript,
     ),
 ]
 
@@ -486,3 +500,15 @@ def test_timeout_reported_no_retry(
     assert _field(result, "ruff", "success") is False
     assert "timed out" in str(_field(result, "ruff", "error"))
     assert len(repo.calls("ruff")) == 1
+
+
+def test_typescript_tools_called_once(repo: FakeRepo) -> None:
+    files = [str(repo.write(f"{n}.ts", "export {};\n").resolve()) for n in "ab"]
+    _install_typescript(repo)
+
+    typescript_lint.maybe_run_typescript_lint(files, jscpd=False)
+
+    for tool in ("tsc-files", "eslint"):
+        calls = repo.calls(tool)
+        assert len(calls) == 1
+        assert calls[0][-2:] == files
