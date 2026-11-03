@@ -1,0 +1,5 @@
+{
+  "name": "tool-stats",
+  "version": "0.1.0",
+  "description": "Status line with per-session Bash/Read/Write/MCP call counts"
+}

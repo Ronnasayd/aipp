@@ -19,6 +19,7 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_EMAIL=$'\U0000F42F'
     ICON_SERENA=$'\U000F1077'
     ICON_TOOLS=$'\U0000F013'
+    ICON_WRENCH=$'\U0000F0AD'
     ICON_MEMORY=$'\U0000F0C7'
     ICON_RAGRAT=$'\U000F1636'
     ICON_COST=$'\U000F0CF4'
@@ -36,7 +37,7 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_READONLY=$'\U0000F023'
 else
     ICON_READONLY="🔏"
-    ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙"
+    ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙" ICON_WRENCH="🔧"
     ICON_EMAIL="📧" ICON_SERENA="🧭" ICON_MEMORY="💾" ICON_RAGRAT="🐀" ICON_COST="💰"
     ICON_WEEK="📅" ICON_FOLDER="📁" ICON_BRANCH="🌿" ICON_MODEL="🤖" ICON_CTX="📚"
     ICON_CACHE="📦" ICON_TOKEN="🎟" ICON_5H="⏱" ICON_DURATION="⌛" ICON_SESSION="👤" ICON_MEAN="📚"
@@ -476,3 +477,6 @@ echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color
 echo -e "${C_BLUE}${ICON_CTX} ctx ${ctx_bar} ${ctx_pct_int}% (${ctx_usage_k}k/${ctx_size_k}k)${RESET}${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${SEP}${cache_ttl_info}"
 echo -e "${rate_info}"
 
+# why: tool-stats mod mirrors per-session counts here; its $.ui.status could only draw first in the footer
+tool_stats_file="/tmp/claude-tool-stats-${session_id}.txt"
+if [ -n "$session_id" ] && [ -r "$tool_stats_file" ]; then echo -e "${C_SUBTEXT}${ICON_WRENCH} $(cat "$tool_stats_file")${RESET}"; fi
