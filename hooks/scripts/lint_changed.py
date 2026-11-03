@@ -80,7 +80,7 @@ def _lint_failures(project_root: str, files: list[str]) -> dict[str, dict]:
     failures: dict[str, dict] = {}
     for rel_path in files:
         maybe_run_lint = _LINT_DISPATCH[Path(rel_path).suffix]
-        results = maybe_run_lint(str(Path(project_root) / rel_path))
+        results = maybe_run_lint([str(Path(project_root) / rel_path)])
         failed = {
             tool: res
             for tool, res in results.items()

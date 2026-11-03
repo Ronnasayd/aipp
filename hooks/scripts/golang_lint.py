@@ -23,6 +23,7 @@ from utils import (  # noqa: E402
     find_project_root,
     get_hooks_logger,
     parse_json_output,
+    resolve_lint_files,
     run_command_cwd,
     run_jscpd,
     run_lint_hook_main,
@@ -202,11 +203,15 @@ def _run_gofmt(resolved: Path, project_root: str) -> dict:
     }
 
 
-def maybe_run_golang_lint(file_path: str | None) -> dict[str, dict[str, Any] | None]:
+def maybe_run_golang_lint(
+    file_paths: list[str], jscpd: bool = True
+) -> dict[str, dict[str, Any] | None]:
     """Run go vet, golangci-lint, gofmt and jscpd checks for Go files.
 
     Args:
-        file_path: Path to the edited file.
+        file_paths: Paths of the edited files, all under one project root.
+        jscpd: Run the duplication check; the batch orchestrator runs it once
+            itself and passes False.
 
     Returns:
         Dict with govet, golangci_lint, gofmt and jscpd results.
@@ -217,32 +222,24 @@ def maybe_run_golang_lint(file_path: str | None) -> dict[str, dict[str, Any] | N
         "gofmt": None,
         "jscpd": None,
     }
-
-    if not file_path:
-        logger.debug("No file_path provided, skipping.")
+    resolved = [
+        path
+        for path in resolve_lint_files(file_paths, _GO_EXTS, logger)
+        if not _is_generated(path)
+    ]
+    if not resolved:
         return result
 
-    resolved = Path(file_path).resolve()
-    if not resolved.exists():
-        logger.debug("File %s does not exist, skipping.", resolved)
-        return result
+    project_root = find_project_root(str(resolved[0].parent))
+    logger.debug("Project root for %s: %s", resolved[0], project_root)
 
-    ext = resolved.suffix.lower()
-    if ext not in _GO_EXTS:
-        logger.debug("File %s not Go, skipping (%s).", resolved, ext)
-        return result
-
-    if _is_generated(resolved):
-        logger.debug("File %s is generated (go-bindata), skipping.", resolved)
-        return result
-
-    project_root = find_project_root(str(resolved.parent))
-    logger.debug("Project root for %s: %s", resolved, project_root)
-
-    result["govet"] = _run_govet(resolved, project_root)
-    result["golangci_lint"] = _run_golangci_lint(resolved, project_root)
-    result["gofmt"] = _run_gofmt(resolved, project_root)
-    result["jscpd"] = run_jscpd([resolved], project_root, logger, "GolangLint")
+    # hazard: the tools below still take one file, so a call with several files
+    # lints only the first until they are batched; no caller passes several yet.
+    result["govet"] = _run_govet(resolved[0], project_root)
+    result["golangci_lint"] = _run_golangci_lint(resolved[0], project_root)
+    result["gofmt"] = _run_gofmt(resolved[0], project_root)
+    if jscpd:
+        result["jscpd"] = run_jscpd(resolved, project_root, logger, "GolangLint")
     return result
 
 
@@ -253,7 +250,11 @@ def maybe_run_golang_lint(file_path: str | None) -> dict[str, dict[str, Any] | N
 
 def main() -> None:
     """Entry point for the Go lint hook."""
-    run_lint_hook_main("GolangLint", logger, maybe_run_golang_lint)
+    run_lint_hook_main(
+        "GolangLint",
+        logger,
+        lambda path: maybe_run_golang_lint([path] if path else []),
+    )
 
 
 if __name__ == "__main__":

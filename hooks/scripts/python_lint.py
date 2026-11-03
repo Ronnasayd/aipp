@@ -24,6 +24,7 @@ from utils import (  # noqa: E402
     get_hooks_logger,
     parse_json_output,
     parse_jsonlines_output,
+    resolve_lint_files,
     run_command_cwd,
     run_jscpd,
     run_lint_hook_main,
@@ -172,11 +173,15 @@ def _run_pylint(resolved: Path, project_root: str) -> dict:
     }
 
 
-def maybe_run_python_lint(file_path: str | None) -> dict[str, dict[str, Any] | None]:
+def maybe_run_python_lint(
+    file_paths: list[str], jscpd: bool = True
+) -> dict[str, dict[str, Any] | None]:
     """Run mypy, ruff, pylint and jscpd checks for Python files.
 
     Args:
-        file_path: Path to the edited file.
+        file_paths: Paths of the edited files, all under one project root.
+        jscpd: Run the duplication check; the batch orchestrator runs it once
+            itself and passes False.
 
     Returns:
         Dict with mypy, ruff, pylint and jscpd results.
@@ -187,28 +192,20 @@ def maybe_run_python_lint(file_path: str | None) -> dict[str, dict[str, Any] | N
         "pylint": None,
         "jscpd": None,
     }
-
-    if not file_path:
-        logger.debug("No file_path provided, skipping.")
+    resolved = resolve_lint_files(file_paths, _PY_EXTS, logger)
+    if not resolved:
         return result
 
-    resolved = Path(file_path).resolve()
-    if not resolved.exists():
-        logger.debug("File %s does not exist, skipping.", resolved)
-        return result
+    project_root = find_project_root(str(resolved[0].parent))
+    logger.debug("Project root for %s: %s", resolved[0], project_root)
 
-    ext = resolved.suffix.lower()
-    if ext not in _PY_EXTS:
-        logger.debug("File %s not Python, skipping (%s).", resolved, ext)
-        return result
-
-    project_root = find_project_root(str(resolved.parent))
-    logger.debug("Project root for %s: %s", resolved, project_root)
-
-    result["mypy"] = _run_mypy(resolved, project_root)
-    result["ruff"] = _run_ruff(resolved, project_root)
-    result["pylint"] = _run_pylint(resolved, project_root)
-    result["jscpd"] = run_jscpd([resolved], project_root, logger, "PythonLint")
+    # hazard: the tools below still take one file, so a call with several files
+    # lints only the first until they are batched; no caller passes several yet.
+    result["mypy"] = _run_mypy(resolved[0], project_root)
+    result["ruff"] = _run_ruff(resolved[0], project_root)
+    result["pylint"] = _run_pylint(resolved[0], project_root)
+    if jscpd:
+        result["jscpd"] = run_jscpd(resolved, project_root, logger, "PythonLint")
     return result
 
 
@@ -219,7 +216,11 @@ def maybe_run_python_lint(file_path: str | None) -> dict[str, dict[str, Any] | N
 
 def main() -> None:
     """Entry point: run mypy/ruff/pylint/jscpd against the changed Python file."""
-    run_lint_hook_main("PythonLint", logger, maybe_run_python_lint)
+    run_lint_hook_main(
+        "PythonLint",
+        logger,
+        lambda path: maybe_run_python_lint([path] if path else []),
+    )
 
 
 if __name__ == "__main__":

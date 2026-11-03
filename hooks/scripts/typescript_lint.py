@@ -22,6 +22,7 @@ from utils import (  # noqa: E402
     find_project_root,
     get_hooks_logger,
     parse_json_output,
+    resolve_lint_files,
     run_command_cwd,
     run_jscpd,
     run_lint_hook_main,
@@ -117,37 +118,31 @@ def _run_eslint(resolved: Path, project_root: str) -> dict:
     }
 
 
-def maybe_run_typescript_lint(file_path: str | None) -> dict:
+def maybe_run_typescript_lint(file_paths: list[str], jscpd: bool = True) -> dict:
     """Run TypeScript, ESLint and jscpd checks for JS/TS files.
 
     Args:
-        file_path: Path to the edited file.
+        file_paths: Paths of the edited files, all under one project root.
+        jscpd: Run the duplication check; the batch orchestrator runs it once
+            itself and passes False.
 
     Returns:
         Dict with typescript, eslint and jscpd results.
     """
     result: dict[str, dict | None] = {"typescript": None, "eslint": None, "jscpd": None}
-
-    if not file_path:
-        logger.debug("t] No file_path provided, skipping.")
+    resolved = resolve_lint_files(file_paths, _TS_JS_EXTS, logger)
+    if not resolved:
         return result
 
-    resolved = Path(file_path).resolve()
-    if not resolved.exists():
-        logger.debug("t] File %s does not exist, skipping.", resolved)
-        return result
+    project_root = find_project_root(str(resolved[0].parent))
+    logger.debug("t] Project root for %s: %s", resolved[0], project_root)
 
-    ext = resolved.suffix.lower()
-    if ext not in _TS_JS_EXTS:
-        logger.debug("t] File %s not JS/TS, skipping (%s).", resolved, ext)
-        return result
-
-    project_root = find_project_root(str(resolved.parent))
-    logger.debug("t] Project root for %s: %s", resolved, project_root)
-
-    result["typescript"] = _run_typescript(resolved, project_root)
-    result["eslint"] = _run_eslint(resolved, project_root)
-    result["jscpd"] = run_jscpd([resolved], project_root, logger, "TypeScriptLint")
+    # hazard: the tools below still take one file, so a call with several files
+    # lints only the first until they are batched; no caller passes several yet.
+    result["typescript"] = _run_typescript(resolved[0], project_root)
+    result["eslint"] = _run_eslint(resolved[0], project_root)
+    if jscpd:
+        result["jscpd"] = run_jscpd(resolved, project_root, logger, "TypeScriptLint")
     return result
 
 
@@ -158,7 +153,11 @@ def maybe_run_typescript_lint(file_path: str | None) -> dict:
 
 def main() -> None:
     """Execute TypeScript/ESLint lint hook."""
-    run_lint_hook_main("TypeScriptLint", logger, maybe_run_typescript_lint)
+    run_lint_hook_main(
+        "TypeScriptLint",
+        logger,
+        lambda path: maybe_run_typescript_lint([path] if path else []),
+    )
 
 
 if __name__ == "__main__":

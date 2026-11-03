@@ -15,12 +15,20 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from typing import TYPE_CHECKING
 
 import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 HOOKS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(HOOKS_DIR))
 
+import golang_lint  # noqa: E402
+import php_lint  # noqa: E402
+import python_lint  # noqa: E402
+import typescript_lint  # noqa: E402
 import utils  # noqa: E402
 
 LOG = logging.getLogger("test_lint_changed")
@@ -265,3 +273,70 @@ def test_jscpd_timeout_300(repo: FakeRepo, monkeypatch: pytest.MonkeyPatch) -> N
     utils.run_jscpd([repo.write("a.py").resolve()], str(repo.root), LOG, "T")
 
     assert spy.timeouts == [300]
+
+
+def _success(result: dict, key: str) -> bool | None:
+    """Return the `success` flag of one tool result, None when it did not run.
+
+    Args:
+        result: Dict returned by a `maybe_run_*` dispatcher.
+        key: Tool result key.
+
+    Returns:
+        bool | None: The tool's success flag, or None for an unrun tool.
+    """
+    entry = result[key]
+    return None if entry is None else entry["success"]
+
+
+def _dup_firsts(result: dict, key: str) -> list[str]:
+    """Return `firstFile` of every duplicate pair reported under `key`.
+
+    Args:
+        result: Dict returned by a `maybe_run_*` dispatcher.
+        key: Tool result key holding a jscpd result.
+
+    Returns:
+        list[str]: `name:start-end` of each pair's first file.
+    """
+    return [d["firstFile"] for d in result[key]["output"]["duplicates"]]
+
+
+def test_single_file_mode_keys(repo: FakeRepo) -> None:
+    target = repo.write("a.py", "import os\n")
+    repo.fake("mypy")
+    repo.fake("ruff", Fake(stdout='[{"code": "F401"}]', code=1))
+    repo.fake("pylint")
+    report = _jscpd_report(("a.py", "z.py"), ("x.py", "y.py"))
+    repo.fake("npx", Fake(code=1, report=report))
+
+    result = python_lint.maybe_run_python_lint([str(target)])
+
+    assert set(result) == {"mypy", "ruff", "pylint", "jscpd"}
+    assert _success(result, "ruff") is False
+    assert _success(result, "mypy") is True
+    assert _success(result, "pylint") is True
+    assert [call[0] for call in repo.calls("npx")] == ["jscpd"]
+    assert _success(result, "jscpd") is False
+    assert _dup_firsts(result, "jscpd") == ["a.py:1-20"]
+
+
+DISPATCHERS = [
+    (python_lint.maybe_run_python_lint, {"mypy", "ruff", "pylint", "jscpd"}),
+    (typescript_lint.maybe_run_typescript_lint, {"typescript", "eslint", "jscpd"}),
+    (golang_lint.maybe_run_golang_lint, {"govet", "golangci_lint", "gofmt", "jscpd"}),
+    (php_lint.maybe_run_php_lint, {"phpstan", "jscpd"}),
+]
+
+
+@pytest.mark.parametrize(
+    ("maybe_run", "keys"), DISPATCHERS, ids=["python", "typescript", "go", "php"]
+)
+def test_maybe_run_empty_list_no_tools(
+    repo: FakeRepo, maybe_run: Callable[..., dict], keys: set[str]
+) -> None:
+    result = maybe_run([])
+
+    assert set(result) == keys
+    assert all(entry is None for entry in result.values())
+    assert not repo.log.exists()

@@ -343,6 +343,31 @@ def run_jscpd(
     }
 
 
+def resolve_lint_files(
+    file_paths: list[str], exts: set[str], logger: logging.Logger
+) -> list[Path]:
+    """Resolve paths, keeping existing files whose suffix is in `exts`.
+
+    Args:
+        file_paths: Paths as received from a hook payload or the orchestrator.
+        exts: Lowercase suffixes the calling language module lints.
+        logger: Logger of the calling module.
+
+    Returns:
+        list[Path]: Resolved paths that exist and have a lintable suffix.
+    """
+    kept: list[Path] = []
+    for file_path in file_paths:
+        resolved = Path(file_path).resolve()
+        if not resolved.exists():
+            logger.debug("File %s does not exist, skipping.", resolved)
+        elif resolved.suffix.lower() not in exts:
+            logger.debug("File %s not lintable here, skipping.", resolved)
+        else:
+            kept.append(resolved)
+    return kept
+
+
 def run_lint_hook_main(
     tag: str, logger: logging.Logger, maybe_run_lint: Callable[[str | None], dict]
 ) -> None:

@@ -21,6 +21,7 @@ from utils import (  # noqa: E402
     find_project_root,
     get_hooks_logger,
     parse_json_output,
+    resolve_lint_files,
     run_command_cwd,
     run_jscpd,
     run_lint_hook_main,
@@ -84,36 +85,30 @@ def _run_phpstan(resolved: Path, project_root: str) -> dict:
     }
 
 
-def maybe_run_php_lint(file_path: str | None) -> dict:
+def maybe_run_php_lint(file_paths: list[str], jscpd: bool = True) -> dict:
     """Run PHPStan and jscpd checks for PHP files.
 
     Args:
-        file_path: Path to the edited file.
+        file_paths: Paths of the edited files, all under one project root.
+        jscpd: Run the duplication check; the batch orchestrator runs it once
+            itself and passes False.
 
     Returns:
         Dict with phpstan and jscpd results.
     """
     result: dict[str, dict | None] = {"phpstan": None, "jscpd": None}
-
-    if not file_path:
-        logger.debug("No file_path provided, skipping.")
+    resolved = resolve_lint_files(file_paths, _PHP_EXTS, logger)
+    if not resolved:
         return result
 
-    resolved = Path(file_path).resolve()
-    if not resolved.exists():
-        logger.debug("File %s does not exist, skipping.", resolved)
-        return result
+    project_root = find_project_root(str(resolved[0].parent))
+    logger.debug("Project root for %s: %s", resolved[0], project_root)
 
-    ext = resolved.suffix.lower()
-    if ext not in _PHP_EXTS:
-        logger.debug("File %s not PHP, skipping (%s).", resolved, ext)
-        return result
-
-    project_root = find_project_root(str(resolved.parent))
-    logger.debug("Project root for %s: %s", resolved, project_root)
-
-    result["phpstan"] = _run_phpstan(resolved, project_root)
-    result["jscpd"] = run_jscpd([resolved], project_root, logger, "PhpLint")
+    # hazard: phpstan still takes one file, so a call with several files lints
+    # only the first until it is batched; no caller passes several yet.
+    result["phpstan"] = _run_phpstan(resolved[0], project_root)
+    if jscpd:
+        result["jscpd"] = run_jscpd(resolved, project_root, logger, "PhpLint")
     return result
 
 
@@ -124,7 +119,11 @@ def maybe_run_php_lint(file_path: str | None) -> dict:
 
 def main() -> None:
     """Entry point: run PHP lint checks via the shared PostToolUse pipeline."""
-    run_lint_hook_main("PhpLint", logger, maybe_run_php_lint)
+    run_lint_hook_main(
+        "PhpLint",
+        logger,
+        lambda path: maybe_run_php_lint([path] if path else []),
+    )
 
 
 if __name__ == "__main__":
