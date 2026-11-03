@@ -183,10 +183,10 @@ T1 → T2 → T3 → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Tests for C2, C3, C4, C5, C7a, C9, C18a, C22, C23, C24, C26 written first and red, then green
-- [ ] `test_changed.py` still imports its helpers: `uv run hooks/scripts/test_changed.py` exits 0
-- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py scripts/`
-- [ ] Test count: 38 tests pass in `test_lint_changed.py`
+- [x] Tests for C2, C3, C4, C5, C7a, C9, C18a, C22, C23, C24, C26 written first and red, then green
+- [x] `test_changed.py` still imports its helpers: `uv run hooks/scripts/test_changed.py` exits 0
+- [x] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py scripts/`
+- [x] Test count: 38 tests pass in `test_lint_changed.py`
 
 **Tests**: integration
 **Gate**: full

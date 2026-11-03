@@ -5,7 +5,9 @@ Standalone entry for harness `grind.lintCommand`: no hook payload on stdin,
 no loop counter, no pinned turn SHA (the harness owns those).
 """
 
+from collections.abc import Callable
 from fnmatch import fnmatch
+import os
 from pathlib import Path
 import sys
 
@@ -14,16 +16,22 @@ from golang_lint import maybe_run_golang_lint
 from php_lint import maybe_run_php_lint
 from python_lint import maybe_run_python_lint
 from typescript_lint import maybe_run_typescript_lint
-from utils import minify_json, run_command_cwd
+from utils import (
+    find_project_root,
+    get_hooks_logger,
+    minify_json,
+    run_command_cwd,
+    run_jscpd,
+)
 
-MAX_FILES = 50
+logger = get_hooks_logger("LintChanged")
 # Always skipped; `--ignore GLOB` adds to these.
 DEFAULT_IGNORE = (
     "legacy/**",
     "node_modules/**",
     "vendor/**",
 )
-_LINT_DISPATCH = {
+_LINT_DISPATCH: dict[str, Callable[..., dict]] = {
     ".py": maybe_run_python_lint,
     ".ts": maybe_run_typescript_lint,
     ".tsx": maybe_run_typescript_lint,
@@ -75,19 +83,68 @@ def _is_ignored(rel_path: str, globs: list[str]) -> bool:
     return any(fnmatch(rel_path, g) or fnmatch("/" + rel_path, g) for g in globs)
 
 
-def _lint_failures(project_root: str, files: list[str]) -> dict[str, dict]:
-    """Run the matching lint dispatcher per file, keyed by file for failures only."""
-    failures: dict[str, dict] = {}
+def _groups(
+    project_root: str, files: list[str]
+) -> dict[tuple[Callable[..., dict], str], list[str]]:
+    """Group existing changed files by (lint dispatcher, project root).
+
+    Args:
+        project_root: Directory the changed paths are relative to.
+        files: Changed paths relative to `project_root`.
+
+    Returns:
+        dict: (dispatcher, project root) -> absolute paths, in `files` order.
+    """
+    groups: dict[tuple[Callable[..., dict], str], list[str]] = {}
     for rel_path in files:
-        maybe_run_lint = _LINT_DISPATCH[Path(rel_path).suffix]
-        results = maybe_run_lint([str(Path(project_root) / rel_path)])
-        failed = {
-            tool: res
-            for tool, res in results.items()
-            if res and not res.get("success", True)
-        }
-        if failed:
-            failures[rel_path] = failed
+        path = Path(project_root) / rel_path
+        # why: a deleted file has nothing to lint, and find_project_root must
+        # never be asked about a directory that no longer exists.
+        if not path.exists():
+            continue
+        key = (_LINT_DISPATCH[path.suffix], find_project_root(str(path.parent)))
+        groups.setdefault(key, []).append(str(path))
+    return groups
+
+
+def _lint_failures(project_root: str, files: list[str]) -> dict:
+    """Lint changed files in one batch per (language, project root).
+
+    Args:
+        project_root: Directory the changed paths are relative to.
+        files: Changed paths relative to `project_root`.
+
+    Returns:
+        dict: `{tool: result}` when one project root has failures, else
+        `{relative_root: {tool: result}}`; a jscpd failure is always keyed
+        `jscpd` at the top level. Empty when everything passes.
+    """
+    groups = _groups(project_root, files)
+    by_root: dict[str, dict[str, dict]] = {}
+    for (maybe_run_lint, group_root), paths in groups.items():
+        results = maybe_run_lint(paths, jscpd=False)
+        by_root.setdefault(group_root, {}).update(
+            {
+                tool: res
+                for tool, res in results.items()
+                if res and not res.get("success", True)
+            }
+        )
+    failed_roots = {root: tools for root, tools in by_root.items() if tools}
+
+    failures: dict = {}
+    if len(failed_roots) == 1:
+        failures.update(next(iter(failed_roots.values())))
+    else:
+        failures.update(
+            {os.path.relpath(root, project_root): t for root, t in failed_roots.items()}
+        )
+
+    changed = [Path(path).resolve() for paths in groups.values() for path in paths]
+    if changed:
+        jscpd = run_jscpd(changed, project_root, logger, "LintChanged")
+        if not jscpd.get("success", True):
+            failures["jscpd"] = jscpd
     return failures
 
 
@@ -111,7 +168,7 @@ def main() -> int:
         for p in changed
         if Path(p).suffix in _LINT_DISPATCH and not _is_ignored(p, ignore)
     )
-    failures = _lint_failures(root, files[:MAX_FILES])
+    failures = _lint_failures(root, files)
     if failures:
         print(minify_json(failures))  # noqa: T201 - CLI output
         return 1

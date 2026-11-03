@@ -12,6 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,7 @@ HOOKS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(HOOKS_DIR))
 
 import golang_lint  # noqa: E402
+import lint_changed  # noqa: E402
 import php_lint  # noqa: E402
 import python_lint  # noqa: E402
 import typescript_lint  # noqa: E402
@@ -169,6 +171,8 @@ def _isolated_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     scratch.mkdir()
     monkeypatch.setattr(tempfile, "tempdir", str(scratch))
     monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    # why: lint_changed.main() reads sys.argv; pytest's own argv must not leak in
+    monkeypatch.setattr(sys, "argv", ["lint_changed.py"])
 
 
 @pytest.fixture
@@ -634,3 +638,195 @@ def test_go_generated_excluded(repo: FakeRepo) -> None:
     assert repo.calls("gofmt") == [["-l", *files]]
     assert repo.calls("go") == [["vet", "./pkg"]]
     assert repo.calls("golangci-lint") == [[*GOLANGCI_RUN, "./pkg"]]
+
+
+def _dirty(repo: FakeRepo, *rels: str) -> list[str]:
+    """Write small files and stage them so git reports each one as changed.
+
+    Args:
+        repo: Repo to write into.
+        *rels: File paths relative to the repo root.
+
+    Returns:
+        list[str]: Resolved path of each file, in the given order.
+    """
+    paths = [str(repo.write(rel, "x = 1\n").resolve()) for rel in rels]
+    repo.stage(*rels)
+    return paths
+
+
+def _run_main(capsys: pytest.CaptureFixture[str]) -> tuple[int, str]:
+    """Run lint_changed.main() in-process.
+
+    Args:
+        capsys: pytest capture fixture.
+
+    Returns:
+        tuple[int, str]: Exit code and captured stdout.
+    """
+    code = lint_changed.main()
+    return code, capsys.readouterr().out
+
+
+def _py_args(calls: list[list[str]]) -> list[list[str]]:
+    """Reduce each argv to its `.py` file arguments.
+
+    Args:
+        calls: argv lists as returned by `FakeRepo.calls`.
+
+    Returns:
+        list[list[str]]: The `.py` arguments of each call, in call order.
+    """
+    return [[arg for arg in call if arg.endswith(".py")] for call in calls]
+
+
+def test_python_groups_by_project_root(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    files = _dirty(repo, "a/x1.py", "a/x2.py", "b/y.py")
+    repo.write("a/pyproject.toml")
+    repo.write("b/pyproject.toml")
+    _install_python(repo)
+
+    _run_main(capsys)
+
+    for tool in ("mypy", "ruff", "pylint"):
+        assert sorted(_py_args(repo.calls(tool))) == [files[:2], files[2:]]
+
+
+def test_failure_keyed_by_tool_exit_1(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _dirty(repo, "a.py")
+    _install_python(repo)
+    repo.fake("ruff", Fake(stdout='[{"code": "F401"}]', code=1))
+    repo.fake("npx")
+
+    code, out = _run_main(capsys)
+
+    assert code == 1
+    assert list(json.loads(out)) == ["ruff"]
+    assert json.loads(out)["ruff"]["success"] is False
+
+
+def test_multi_root_failures_nested_by_root(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _dirty(repo, "a.py", "b/y.py")
+    repo.write("b/pyproject.toml")
+    _install_python(repo)
+    repo.fake("ruff", Fake(stdout='[{"code": "F401"}]', code=1))
+    repo.fake("npx")
+
+    code, out = _run_main(capsys)
+
+    assert code == 1
+    parsed = json.loads(out)
+    assert set(parsed) == {".", "b"}
+    assert parsed["."]["ruff"]["success"] is False
+    assert parsed["b"]["ruff"]["success"] is False
+
+
+def test_all_pass_silent_exit_0(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _dirty(repo, "a.py")
+    _install_python(repo)
+    repo.fake("npx")
+
+    assert _run_main(capsys) == (0, "")
+
+
+def test_jscpd_invoked_once(repo: FakeRepo, capsys: pytest.CaptureFixture[str]) -> None:
+    _dirty(repo, "a.py", "b.ts", "c.go", "d.php")
+    for lang in LANGS:
+        lang.install(repo)
+    repo.fake("npx")
+
+    _run_main(capsys)
+
+    assert [call[0] for call in repo.calls("npx")] == ["jscpd"]
+
+
+def test_no_file_cap(repo: FakeRepo, capsys: pytest.CaptureFixture[str]) -> None:
+    files = _dirty(repo, *[f"m{i}.py" for i in range(51)])
+    _install_python(repo)
+    repo.fake("npx")
+
+    _run_main(capsys)
+
+    (passed,) = _py_args(repo.calls("ruff"))
+    assert len(passed) == 51
+    assert sorted(passed) == sorted(files)
+
+
+def test_no_lintable_files_exit_0(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _dirty(repo, "notes.md")
+    for lang in LANGS:
+        lang.install(repo)
+    repo.fake("npx")
+
+    assert _run_main(capsys) == (0, "")
+    assert not repo.log.exists()
+
+
+def test_jscpd_key_top_level(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _dirty(repo, "a.py")
+    _install_python(repo)
+    repo.fake("npx", Fake(code=1, report=_jscpd_report(("a.py", "z.py"))))
+
+    _, flat = _run_main(capsys)
+
+    assert set(json.loads(flat)) == {"jscpd"}
+
+    _dirty(repo, "b/y.py")
+    repo.write("b/pyproject.toml")
+    repo.fake("ruff", Fake(stdout='[{"code": "F401"}]', code=1))
+
+    _, nested = _run_main(capsys)
+
+    assert set(json.loads(nested)) == {".", "b", "jscpd"}
+
+
+def test_jscpd_skipped_when_no_files(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    gone = repo.write("a.py", "x = 1\n")
+    repo.commit("add a.py")
+    gone.unlink()
+    _install_python(repo)
+    repo.fake("npx")
+
+    assert _run_main(capsys) == (0, "")
+    assert repo.calls("npx") == []
+
+
+def test_orchestrator_reports_jscpd_pair(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _dirty(repo, "a.py")
+    _install_python(repo)
+    repo.fake("npx", Fake(code=1, report=_jscpd_report(("a.py", "c.py"))))
+
+    code, out = _run_main(capsys)
+
+    assert code == 1
+    assert _dup_firsts(json.loads(out), "jscpd") == ["a.py:1-20"]
+
+
+def test_deleted_dir_excluded(
+    repo: FakeRepo, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo.write("gone/a.py", "x = 1\n")
+    repo.commit("add gone/a.py")
+    shutil.rmtree(repo.root / "gone")
+    kept = _dirty(repo, "keep.py")
+    _install_python(repo)
+    repo.fake("npx")
+
+    assert _run_main(capsys) == (0, "")
+    assert _py_args(repo.calls("ruff")) == [kept]
