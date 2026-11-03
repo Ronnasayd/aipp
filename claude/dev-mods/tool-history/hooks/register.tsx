@@ -142,6 +142,23 @@ function scrollToEnd($: EngineInterface) {
   $.ui.scroll({ to: "end", in: PANE }).catch(() => {});
 }
 
+// why: with another plugin wrapping AbovePrompt (router), two band renders can
+// settle out of order and the terminal keeps the stale tree's button handles;
+// nothing redraws the band mid-turn, so presses die until the turn ends.
+// ponytail: blind 100ms re-render per press; drop once the engine orders renders.
+const BAND_HEAL_MS = 100;
+function healBand($: EngineInterface) {
+  $.clock.after(BAND_HEAL_MS, () => {
+    $.ui.invalidate("ui.render");
+  });
+}
+
+const onBand =
+  ($: EngineInterface, act: () => Promise<void> | void) => async () => {
+    await act();
+    healBand($);
+  };
+
 // why: the dock never narrows below 24 columns, so collapsing closes the pane
 // outright and leaves the reopen button in the band above the prompt.
 async function setCollapsed($: EngineInterface, collapsed: boolean) {
@@ -314,7 +331,11 @@ export const register: Register = (on) => {
     if (await read($, isCollapsed)) {
       const { Button } = $.ui.resolve(e);
       return (
-        <Button key="expand" plain onPress={() => setCollapsed($, false)}>
+        <Button
+          key="expand"
+          plain
+          onPress={onBand($, () => setCollapsed($, false))}
+        >
           » Tool-History
         </Button>
       );
@@ -326,10 +347,11 @@ export const register: Register = (on) => {
     const { Box, Button } = $.ui.resolve(e);
     const tab = await read($, activeTab);
     const atBottom = await read($, isAtBottom);
-    const selectTab = (target: ToolHistoryTab) => async () => {
-      await update($, activeTab, () => target);
-      scrollToEnd($);
-    };
+    const selectTab = (target: ToolHistoryTab) =>
+      onBand($, async () => {
+        await update($, activeTab, () => target);
+        scrollToEnd($);
+      });
     return (
       <Box
         key="toolbar"
@@ -364,11 +386,15 @@ export const register: Register = (on) => {
         >
           🔀
         </Button>
-        <Button key="collapse" plain onPress={() => setCollapsed($, true)}>
+        <Button
+          key="collapse"
+          plain
+          onPress={onBand($, () => setCollapsed($, true))}
+        >
           📋
         </Button>
         {!atBottom && (
-          <Button key="to-end" plain onPress={() => scrollToEnd($)}>
+          <Button key="to-end" plain onPress={onBand($, () => scrollToEnd($))}>
             ⬇ fim
           </Button>
         )}

@@ -479,4 +479,8 @@ echo -e "${rate_info}"
 
 # why: tool-stats mod mirrors per-session counts here; its $.ui.status could only draw first in the footer
 tool_stats_file="/tmp/claude-tool-stats-${session_id}.txt"
-if [ -n "$session_id" ] && [ -r "$tool_stats_file" ]; then echo -e "${C_SUBTEXT}${ICON_WRENCH} $(cat "$tool_stats_file")${RESET}"; fi
+# why: /clear switches session_id without session.start, so the new id has no file until its first tool call
+if [ -n "$session_id" ]; then
+    tool_stats=$(cat "$tool_stats_file" 2>/dev/null || echo "Bash 0 · Read 0 · Write 0 · MCP 0")
+    echo -e "${C_SUBTEXT}${ICON_WRENCH} ${tool_stats}${RESET}"
+fi

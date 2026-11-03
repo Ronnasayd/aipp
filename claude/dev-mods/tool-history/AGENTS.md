@@ -32,3 +32,13 @@
   other tabs. `tests/all-tab.test.tsx` asserts the interleaved order.
 - Text/thinking get `at` from their first streamed chunk, not step end:
   tools run mid-stream, so an end stamp sorts text after its own calls.
+
+## Band redraw after each press
+
+- Every band Button (`expand`, tabs, `collapse`, `to-end`) goes through
+  `onBand`, which asks `$.ui.invalidate("ui.render")` 100ms after the press.
+  `tests/band-redraw.test.tsx` asserts this.
+- Why: router (alexei-led/claude-router) wraps AbovePrompt; two band renders
+  settled out of order and the terminal kept stale handles
+  (`ui.press: no Button of tool-history is held under handle …`). Nothing
+  redraws the band mid-turn, so clicks died until the turn ended.
