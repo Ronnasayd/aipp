@@ -163,9 +163,9 @@ T1 → T2 → T3 → T4 → T5 → T6 → T7
 
 **Done when**:
 
-- [ ] Tests for C13, C14, C15, C16, C10[go], C21[go] written first and red, then green
-- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`
-- [ ] Test count: 27 tests pass
+- [x] Tests for C13, C14, C15, C16, C10[go], C21[go] written first and red, then green
+- [x] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`
+- [x] Test count: 27 tests pass
 
 **Tests**: unit
 **Gate**: quick

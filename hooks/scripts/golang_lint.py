@@ -11,6 +11,7 @@ Cross-platform (Windows, macOS, Linux).
 
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 from typing import Any
@@ -20,6 +21,7 @@ if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 from utils import (  # noqa: E402
+    LINT_TIMEOUT_S,
     find_project_root,
     get_hooks_logger,
     parse_json_output,
@@ -53,8 +55,8 @@ def _is_generated(path: Path) -> bool:
 
 def _exec(bin_: str, args: list[str], cwd: str | None = None) -> dict:
     """Wrapper for tool invocations."""
-    cmd = " ".join([bin_, *args])
-    return run_command_cwd(cmd, cwd=cwd)
+    cmd = shlex.join([bin_, *args])
+    return run_command_cwd(cmd, cwd=cwd, timeout=LINT_TIMEOUT_S)
 
 
 def _check_tool_installed(tool: str) -> bool:
@@ -68,46 +70,60 @@ def _check_tool_installed(tool: str) -> bool:
     return result.returncode == 0
 
 
-def _filter_lines_by_file(text: str, resolved: Path) -> tuple[str, bool]:
-    """Keep only lines whose leading `path:` matches resolved's name.
+def _package_dirs(resolved: list[Path], project_root: str) -> list[str]:
+    """Deduplicated `./pkg` directories of `resolved`, sorted for a stable argv."""
+    return sorted({f"./{path.parent.relative_to(project_root)!s}" for path in resolved})
 
-    go vet's text output is one issue per line prefixed `file.go:line:col:`.
-    Returns (filtered_text, any_matched_line_failed) — the bool is always
-    False here since go vet has no separate pass/fail per line; callers
-    derive success from whether filtered output is empty.
+
+def _is_changed(reported: str, changed: set[Path], project_root: str) -> bool:
+    """True when `reported` names one of the `changed` files.
+
+    `reported` is a path as a Go tool prints it: relative to `project_root`,
+    possibly `./`-prefixed. Comparing resolved paths, not name suffixes, keeps
+    `xa.go` from matching a changed `a.go`.
     """
-    name = resolved.name
+    return (Path(project_root) / reported.removeprefix("./")).resolve() in changed
+
+
+def _filter_lines_by_file(text: str, resolved: list[Path], project_root: str) -> str:
+    """Keep only lines whose leading `path:` is one of the `resolved` files.
+
+    go vet's text output is one issue per line prefixed `file.go:line:col:`;
+    `# <pkg>` header lines never name a changed file and are dropped.
+    """
+    changed = set(resolved)
     kept = [
         line
         for line in text.splitlines()
-        if line.split(":", 1)[0].endswith(name) or not line.strip()
+        if _is_changed(line.split(":", 1)[0], changed, project_root)
     ]
-    return "\n".join(kept).strip(), False
+    return "\n".join(kept).strip()
 
 
-def _run_govet(resolved: Path, project_root: str) -> dict:
-    """Run go vet on resolved's package and filter to resolved's own issues.
+def _run_govet(resolved: list[Path], project_root: str) -> dict:
+    """Run go vet once over the packages of `resolved`, keeping their own issues.
 
-    Running on the package (not the lone file) gives go vet the sibling
-    symbols it needs; filtering back by filename keeps the result scoped to
-    the file actually edited. Returns {success, output, error}.
+    Running on the packages (not the lone files) gives go vet the sibling
+    symbols it needs; filtering back by path keeps the result scoped to the
+    files actually edited. Returns {success, output, error}.
     """
     if not _check_tool_installed("go"):
-        logger.debug("go not installed, skipping vet for %s", resolved)
+        logger.debug("go not installed, skipping vet for %d files", len(resolved))
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    pkg_dir = f"./{resolved.parent.relative_to(project_root)!s}"
-    cmd = f"go vet {pkg_dir}"
-    logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
-    result = _exec("go", ["vet", pkg_dir], cwd=project_root)
+    pkg_dirs = _package_dirs(resolved, project_root)
+    logger.debug("Executing: go vet %s (cwd=%s)", pkg_dirs, project_root)
+    result = _exec("go", ["vet", *pkg_dirs], cwd=project_root)
     # why: go vet's issues land on stderr, not stdout
-    filtered_err, _ = _filter_lines_by_file(result.get("error", ""), resolved)
+    filtered_err = _filter_lines_by_file(
+        result.get("error", ""), resolved, project_root
+    )
     success = result["success"] or not filtered_err
     logger.debug("go vet result: success=%s", success)
     if success:
-        logger.debug("go vet passed for %s", resolved)
+        logger.debug("go vet passed for %d files", len(resolved))
     else:
-        logger.warning("go vet found issues in %s:\n%s", resolved, filtered_err)
+        logger.warning("go vet found issues:\n%s", filtered_err)
     output = truncate_large_output(result.get("output", ""), "govet")
     return {
         "success": success,
@@ -119,56 +135,60 @@ def _run_govet(resolved: Path, project_root: str) -> dict:
 
 def _filter_issues_by_file(
     parsed: Any,  # noqa: ANN401 - golangci-lint JSON shape varies (dict/list/str)
-    resolved: Path,
+    resolved: list[Path],
+    project_root: str,
 ) -> tuple[Any, bool]:
-    """Keep only golangci-lint JSON Issues whose Pos.Filename matches resolved.
+    """Keep only golangci-lint JSON Issues whose Pos.Filename is a `resolved` file.
 
     Returns (filtered_parsed, any_left) — `any_left` tells the caller whether
     issues remain after filtering so success can be recomputed.
     """
     if not isinstance(parsed, dict) or not isinstance(parsed.get("Issues"), list):
         return parsed, False
-    name = resolved.name
+    changed = set(resolved)
     kept = [
         issue
         for issue in parsed["Issues"]
-        if str(issue.get("Pos", {}).get("Filename", "")).endswith(name)
+        if _is_changed(
+            str(issue.get("Pos", {}).get("Filename", "")), changed, project_root
+        )
     ]
     filtered = {**parsed, "Issues": kept}
     return filtered, bool(kept)
 
 
-def _run_golangci_lint(resolved: Path, project_root: str) -> dict:
-    """Run golangci-lint on resolved's package and filter to resolved's issues.
+def _run_golangci_lint(resolved: list[Path], project_root: str) -> dict:
+    """Run golangci-lint once over the packages of `resolved`, keeping their issues.
 
-    Running on the package (not the lone file) gives the linter the sibling
-    symbols it needs; filtering back by filename keeps the result scoped to
-    the file actually edited. `output` is parsed from golangci-lint's
+    Running on the packages (not the lone files) gives the linter the sibling
+    symbols it needs; filtering back by path keeps the result scoped to the
+    files actually edited. `output` is parsed from golangci-lint's
     `--out-format json` (structured Issues list) since agents parse
     structured data far more reliably than the default text output.
     """
     if not _check_tool_installed("golangci-lint"):
-        logger.debug("golangci-lint not installed, skipping lint for %s", resolved)
+        logger.debug(
+            "golangci-lint not installed, skipping lint for %d files", len(resolved)
+        )
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    pkg_dir = f"./{resolved.parent.relative_to(project_root)!s}"
-    cmd = f"golangci-lint run --output.json.path stdout {pkg_dir}"
-    logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
+    pkg_dirs = _package_dirs(resolved, project_root)
+    logger.debug("Executing: golangci-lint run %s (cwd=%s)", pkg_dirs, project_root)
     result = _exec(
         "golangci-lint",
-        ["run", "--output.json.path", "stdout", pkg_dir],
+        ["run", "--output.json.path", "stdout", *pkg_dirs],
         cwd=project_root,
     )
     parsed = parse_json_output(
         result.get("output", ""), "GolangLint", "golangci-lint", logger
     )
-    filtered, any_left = _filter_issues_by_file(parsed, resolved)
+    filtered, any_left = _filter_issues_by_file(parsed, resolved, project_root)
     success = result["success"] or not any_left
     logger.debug("golangci-lint result: success=%s", success)
     if success:
-        logger.debug("golangci-lint passed for %s", resolved)
+        logger.debug("golangci-lint passed for %d files", len(resolved))
     else:
-        logger.warning("golangci-lint found issues in %s:\n%s", resolved, filtered)
+        logger.warning("golangci-lint found issues:\n%s", filtered)
     if result.get("error"):
         logger.warning("golangci-lint stderr: %s", result.get("error", ""))
     output = truncate_large_output(filtered, "golangci-lint")
@@ -180,20 +200,23 @@ def _run_golangci_lint(resolved: Path, project_root: str) -> dict:
     }
 
 
-def _run_gofmt(resolved: Path, project_root: str) -> dict:
-    """Run gofmt -l to detect formatting diffs. Returns {success, output, error}."""
+def _run_gofmt(resolved: list[Path], project_root: str) -> dict:
+    """Run gofmt -l once over `resolved`. Returns {success, output, error}."""
     if not _check_tool_installed("gofmt"):
-        logger.debug("gofmt not installed, skipping fmt check for %s", resolved)
+        logger.debug(
+            "gofmt not installed, skipping fmt check for %d files", len(resolved)
+        )
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    cmd = f"gofmt -l {resolved!s}"
-    logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
-    result = _exec("gofmt", ["-l", str(resolved)], cwd=project_root)
+    logger.debug(
+        "Executing: gofmt -l on %d files (cwd=%s)", len(resolved), project_root
+    )
+    result = _exec("gofmt", ["-l", *map(str, resolved)], cwd=project_root)
     # why: gofmt -l exits 0 even when files need formatting;
     # non-empty output means unformatted.
     unformatted = bool(result.get("output", "").strip())
     if unformatted:
-        logger.warning("gofmt found unformatted file: %s", resolved)
+        logger.warning("gofmt found unformatted files:\n%s", result.get("output", ""))
     output = truncate_large_output(result.get("output", ""), "gofmt")
     return {
         "success": result["success"] and not unformatted,
@@ -233,11 +256,9 @@ def maybe_run_golang_lint(
     project_root = find_project_root(str(resolved[0].parent))
     logger.debug("Project root for %s: %s", resolved[0], project_root)
 
-    # hazard: the tools below still take one file, so a call with several files
-    # lints only the first until they are batched; no caller passes several yet.
-    result["govet"] = _run_govet(resolved[0], project_root)
-    result["golangci_lint"] = _run_golangci_lint(resolved[0], project_root)
-    result["gofmt"] = _run_gofmt(resolved[0], project_root)
+    result["govet"] = _run_govet(resolved, project_root)
+    result["golangci_lint"] = _run_golangci_lint(resolved, project_root)
+    result["gofmt"] = _run_gofmt(resolved, project_root)
     if jscpd:
         result["jscpd"] = run_jscpd(resolved, project_root, logger, "GolangLint")
     return result
