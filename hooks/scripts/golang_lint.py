@@ -242,7 +242,7 @@ def maybe_run_golang_lint(file_path: str | None) -> dict[str, dict[str, Any] | N
     result["govet"] = _run_govet(resolved, project_root)
     result["golangci_lint"] = _run_golangci_lint(resolved, project_root)
     result["gofmt"] = _run_gofmt(resolved, project_root)
-    result["jscpd"] = run_jscpd(resolved, project_root, logger, "GolangLint")
+    result["jscpd"] = run_jscpd([resolved], project_root, logger, "GolangLint")
     return result
 
 

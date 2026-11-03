@@ -8,6 +8,7 @@
 Cross-platform (Windows, macOS, Linux)
 """
 
+# why: identical import bootstrap in every lint hook (jscpd:ignore-start)
 import os
 from pathlib import Path
 import sys
@@ -26,6 +27,7 @@ from utils import (  # noqa: E402
     truncate_large_output,
 )
 
+# why: end of the shared bootstrap (jscpd:ignore-end)
 logger = get_hooks_logger("PhpLint")
 
 # ---------------------------------------------------------------------------
@@ -111,7 +113,7 @@ def maybe_run_php_lint(file_path: str | None) -> dict:
     logger.debug("Project root for %s: %s", resolved, project_root)
 
     result["phpstan"] = _run_phpstan(resolved, project_root)
-    result["jscpd"] = run_jscpd(resolved, project_root, logger, "PhpLint")
+    result["jscpd"] = run_jscpd([resolved], project_root, logger, "PhpLint")
     return result
 
 

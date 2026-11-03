@@ -248,16 +248,24 @@ def parse_jsonlines_output(
 # and reporting it every write is pure noise. Override via env.
 JSCPD_THRESHOLD = float(os.environ.get("JSCPD_THRESHOLD", "10"))
 JSCPD_MIN_LINES = int(os.environ.get("JSCPD_MIN_LINES", "15"))
+# why: a batch of files makes one lint tool run long; the 30 s default of
+# run_command_cwd would kill it. Applies to every lint subprocess and jscpd.
+LINT_TIMEOUT_S = 300
 
 
-def _filter_jscpd_duplicates_for_file(
-    report: dict, resolved: Path, scan_root: str
-) -> dict:
-    """Keep only duplicate pairs that reference `resolved` (either side)."""
+def _rel_to_scan_root(path: Path, scan_root: str) -> str:
+    """`path` relative to scan_root; the absolute path when it lies outside it."""
     try:
-        rel = str(resolved.relative_to(Path(scan_root).resolve()))
+        return str(path.relative_to(Path(scan_root).resolve()))
     except ValueError:
-        rel = str(resolved)
+        return str(path)
+
+
+def _filter_jscpd_duplicates(
+    report: dict, resolved: list[Path], scan_root: str
+) -> dict:
+    """Keep only duplicate pairs that reference any of `resolved` (either side)."""
+    touching = {_rel_to_scan_root(path, scan_root) for path in resolved}
 
     duplicates = report.get("duplicates", [])
     matched = [
@@ -271,19 +279,19 @@ def _filter_jscpd_duplicates_for_file(
             "lines": d["lines"],
         }
         for d in duplicates
-        if d["firstFile"]["name"] == rel or d["secondFile"]["name"] == rel
+        if d["firstFile"]["name"] in touching or d["secondFile"]["name"] in touching
     ]
-    # Drop `statistics` (repo-wide totals) and `fragment` (raw code snippet) —
-    # irrelevant to a single-file hook; agent reads the file:line pair itself.
+    # why: drop `statistics` (repo-wide totals) and `fragment` (raw code snippet);
+    # irrelevant to a changed-files check, the agent reads the file:line pair itself.
     return {"duplicates": matched}
 
 
 def run_jscpd(
-    resolved: Path, project_root: str, logger: logging.Logger, tag: str
+    resolved: list[Path], project_root: str, logger: logging.Logger, tag: str
 ) -> dict:
     """Run jscpd duplication check via npx over $CLAUDE_PROJECT_DIR.
 
-    Filters the report down to pairs involving `resolved`. Returns
+    Filters the report down to pairs involving any file in `resolved`. Returns
     {success, output, error, installed}.
 
     Scanning the fixed repo root (not `find_project_root`'s marker-based
@@ -305,7 +313,7 @@ def run_jscpd(
         f"--output {report_dir} {shlex.quote(scan_root)}"
     )
     logger.debug("[%s] Executing: %s (cwd=%s)", tag, cmd, project_root)
-    result = run_command_cwd(cmd, cwd=project_root)
+    result = run_command_cwd(cmd, cwd=project_root, timeout=LINT_TIMEOUT_S)
     logger.debug("[%s] jscpd result: success=%s", tag, result["success"])
 
     report_path = report_dir / "jscpd-report.json"
@@ -318,7 +326,7 @@ def run_jscpd(
             logger.warning("[%s] Failed to parse jscpd report at %s", tag, report_path)
 
     if isinstance(output, dict) and "duplicates" in output:
-        output = _filter_jscpd_duplicates_for_file(output, resolved, scan_root)
+        output = _filter_jscpd_duplicates(output, resolved, scan_root)
 
     no_matches = isinstance(output, dict) and not output.get("duplicates")
     if result["success"] or no_matches:

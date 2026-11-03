@@ -208,7 +208,7 @@ def maybe_run_python_lint(file_path: str | None) -> dict[str, dict[str, Any] | N
     result["mypy"] = _run_mypy(resolved, project_root)
     result["ruff"] = _run_ruff(resolved, project_root)
     result["pylint"] = _run_pylint(resolved, project_root)
-    result["jscpd"] = run_jscpd(resolved, project_root, logger, "PythonLint")
+    result["jscpd"] = run_jscpd([resolved], project_root, logger, "PythonLint")
     return result
 
 

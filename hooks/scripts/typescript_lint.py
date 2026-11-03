@@ -9,6 +9,7 @@ Runs TypeScript and ESLint checks on JS/TS files after edit.
 Cross-platform (Windows, macOS, Linux).
 """
 
+# why: identical import bootstrap in every lint hook (jscpd:ignore-start)
 import os
 from pathlib import Path
 import sys
@@ -27,6 +28,7 @@ from utils import (  # noqa: E402
     truncate_large_output,
 )
 
+# why: end of the shared bootstrap (jscpd:ignore-end)
 logger = get_hooks_logger("TypeScriptLint")
 
 # ---------------------------------------------------------------------------
@@ -145,7 +147,7 @@ def maybe_run_typescript_lint(file_path: str | None) -> dict:
 
     result["typescript"] = _run_typescript(resolved, project_root)
     result["eslint"] = _run_eslint(resolved, project_root)
-    result["jscpd"] = run_jscpd(resolved, project_root, logger, "TypeScriptLint")
+    result["jscpd"] = run_jscpd([resolved], project_root, logger, "TypeScriptLint")
     return result
 
 
