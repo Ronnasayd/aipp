@@ -1,4 +1,5 @@
 ---
+model: haiku
 description: Toggle readonly mode (blocks Write/Edit/MultiEdit/NotebookEdit, write-capable Bash commands and serena edit tools)
 allowed-tools: Bash(f=*)
 ---

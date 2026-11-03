@@ -153,5 +153,128 @@
       "completedCount": 9,
       "tags": ["readme-improvement"]
     }
+  },
+  "batch-lint": {
+    "tasks": [
+      {
+        "id": "1",
+        "title": "Set-based jscpd with lint timeout",
+        "description": "`run_jscpd` takes `list[Path]`, keeps pairs touching any of them, runs with `timeout=LINT_TIMEOUT_S`; add `LINT_TIMEOUT_S = 300`; the four module call sites pass `[resolved]`.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [],
+        "details": "Where: `hooks/scripts/utils.py`\nRequirement: BLINT-04, BLINT-07\nDone when:\n- [ ] Tests for C7, C8, C10a written first and red, then green\n- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`\n- [ ] Test count: 3 tests pass (no silent deletions)\nGate: quick\nCommit: `refactor(hooks): make run_jscpd filter by a set of files`",
+        "testStrategy": "unit - pytest hooks/scripts/test_lint_changed.py (checks listed in Done when)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 1,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-11-03T20:48:34.748Z"
+      },
+      {
+        "id": "2",
+        "title": "List signature for every maybe_run_* (behaviour preserved)",
+        "description": "`maybe_run_{python,typescript,golang,php}_lint(file_paths: list[str], jscpd: bool = True)`; each `main()` passes `lambda p: maybe_run_X([p] if p else [])`; `lint_changed._lint_failures` passes `[abs_path]` per file (still per file).",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["1"],
+        "details": "Where: `hooks/scripts/python_lint.py` (signature only; same mechanical edit in the three sibling modules and `lint_changed.py:83`)\nRequirement: BLINT-05, BLINT-11, BLINT-12\nDone when:\n- [ ] Tests for C17, C18 (parametrized over the 4 modules) written first and red, then green\n- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`\n- [ ] Test count: 8 tests pass\nGate: quick\nCommit: `refactor(hooks): take a file list in lint dispatchers`",
+        "testStrategy": "unit - pytest hooks/scripts/test_lint_changed.py (checks listed in Done when)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 2,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-11-03T20:51:41.678Z"
+      },
+      {
+        "id": "3",
+        "title": "Python tools run once over the file list",
+        "description": "`_run_mypy/_run_ruff/_run_pylint` take `list[Path]`; `_exec` uses `shlex.join` and `timeout=LINT_TIMEOUT_S`; nonexistent / non-`.py` paths dropped.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["2"],
+        "details": "Where: `hooks/scripts/python_lint.py`\nRequirement: BLINT-01, BLINT-03, BLINT-07, BLINT-12\nDone when:\n- [ ] Tests for C1, C6, C10[python], C19, C20, C21[python], C25 written first and red, then green\n- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`\n- [ ] Test count: 15 tests pass\nGate: quick\nCommit: `perf(hooks): batch mypy, ruff and pylint over all files`",
+        "testStrategy": "unit - pytest hooks/scripts/test_lint_changed.py (checks listed in Done when)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 3,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-11-03T20:53:28.639Z"
+      },
+      {
+        "id": "4",
+        "title": "TypeScript tools batched",
+        "description": "`_run_typescript` / `_run_eslint` take `list[Path]`; `_exec` uses `shlex.join` + timeout.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["3"],
+        "details": "Where: `hooks/scripts/typescript_lint.py`\nRequirement: BLINT-08, BLINT-07, BLINT-12\nDone when:\n- [ ] Tests for C11, C10[typescript], C21[typescript] written first and red, then green\n- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`\n- [ ] Test count: 18 tests pass\nGate: quick\nCommit: `perf(hooks): batch tsc-files and eslint over all files`",
+        "testStrategy": "unit - pytest hooks/scripts/test_lint_changed.py (checks listed in Done when)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 4,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-11-03T20:54:28.085Z"
+      },
+      {
+        "id": "5",
+        "title": "PHP phpstan batched",
+        "description": "`_run_phpstan` takes `list[Path]`; `_exec` uses `shlex.join` + timeout.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["4"],
+        "details": "Where: `hooks/scripts/php_lint.py`\nRequirement: BLINT-09, BLINT-07, BLINT-12\nDone when:\n- [ ] Tests for C12, C10[php], C21[php] written first and red, then green\n- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`\n- [ ] Test count: 21 tests pass\nGate: quick\nCommit: `perf(hooks): batch phpstan over all files`",
+        "testStrategy": "unit - pytest hooks/scripts/test_lint_changed.py (checks listed in Done when)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 5,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-11-03T20:55:11.745Z"
+      },
+      {
+        "id": "6",
+        "title": "Go tools batched with package dedupe and set filtering",
+        "description": "gofmt gets the file list; go vet / golangci-lint get deduplicated package dirs; filters keep issues whose `./`-stripped path resolved against the project root equals a changed file, dropping `# <pkg>` headers; generated files dropped; `_exec` uses `shlex.join` + timeout.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["5"],
+        "details": "Where: `hooks/scripts/golang_lint.py`\nRequirement: BLINT-10, BLINT-07, BLINT-12\nDone when:\n- [ ] Tests for C13, C14, C15, C16, C10[go], C21[go] written first and red, then green\n- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py`\n- [ ] Test count: 27 tests pass\nGate: quick\nCommit: `perf(hooks): batch go vet, golangci-lint and gofmt`",
+        "testStrategy": "unit - pytest hooks/scripts/test_lint_changed.py (checks listed in Done when)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 6,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-11-03T20:57:05.721Z"
+      },
+      {
+        "id": "7",
+        "title": "Orchestrator groups by language and root, jscpd once, no cap",
+        "description": "`lint_changed.py` drops nonexistent paths, groups by (dispatcher, `find_project_root`), calls `maybe_run(paths, jscpd=False)` per group, runs `run_jscpd(all_files, cwd, logger, \"LintChanged\")` once when any file remains, emits `{tool: res}` (nested by relative root when >1 root fails, `jscpd` always top level), removes `MAX_FILES`.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": ["6"],
+        "details": "Where: `hooks/scripts/lint_changed.py`\nRequirement: BLINT-01, BLINT-02, BLINT-04, BLINT-06, BLINT-12\nDone when:\n- [ ] Tests for C2, C3, C4, C5, C7a, C9, C18a, C22, C23, C24, C26 written first and red, then green\n- [ ] `test_changed.py` still imports its helpers: `uv run hooks/scripts/test_changed.py` exits 0\n- [ ] Gate check passes: `uv run --with pytest pytest hooks/scripts/test_lint_changed.py scripts/`\n- [ ] Test count: 38 tests pass in `test_lint_changed.py`\nGate: full\nCommit: `perf(hooks): lint changed files in per-root batches`",
+        "testStrategy": "integration - pytest hooks/scripts/test_lint_changed.py (checks listed in Done when)",
+        "subtasks": [],
+        "metadata": {
+          "wave": 7,
+          "onCriticalPath": true
+        },
+        "updatedAt": "2026-11-03T20:59:41.749Z"
+      }
+    ],
+    "metadata": {
+      "version": "1.0.0",
+      "lastModified": "2026-11-03T20:59:41.749Z",
+      "taskCount": 7,
+      "completedCount": 7,
+      "tags": ["batch-lint"]
+    }
   }
 }

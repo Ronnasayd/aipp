@@ -35,7 +35,9 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_SESSION=$'\U000025B2'
     ICON_MEAN=$'\U000003BC'
     ICON_READONLY=$'\U0000F023'
+    ICON_TASK=$'\U0000F0AE'
 else
+    ICON_TASK="📋"
     ICON_READONLY="🔏"
     ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙" ICON_WRENCH="🔧"
     ICON_EMAIL="📧" ICON_SERENA="🧭" ICON_MEMORY="💾" ICON_RAGRAT="🐀" ICON_COST="💰"
@@ -476,6 +478,15 @@ echo -e "${email_color}${email_info}${RESET}${transcript_link}"
 echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${readonly_info}${tools_status}${cc_ver_info}"
 echo -e "${C_BLUE}${ICON_CTX} ctx ${ctx_bar} ${ctx_pct_int}% (${ctx_usage_k}k/${ctx_size_k}k)${RESET}${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${SEP}${cache_ttl_info}"
 echo -e "${rate_info}"
+
+# why: same per-tag "first pending" rule as hooks/scripts/taskmaster_next_task.py
+TASKS_FILE="$CLAUDE_PROJECT_DIR/.taskmaster/tasks/tasks.json"
+if [ -f "$TASKS_FILE" ]; then
+    next_tasks=$(jq -r 'to_entries[] | .key as $t | (.value.tasks // [] | map(select(.status == "pending")) | first) // empty | "\($t): #\(.id) \(.title)"' "$TASKS_FILE" 2>/dev/null)
+    while IFS= read -r t; do
+        [ -n "$t" ] && echo -e "${C_TEAL}${ICON_TASK} ${t}${RESET}"
+    done <<< "$next_tasks"
+fi
 
 # why: tool-stats mod mirrors per-session counts here; its $.ui.status could only draw first in the footer
 tool_stats_file="/tmp/claude-tool-stats-${session_id}.txt"

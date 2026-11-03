@@ -266,6 +266,7 @@
     "python:my-python-testing": false,
     "python:python-style-guide": false,
     "quality-gate": false,
+    "rea:reverse-engineer-anything": false,
     "react-best-practices": false,
     "react-composition-patterns": false,
     "react-native-patterns": false,
