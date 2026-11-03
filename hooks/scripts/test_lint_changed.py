@@ -19,8 +19,11 @@ from typing import TYPE_CHECKING
 
 import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
 
+# pylint: disable=protected-access
+
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from types import ModuleType
 
 HOOKS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(HOOKS_DIR))
@@ -289,6 +292,20 @@ def _success(result: dict, key: str) -> bool | None:
     return None if entry is None else entry["success"]
 
 
+def _field(result: dict, key: str, name: str) -> object:
+    """Return one field of one tool result.
+
+    Args:
+        result: Dict returned by a `maybe_run_*` dispatcher.
+        key: Tool result key.
+        name: Field of the tool result (`success`, `output`, `error`, `installed`).
+
+    Returns:
+        object: The field value.
+    """
+    return result[key][name]
+
+
 def _dup_firsts(result: dict, key: str) -> list[str]:
     """Return `firstFile` of every duplicate pair reported under `key`.
 
@@ -340,3 +357,132 @@ def test_maybe_run_empty_list_no_tools(
     assert set(result) == keys
     assert all(entry is None for entry in result.values())
     assert not repo.log.exists()
+
+
+@dataclass(frozen=True)
+class Lang:
+    """One language module under test and how to fake its tools."""
+
+    id: str
+    module: ModuleType
+    maybe_run: Callable[..., dict]
+    filename: str
+    tools: tuple[str, ...]
+    install: Callable[[FakeRepo], None]
+
+
+def _install_python(repo: FakeRepo) -> None:
+    for tool in ("mypy", "ruff", "pylint"):
+        repo.fake(tool)
+
+
+LANGS = [
+    Lang(
+        "python",
+        python_lint,
+        python_lint.maybe_run_python_lint,
+        "a b.py",
+        ("mypy", "ruff", "pylint"),
+        _install_python,
+    ),
+]
+
+
+def _py_files(repo: FakeRepo, *names: str) -> list[str]:
+    """Create small Python files under the repo root.
+
+    Args:
+        repo: Repo to write into.
+        *names: File names relative to the repo root.
+
+    Returns:
+        list[str]: Resolved path of each file, in the given order.
+    """
+    return [str(repo.write(name, "x = 1\n").resolve()) for name in names]
+
+
+def test_python_tools_called_once_with_all_files(repo: FakeRepo) -> None:
+    files = _py_files(repo, "a.py", "b.py", "c.py")
+    _install_python(repo)
+
+    python_lint.maybe_run_python_lint(files, jscpd=False)
+
+    for tool in ("mypy", "ruff", "pylint"):
+        calls = repo.calls(tool)
+        assert len(calls) == 1
+        assert calls[0][-3:] == files
+
+
+def test_crash_reports_raw_output(repo: FakeRepo) -> None:
+    files = _py_files(repo, "a.py")
+    _install_python(repo)
+    repo.fake("ruff", Fake(stdout="Traceback boom", stderr="fatal crash", code=2))
+
+    result = python_lint.maybe_run_python_lint(files, jscpd=False)
+
+    assert _field(result, "ruff", "success") is False
+    assert _field(result, "ruff", "output") == "Traceback boom"
+    assert _field(result, "ruff", "error") == "fatal crash"
+
+
+def test_missing_path_excluded(repo: FakeRepo) -> None:
+    files = _py_files(repo, "a.py")
+    gone = str(repo.root / "gone.py")
+    _install_python(repo)
+
+    python_lint.maybe_run_python_lint([gone, *files], jscpd=False)
+
+    for tool in ("mypy", "ruff", "pylint"):
+        assert gone not in repo.calls(tool)[0]
+        assert files[0] in repo.calls(tool)[0]
+
+
+def test_missing_tool_passes(repo: FakeRepo, monkeypatch: pytest.MonkeyPatch) -> None:
+    files = _py_files(repo, "a.py")
+    _install_python(repo)
+    monkeypatch.setattr(python_lint, "_check_tool_installed", lambda *_: False)
+
+    result = python_lint.maybe_run_python_lint(files, jscpd=False)
+
+    for tool in ("mypy", "ruff", "pylint"):
+        assert _field(result, tool, "success") is True
+        assert _field(result, tool, "installed") is False
+        assert repo.calls(tool) == []
+
+
+@pytest.mark.parametrize("lang", LANGS, ids=lambda lang: lang.id)
+def test_lint_exec_timeout_300(
+    repo: FakeRepo, monkeypatch: pytest.MonkeyPatch, lang: Lang
+) -> None:
+    spy = TimeoutSpy()
+    monkeypatch.setattr(lang.module, "run_command_cwd", spy)
+
+    lang.module._exec("tool", ["arg"], cwd=str(repo.root))
+
+    assert spy.timeouts == [300]
+
+
+@pytest.mark.parametrize("lang", LANGS, ids=lambda lang: lang.id)
+def test_path_with_space_single_arg(repo: FakeRepo, lang: Lang) -> None:
+    path = str(repo.write(f"my dir/{lang.filename}", "x\n").resolve())
+    lang.install(repo)
+
+    lang.maybe_run([path], jscpd=False)
+
+    for tool in lang.tools:
+        assert path in repo.calls(tool)[0]
+
+
+def test_timeout_reported_no_retry(
+    repo: FakeRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    files = _py_files(repo, "a.py")
+    _install_python(repo)
+    repo.fake("ruff", Fake(sleep=3))
+    monkeypatch.setattr(python_lint, "LINT_TIMEOUT_S", 1)
+
+    result = python_lint.maybe_run_python_lint(files, jscpd=False)
+
+    assert _field(result, "ruff", "success") is False
+    assert "timed out" in str(_field(result, "ruff", "error"))
+    assert len(repo.calls("ruff")) == 1

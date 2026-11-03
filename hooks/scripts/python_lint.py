@@ -11,6 +11,7 @@ Cross-platform (Windows, macOS, Linux)
 
 import os
 from pathlib import Path
+import shlex
 import shutil
 import sys
 from typing import Any
@@ -20,6 +21,7 @@ if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 from utils import (  # noqa: E402
+    LINT_TIMEOUT_S,
     find_project_root,
     get_hooks_logger,
     parse_json_output,
@@ -44,8 +46,8 @@ _PY_EXTS = {".py"}
 def _exec(bin_: str, args: list[str], cwd: str | None = None) -> dict:
     """Wrapper for tool invocations. Prefers the project venv's binary if present."""
     resolved_bin = _resolve_tool_bin(bin_, cwd) if cwd else bin_
-    cmd = " ".join([resolved_bin, *args])
-    return run_command_cwd(cmd, cwd=cwd)
+    cmd = shlex.join([resolved_bin, *args])
+    return run_command_cwd(cmd, cwd=cwd, timeout=LINT_TIMEOUT_S)
 
 
 _VENV_DIRS = (".venv", "venv")
@@ -73,8 +75,8 @@ def _check_tool_installed(tool: str, project_root: str) -> bool:
     return shutil.which(tool) is not None
 
 
-def _run_mypy(resolved: Path, project_root: str) -> dict:
-    """Run mypy type checking. Returns {success, output, error}.
+def _run_mypy(resolved: list[Path], project_root: str) -> dict:
+    """Run mypy once over all `resolved` files. Returns {success, output, error}.
 
     `output` is parsed from mypy's `--output json` jsonlines format (one
     JSON object per error) since agents parse structured data far more
@@ -82,22 +84,20 @@ def _run_mypy(resolved: Path, project_root: str) -> dict:
     """
     if not _check_tool_installed("mypy", project_root):
         logger.debug(
-            "mypy not installed, skipping type check for %s",
-            resolved,
+            "mypy not installed, skipping type check for %d files", len(resolved)
         )
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    cmd = f"mypy --output json {resolved!s}"
-    logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
-    result = _exec("mypy", ["--output", "json", str(resolved)], cwd=project_root)
+    logger.debug("Executing: mypy on %d files (cwd=%s)", len(resolved), project_root)
+    result = _exec("mypy", ["--output", "json", *map(str, resolved)], cwd=project_root)
     logger.debug("mypy result: success=%s", result["success"])
     output = parse_jsonlines_output(
         result.get("output", ""), "PythonLint", "mypy", logger
     )
     if result["success"]:
-        logger.debug("mypy passed for %s", resolved)
+        logger.debug("mypy passed for %d files", len(resolved))
     else:
-        logger.warning("mypy found type errors in %s:\n%s", resolved, output)
+        logger.warning("mypy found type errors:\n%s", output)
     if result.get("error"):
         logger.warning("mypy stderr: %s", result.get("error", ""))
     output = truncate_large_output(output, "mypy")
@@ -109,28 +109,29 @@ def _run_mypy(resolved: Path, project_root: str) -> dict:
     }
 
 
-def _run_ruff(resolved: Path, project_root: str) -> dict:
-    """Run ruff linting. Returns {success, output, error}.
+def _run_ruff(resolved: list[Path], project_root: str) -> dict:
+    """Run ruff once over all `resolved` files. Returns {success, output, error}.
 
     `output` is parsed from ruff's `--output-format json` (structured
     violations list) since agents parse structured data far more reliably
     than the default text output.
     """
     if not _check_tool_installed("ruff", project_root):
-        logger.debug("ruff not installed, skipping lint for %s", resolved)
+        logger.debug("ruff not installed, skipping lint for %d files", len(resolved))
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    cmd = f"ruff check --output-format json {resolved!s}"
-    logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
+    logger.debug("Executing: ruff on %d files (cwd=%s)", len(resolved), project_root)
     result = _exec(
-        "ruff", ["check", "--output-format", "json", str(resolved)], cwd=project_root
+        "ruff",
+        ["check", "--output-format", "json", *map(str, resolved)],
+        cwd=project_root,
     )
     logger.debug("ruff result: success=%s", result["success"])
     output = parse_json_output(result.get("output", ""), "PythonLint", "ruff", logger)
     if result["success"]:
-        logger.debug("ruff passed for %s", resolved)
+        logger.debug("ruff passed for %d files", len(resolved))
     else:
-        logger.warning("ruff found issues in %s:\n%s", resolved, output)
+        logger.warning("ruff found issues:\n%s", output)
     if result.get("error"):
         logger.warning("ruff stderr: %s", result.get("error", ""))
     output = truncate_large_output(output, "ruff")
@@ -142,26 +143,27 @@ def _run_ruff(resolved: Path, project_root: str) -> dict:
     }
 
 
-def _run_pylint(resolved: Path, project_root: str) -> dict:
-    """Run pylint linting. Returns {success, output, error}.
+def _run_pylint(resolved: list[Path], project_root: str) -> dict:
+    """Run pylint once over all `resolved` files. Returns {success, output, error}.
 
     `output` is parsed from pylint's `--output-format=json` (structured
     violations list) since agents parse structured data far more reliably
     than the default text output.
     """
     if not _check_tool_installed("pylint", project_root):
-        logger.debug("pylint not installed, skipping lint for %s", resolved)
+        logger.debug("pylint not installed, skipping lint for %d files", len(resolved))
         return {"success": True, "output": "", "error": "", "installed": False}
 
-    cmd = f"pylint --output-format=json {resolved!s}"
-    logger.debug("Executing: %s (cwd=%s)", cmd, project_root)
-    result = _exec("pylint", ["--output-format=json", str(resolved)], cwd=project_root)
+    logger.debug("Executing: pylint on %d files (cwd=%s)", len(resolved), project_root)
+    result = _exec(
+        "pylint", ["--output-format=json", *map(str, resolved)], cwd=project_root
+    )
     logger.debug("pylint result: success=%s", result["success"])
     output = parse_json_output(result.get("output", ""), "PythonLint", "pylint", logger)
     if result["success"]:
-        logger.debug("pylint passed for %s", resolved)
+        logger.debug("pylint passed for %d files", len(resolved))
     else:
-        logger.warning("pylint found issues in %s:\n%s", resolved, output)
+        logger.warning("pylint found issues:\n%s", output)
     if result.get("error"):
         logger.warning("pylint stderr: %s", result.get("error", ""))
     output = truncate_large_output(output, "pylint")
@@ -199,11 +201,9 @@ def maybe_run_python_lint(
     project_root = find_project_root(str(resolved[0].parent))
     logger.debug("Project root for %s: %s", resolved[0], project_root)
 
-    # hazard: the tools below still take one file, so a call with several files
-    # lints only the first until they are batched; no caller passes several yet.
-    result["mypy"] = _run_mypy(resolved[0], project_root)
-    result["ruff"] = _run_ruff(resolved[0], project_root)
-    result["pylint"] = _run_pylint(resolved[0], project_root)
+    result["mypy"] = _run_mypy(resolved, project_root)
+    result["ruff"] = _run_ruff(resolved, project_root)
+    result["pylint"] = _run_pylint(resolved, project_root)
     if jscpd:
         result["jscpd"] = run_jscpd(resolved, project_root, logger, "PythonLint")
     return result
