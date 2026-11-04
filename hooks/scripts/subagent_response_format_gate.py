@@ -87,7 +87,11 @@ def main() -> None:
         "Your final report is missing required field(s): "
         f"{', '.join(missing)}. Re-send your report following the mandatory "
         "response format (status/summary/files_changed/reason/evidence/"
-        "gateways/next_steps) from hooks/markdown/SUBAGENT-RESPONSE-TEMPLATE.md."
+        "gateways/next_steps) from "
+        f"{project_root}/.claude/hooks/markdown/SUBAGENT-RESPONSE-TEMPLATE.md. "
+        "Only your final message reaches the caller, so repeat verbatim any "
+        "deliverable from your previous message (commit message, PR description, "
+        "map, etc.) and add the fields around it."
     )
     output = {"decision": "block", "reason": reason}
     LOG.debug("[block] (%d/%d): %s", loop_count, MAX_LOOPS, minify_json(output))

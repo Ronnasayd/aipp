@@ -16,3 +16,4 @@ next_steps: (optional) what main agent should do next, if anything
 - `evidence`: proof over claim — test pass/fail, lint output, whatever backs the status.
 - `gateways`: your own checklist (e.g. "no lint errors", "tests pass", "no unused vars touched"), each with pass/fail. Free-form key-value, you pick keys relevant to your task.
 - `next_steps`: blocker handoff or suggestion for main agent.
+- Task asked for a deliverable (commit message, PR description, map): keep it verbatim in the same message, outside these fields. Only the final message reaches the caller.
