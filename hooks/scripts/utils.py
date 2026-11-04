@@ -1714,6 +1714,8 @@ def _decide_with_clef(state: Any, questions: dict[str, Any]) -> dict[str, Any]: 
 DECISION_BACKENDS: dict[str, Callable[[Any, dict[str, Any]], dict[str, Any]]] = {
     "clef": _decide_with_clef,
 }
+DECISION_CACHE_DIR = Path.home() / ".cache" / "decision-cache"
+DECISION_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
 
 
 def decide(state: Any, questions: dict[str, Any]) -> dict[str, Any]:  # noqa: ANN401 - any JSON value
@@ -1740,6 +1742,40 @@ def decide(state: Any, questions: dict[str, Any]) -> dict[str, Any]:  # noqa: AN
         return {"error": f"Decision backend {name!r} failed: {e}"}
 
 
+def read_cached_json(path: Path, ttl_seconds: float) -> Any:  # noqa: ANN401 - any JSON value
+    """Return the JSON stored at path, or None when missing, expired or corrupt."""
+    try:
+        if time.time() - path.stat().st_mtime > ttl_seconds:
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def write_cached_json(path: Path, value: Any) -> None:  # noqa: ANN401 - any JSON value
+    """Store value at path as JSON, ignoring filesystem failures."""
+    # why: a cache that cannot be written must never cost a hook its result.
+    with contextlib.suppress(OSError):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value), encoding="utf-8")
+
+
+def _decision_cache_path(state: Any, question_id: str, instructions: str) -> Path:  # noqa: ANN401 - any JSON value
+    """Locate the cached answer for everything that shapes a decision."""
+    key = json.dumps(
+        [
+            os.environ.get("DECISION_BACKEND", ""),
+            os.environ.get("CLEF_MODEL", ""),
+            question_id,
+            instructions,
+            state,
+        ],
+        default=str,
+    )
+    # invariant: only a hash reaches the disk, so prompts are never persisted.
+    return DECISION_CACHE_DIR / f"{hashlib.sha256(key.encode()).hexdigest()}.json"
+
+
 def decide_yes(
     state: Any,  # noqa: ANN401 - any JSON value
     question_id: str,
@@ -1747,6 +1783,9 @@ def decide_yes(
     threshold: float = 0.5,
 ) -> bool:
     """Ask one yes/no question about a state, failing open.
+
+    Answers are cached on disk, so a repeated state costs no backend call.
+    Failures are not: the next attempt must reach the backend again.
 
     Args:
         state: context the question is about.
@@ -1759,6 +1798,11 @@ def decide_yes(
             unconfigured or failing backend leaves the hook's plain behavior.
     """
     log = get_hooks_logger("Decision")
+    cache_path = _decision_cache_path(state, question_id, instructions)
+    cached = read_cached_json(cache_path, DECISION_CACHE_TTL_SECONDS)
+    if cached is not None:
+        log.debug("%s: cached noul=%s threshold=%s", question_id, cached, threshold)
+        return cached >= threshold
     question = {"type": "noul", "instructions": instructions}
     started = time.monotonic()
     result = decide(state, {question_id: question})
@@ -1770,6 +1814,7 @@ def decide_yes(
     log.debug(
         "%s: noul=%s threshold=%s elapsed=%.2fs", question_id, noul, threshold, elapsed
     )
+    write_cached_json(cache_path, noul)
     return noul >= threshold
 
 

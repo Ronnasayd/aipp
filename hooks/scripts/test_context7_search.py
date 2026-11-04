@@ -107,6 +107,24 @@ def test_unconfigured_clef_keeps_searching_without_request(
     assert "/vercel/next.js" in out
 
 
+def test_repeated_prompt_decides_once(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Replaying a rejected prompt spends no second backend call."""
+    calls: list[str] = []
+
+    def record(state: str, _: dict[str, Any]) -> dict[str, Any]:
+        calls.append(state)
+        return answer(0.1)
+
+    monkeypatch.setattr(utils, "decide", record)
+    for _ in range(2):
+        out, searched = run_hook(monkeypatch, capsys, None)
+        assert out == ""
+        assert not searched
+    assert calls == [PROMPT]
+
+
 def test_question_sent_to_backend_is_typed(monkeypatch: pytest.MonkeyPatch) -> None:
     """The prompt is the state and the relevance question is a noul."""
     seen: list[tuple[Any, dict[str, Any]]] = []

@@ -5,7 +5,6 @@ import hashlib
 import json
 from pathlib import Path
 import sys
-import time
 import urllib.parse
 import urllib.request
 
@@ -20,6 +19,8 @@ from utils import (
     get_by_key,
     get_hooks_logger,
     minify_json,
+    read_cached_json,
+    write_cached_json,
 )
 
 LOG = get_hooks_logger("Context7Search")
@@ -49,20 +50,11 @@ def _cache_path(query: str) -> Path:
 
 
 def _read_cache(query: str) -> list[dict] | None:
-    path = _cache_path(query)
-    if not path.exists():
-        return None
-    if time.time() - path.stat().st_mtime > CACHE_TTL_SECONDS:
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
+    return read_cached_json(_cache_path(query), CACHE_TTL_SECONDS)
 
 
 def _write_cache(query: str, results: list[dict]) -> None:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    _cache_path(query).write_text(json.dumps(results), encoding="utf-8")
+    write_cached_json(_cache_path(query), results)
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -92,6 +84,7 @@ def fetch_results(query: str) -> list[dict]:
     """
     cached = _read_cache(query)
     if cached is not None:
+        LOG.debug("cache hit: %d results", len(cached))
         return cached
 
     url = f"{SEARCH_URL}?query={urllib.parse.quote(query)}"
@@ -244,6 +237,7 @@ def main() -> None:
         LOG.warning("Failed to get prompt embedding — skipping similarity filter")
 
     matches = top_results(results, query_vector)
+    LOG.debug("%d results, %d kept", len(results), len(matches))
     if not matches:
         LOG.debug("No context7 matches above benchmark threshold")
         sys.exit(0)

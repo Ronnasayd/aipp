@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 from typing import TYPE_CHECKING, Any
 import urllib.error
@@ -16,6 +17,7 @@ import question_tool_enforcer as enforcer
 import utils
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from urllib.request import Request
 
 TOKEN = "secret-token"
@@ -240,3 +242,132 @@ def test_unavailable_decision_is_logged(
     run_hook(monkeypatch, capsys, QUESTION)
     assert f"{enforcer.QUESTION_ID}: unavailable" in caplog.text
     assert "Missing CLOUDFLARE_ACCOUNT_ID" in caplog.text
+
+
+def ask(state: str = QUESTION, instructions: str = "It asks.") -> bool:
+    """Ask the fixed yes/no question used by the decision cache tests."""
+    return utils.decide_yes(state, "q", instructions)
+
+
+def reply_q(noul: float) -> bytes:
+    """Build a successful Clef envelope for the cache tests' question."""
+    answer = {"type": "noul", "noul": noul}
+    return json.dumps({"success": True, "result": {"answers": {"q": answer}}}).encode()
+
+
+@pytest.mark.parametrize(("noul", "expected"), [(0.9, True), (0.0, False)])
+def test_repeated_state_asks_backend_once(
+    monkeypatch: pytest.MonkeyPatch, noul: float, *, expected: bool
+) -> None:
+    """A repeated state reuses the answer, including a zero probability."""
+    seen = serve(monkeypatch, reply_q(noul))
+    assert ask() is expected
+    assert ask() is expected
+    assert len(seen) == 1
+
+
+def test_cached_answer_honors_the_callers_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The probability is cached, not the yes/no reached with one threshold."""
+    seen = serve(monkeypatch, reply_q(0.6))
+    assert utils.decide_yes(QUESTION, "q", "It asks.", threshold=0.5)
+    assert not utils.decide_yes(QUESTION, "q", "It asks.", threshold=0.7)
+    assert len(seen) == 1
+
+
+def test_failed_decision_is_not_cached(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An outage fails open once, without pinning that answer to the state."""
+    serve(monkeypatch, json.dumps({"success": False, "errors": []}).encode())
+    assert ask()
+    seen = serve(monkeypatch, reply_q(0.1))
+    assert not ask()
+    assert len(seen) == 1
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda mp: ask(state="Outra mensagem?"),
+        lambda mp: ask(instructions="It asks something else."),
+        lambda mp: (mp.setenv("CLEF_MODEL", "clef-flash"), ask()),
+    ],
+    ids=["state", "instructions", "model"],
+)
+def test_anything_shaping_the_answer_misses_the_cache(
+    monkeypatch: pytest.MonkeyPatch, change: Any
+) -> None:
+    """A different state, statement or model gets a fresh answer."""
+    seen = serve(monkeypatch, reply_q(0.9))
+    ask()
+    change(monkeypatch)
+    assert len(seen) == 2
+
+
+def test_expired_decision_asks_again(
+    monkeypatch: pytest.MonkeyPatch, isolated_decision_cache: Path
+) -> None:
+    """Past the TTL the cached answer is ignored."""
+    seen = serve(monkeypatch, reply_q(0.9))
+    ask()
+    expired = 1000.0
+    for entry in isolated_decision_cache.iterdir():
+        os.utime(entry, (expired, expired))
+    ask()
+    assert len(seen) == 2
+
+
+def test_corrupt_cache_entry_asks_again(
+    monkeypatch: pytest.MonkeyPatch, isolated_decision_cache: Path
+) -> None:
+    """A damaged entry behaves as a miss instead of killing the hook."""
+    seen = serve(monkeypatch, reply_q(0.9))
+    ask()
+    for entry in isolated_decision_cache.iterdir():
+        entry.write_text("{not json", encoding="utf-8")
+    assert ask()
+    assert len(seen) == 2
+
+
+def test_unwritable_cache_keeps_the_decision(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A cache that cannot be written never costs the hook its decision."""
+    blocker = tmp_path / "file"
+    blocker.write_text("", encoding="utf-8")
+    monkeypatch.setattr(utils, "DECISION_CACHE_DIR", blocker / "sub")
+    serve(monkeypatch, reply_q(0.1))
+    assert not ask()
+
+
+def test_cache_stores_no_message_text(
+    monkeypatch: pytest.MonkeyPatch, isolated_decision_cache: Path
+) -> None:
+    """Prompts stay off the disk: the entry holds only a hash and a number."""
+    serve(monkeypatch, reply_q(0.9))
+    ask()
+    (entry,) = isolated_decision_cache.iterdir()
+    assert QUESTION not in entry.name
+    assert json.loads(entry.read_text(encoding="utf-8")) == 0.9
+
+
+def test_cache_hit_is_logged_without_state(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A cached decision says so, explaining why no request happened."""
+    serve(monkeypatch, reply_q(0.9))
+    ask()
+    ask()
+    assert "q: cached noul=0.9" in caplog.text
+    assert QUESTION not in caplog.text
+
+
+def test_hook_replay_skips_backend(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The enforcer gives the same verdict on replay with a single request."""
+    seen = serve(monkeypatch, clef_reply(0.98))
+    first = run_hook(monkeypatch, capsys, QUESTION)
+    assert first
+    assert run_hook(monkeypatch, capsys, QUESTION) == first
+    assert len(seen) == 1
