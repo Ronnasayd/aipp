@@ -1,6 +1,10 @@
 ---
 name: sd-insert-taskmaster
 description: Convert tasks.md spec files into TaskMaster JSON format (.taskmaster/tasks/tasks.json), falling back to one synthetic task per requirement from spec.md when tasks.md doesn't exist. Use when user says 'convert tasks.md to taskmaster json', 'transform tasks.md to .taskmaster format', 'generate taskmaster json from this spec', or 'register this feature in taskmaster'.
+argument-hint: "<tag>: (Required) Feature tag, used as the taskmaster root key and as the .specs/features/<tag>/ directory. Ask the user before invoking if unknown."
+context: fork
+background: false
+model: haiku
 metadata:
   author: Ronnasayd Machado - github.com/Ronnasayd
   version: 1.2.0
@@ -10,13 +14,19 @@ metadata:
 
 Converts a `tasks.md` spec into `.taskmaster/tasks/tasks.json` (TaskMaster-compatible task list, merge-safe).
 
+## Input
+
+Tag: $ARGUMENTS
+
+This skill runs as an isolated subagent: it has no conversation history and cannot ask the user anything. If the tag above is empty, stop before writing anything and return `status: partial` with `reason: missing tag`, so the caller can ask and invoke again.
+
 When the feature only has `spec.md` (no `tasks.md` -- tlc-spec-driven's auto-sizing decided the feature is Small/Medium and skipped the Tasks phase), this skill still registers it in taskmaster for tracking, via the spec-only fallback (Step 0.5) -- taskmaster stays a complete progress log regardless of feature size, even though execution itself stays inline and unbatched for these features.
 
 ## Steps
 
 | #   | Step                   | Action                                                                                                | Output / Gate                                                                                                   |
 | --- | ---------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 0   | Resolve tag            | Ask user for root key tag (skip if given); default `"master"`                                         | tag stored for steps 6-7 — see [json-schemas.md](references/json-schemas.md) for wrapper shape                  |
+| 0   | Resolve tag            | Read the root key tag from Input                                                                      | tag stored for steps 6-7 — see [json-schemas.md](references/json-schemas.md) for wrapper shape                  |
 | 0.5 | Check for tasks.md     | If `.specs/features/{TAG}/tasks.md` is missing but `spec.md` exists, switch to the spec-only fallback | See "Spec-only fallback" below — skip steps 1-4, go straight to Step 5 with synthetic tasks                     |
 | 1   | Read tasks.md fully    | Read Execution Diagram, task tables, cross-checks before writing any JSON                             | diagram + cross-checks are source of truth, not just `Depends on` (which may omit transitive deps)              |
 | 2   | Build dependency graph | Directed edges: `task_id → [deps]`                                                                    | validate every dep against the ASCII diagram                                                                    |
@@ -64,7 +74,11 @@ python3 <skill-path>/scripts/validate-tasks.py tasks .taskmaster/tasks/tasks.jso
 - [ ] Each task has `metadata: { wave, onCriticalPath }`
 - [ ] Valid JSON (`validate-tasks.py tasks` passes)
 - [ ] New tag merged without overwriting existing tags
-- [ ] Root key = resolved tag (default `"master"`); `tasks` nested under it, no global metadata
+- [ ] Root key = resolved tag; `tasks` nested under it, no global metadata
+
+## Final response
+
+State the tag, the task count, whether the spec-only fallback ran, and the `validate-tasks.py` result, alongside any other fields your final response requires.
 
 ## Reference files
 

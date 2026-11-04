@@ -11,7 +11,7 @@ Repeat phases 1 and 2 together, as one loop, until you have a complete understan
 1. **Exploration phase.**
    1. Use `sequentialthinking` to break down the request into sub-issues (scope, constraints, edge cases, dependencies).
    2. Use `/dynamic-programming-analysis` when the breakdown itself is hard (unclear where to start, many interdependent sub-problems).
-   3. Use `/context-map` with the sub-issues as the task description to get verified anchors, dependents, tests, reference patterns, and risks. Re-run or extend it on later loop iterations when new sub-issues open unmapped areas.
+   3. Use `/context-map` to get verified anchors, dependents, tests, reference patterns, and risks. It runs isolated and sees no conversation, so pass as arguments the sub-issues, every decision already settled, and on later loop iterations the path of the earlier map. Re-run it when new sub-issues open unmapped areas. Its `Open questions:` go into the next grilling round.
 
    Across all of the above: treat the codebase as the absolute source of truth — navigate file-by-file, following the flows that will be modified/adjusted, until you reach the limits of what's there and have a full understanding of current behavior. Search transversally too, not just along linear flows: hunt keywords/terms possibly related but not directly linked, or absent from files already inspected (config, feature flags, error codes, event names, shared constants). If a knowledge gap remains that the codebase and `context7` (library docs) can't cover — market patterns, RFCs, security advisories, precedent for a novel architectural decision — use `WebSearch` to fill it. Skip this when the codebase/context7 already answer the question.
 

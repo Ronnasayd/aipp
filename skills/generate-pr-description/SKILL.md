@@ -1,14 +1,20 @@
 ---
 name: generate-pr-description
-description: "Generate structured Pull Request descriptions from git diffs (staged or branch) and commit history. Auto-detects .github/pull_request_template.md; falls back to Description/Impact/Task sections. Use when user says 'generate PR description', 'write PR description', 'create pull request description', 'draft the PR description', or 'summarize this branch for a PR'. Always asks user for output language if not specified."
-argument-hint: "[language]: (Optional) Language for PR description (e.g., 'English', 'Portuguese'). Not provided → skill MUST ask user."
+description: "Generate structured Pull Request descriptions from git diffs (staged or branch) and commit history. Auto-detects .github/pull_request_template.md; falls back to Description/Impact/Task sections. Use when user says 'generate PR description', 'write PR description', 'create pull request description', 'draft the PR description', or 'summarize this branch for a PR'. Requires the output language as an argument; ask the user before invoking if not specified."
+argument-hint: "<language>: (Required) Language for PR description (e.g., 'English', 'Portuguese'). Ask the user before invoking if unknown."
+context: fork
+agent: reviewer-specialist
+background: false
+model: sonnet
 metadata:
   author: Ronnasayd Machado - github.com/Ronnasayd
   version: "1.0.0"
 ---
 
-MANDATORY: Use developer-specialist or reviewer-specialist agent.
-MANDATORY: {language} arg not provided → MUST ask user: "Which language should I use for the PR description (e.g., English, Portuguese)?"
+Language: $ARGUMENTS
+
+This skill runs as an isolated subagent: it has no conversation history and cannot ask the user anything. It only reads and reports; it does not change code.
+MANDATORY: language above is empty → stop and return `status: partial` with `reason: missing language`, so the caller can ask and invoke again.
 
 Objective: generate professional, comprehensive PR description by analyzing staged changes + recent commit history.
 
@@ -30,7 +36,7 @@ PHASE 2 — CONTEXT GATHERING
 1. Identify changes to describe:
    - Run `git diff --staged`. Not empty → use as primary source.
    - `git diff --staged` empty → run `git diff main...HEAD` (or default branch) for current branch changes.
-   - Still empty → inform user, ask for source of changes.
+   - Still empty → stop and return `status: partial` with `reason: no changes found`.
 2. Run `git log -n 10 --oneline` to understand commit sequence + intent.
 3. Search `.taskmaster/` or `docs/` for relevant PRDs/task specs matching branch name or commit keywords.
 
@@ -42,8 +48,7 @@ Based on analysis, generate PR description:
 
 1. Follow detected or default template strictly.
 2. Tone professional, content accurate.
-3. Language specified → generate entire description in that language.
-4. No language specified → must have asked user in advance (see MANDATORY rule).
+3. Generate entire description in the specified language.
 
 ====================
 PHASE 4 — VALIDATION
@@ -56,7 +61,7 @@ FAIL (exit 1) → fix flagged sections (missing/empty/placeholder text) and re-r
 PHASE 5 — OUTPUT
 ====================
 
-Present generated PR description to user in Markdown block.
+Your final response must contain the complete PR description verbatim in a Markdown block, alongside any other fields your final response requires.
 
 Example Output (Default Template):
 
@@ -82,5 +87,4 @@ WORKFLOW
 ====================
 
 - Always verify PR template exists before proposing structure.
-- `git diff --staged` empty → inform user no staged changes to analyze.
 - Use commit history to add context not obvious from diff alone.

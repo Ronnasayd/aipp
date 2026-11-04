@@ -1,6 +1,10 @@
 ---
 name: spec-to-requirements-table
 description: Derive a flat, self-contained requirements review table from a feature's spec.md, design.md and tasks.md — one row per acceptance criterion, tagged success or error path — so a non-implementer can scan it and judge whether each rule makes sense. Use when the user says 'the spec is too technical', 'make a requirements table', 'build a review sheet for these requirements', 'turn this spec into a requirements table', or supplies a table template and asks to fill it from an existing spec.
+argument-hint: "<spec-dir> <language> [template-path] [id-scheme]: (Required) Feature spec directory and output language. Optional template file path and id scheme. Ask the user before invoking if the language is unknown."
+context: fork
+background: false
+model: sonnet
 ---
 
 # Spec → Requirements Review Table
@@ -8,6 +12,15 @@ description: Derive a flat, self-contained requirements review table from a feat
 Derive a reviewer-facing table from the implementer-facing spec set. Reviewer asks
 "does this rule make sense?", not "is this implementable?". Every row judgeable
 alone, no lookup.
+
+## Input
+
+$ARGUMENTS
+
+This skill runs as an isolated subagent: it has no conversation history and cannot
+ask the user anything. If the input above lacks the spec directory or the language,
+stop before writing and return `status: partial` with `reason: missing <field>`, so
+the caller can ask and invoke again.
 
 ## The one rule that matters
 
@@ -46,13 +59,13 @@ design, work breakdown = tasks.
 | #   | Step                    | Action                                                                                                                                                                                                                                | Gate                                                                    |
 | --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | 1   | Read sources            | All three end to end; extract behaviors, rationale, consequences separately                                                                                                                                                           | rationale + consequences captured, not just criteria                    |
-| 2   | Settle format decisions | **Ask, don't assume**: language (spec's ≠ user's often), id scheme                                                                                                                                                                    | both global; retrofitting = full rewrite                                |
+| 2   | Settle format decisions | **Take from Input, don't assume**: language (spec's ≠ user's often), id scheme (sequential if not given)                                                                                                                              | both global; retrofitting = full rewrite                                |
 | 3   | Enumerate               | One row per criterion; sweep `tasks.md` for uncovered "done when" items                                                                                                                                                               | six cases existing for six reasons = six rows, never merged             |
 | 4   | Group                   | Sections follow system execution order, not story order                                                                                                                                                                               | each section readable given only sections above it                      |
 | 5   | Write rows              | Per rules below                                                                                                                                                                                                                       | every row self-contained                                                |
 | 6   | Consequences section    | Last numbered section: a table, one numbered row per trade-off, naming the rows that drive it                                                                                                                                         | every uncomfortable trade-off named explicitly, not implied across rows |
 | 7   | Format + verify         | Run project markdown formatter if present (wide tables realign — expected, don't revert); then `python3 skills/spec-to-requirements-table/scripts/validate_requirements.py <path/to/requirements.md>`, then verification checks below | script exits 0, all checks pass                                         |
-| 8   | Report entry point      | Name rows most likely wrong or most expensive if wrong                                                                                                                                                                                | reviewer has a starting place                                           |
+| 8   | Report entry point      | Your final response must state the saved path and name the rows most likely wrong or most expensive if wrong, alongside any other fields your final response requires                                                                 | reviewer has a starting place                                           |
 
 **Id scheme (step 2)**: prefer sequential (`FR-001`, `FR-002`, …). Spec ids repeat
 across many rows and defeat "one row, one decision".

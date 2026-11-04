@@ -4,7 +4,7 @@
 
 **Actions:**
 
-1. Ask: "What tag should be used as the root key?" → user says `"master"` (or skips → default `"master"`)
+1. Read the tag from the skill's arguments (`auth-keycloak`); caller asks the user first if unknown
 2. Read `.specs/features/auth-keycloak/tasks.md` completely
 3. Extract the ASCII execution diagram and all task tables
 4. Build dependency graph edges (T01→[], T02→[1], T03→[1], ...)

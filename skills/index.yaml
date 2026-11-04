@@ -994,8 +994,8 @@ skills:
     or branch) and commit history. Auto-detects .github/pull_request_template.md;
     falls back to Description/Impact/Task sections. Use when user says 'generate PR
     description', 'write PR description', 'create pull request description', 'draft
-    the PR description', or 'summarize this branch for a PR'. Always asks user for
-    output language if not specified.
+    the PR description', or 'summarize this branch for a PR'. Requires the output
+    language as an argument; ask the user before invoking if not specified.
 - name:
   - prd-get-implicit-requirements
   description: 'Extract implicit requirements from product requirement documents (PRDs),
