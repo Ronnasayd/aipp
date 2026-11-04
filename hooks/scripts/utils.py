@@ -27,6 +27,7 @@ import sys
 import tempfile
 import time
 from typing import Any
+import urllib.request
 
 import numpy as np
 
@@ -1669,6 +1670,74 @@ def split_on_operators(command: str, protect_exec: bool = False) -> list[str]:
 
     segments.append("".join(current))
     return [s.replace("\x00", ";").strip() for s in segments if s.strip()]
+
+
+# why: hooks run under a 10s timeout that also pays for interpreter startup.
+DECISION_TIMEOUT_SECONDS = 5
+CLEF_API_URL = (
+    "https://api.cloudflare.com/client/v4/accounts/{account}"
+    "/ai/run/@cf/cloudflare/{model}"
+)
+
+
+def _decide_with_clef(state: Any, questions: dict[str, Any]) -> dict[str, Any]:  # noqa: ANN401 - any JSON value
+    """Answer typed questions through Cloudflare's hosted Clef models."""
+    account = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+    token = os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
+    if not account or not token:
+        return {"error": "Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN"}
+    model = os.environ.get("CLEF_MODEL", "").strip().lower() or "clef"
+    request = urllib.request.Request(  # noqa: S310 - fixed https URL
+        CLEF_API_URL.format(account=account, model=model),
+        data=json.dumps(
+            {"model": model, "state": state, "questions": questions}
+        ).encode(),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            # why: Cloudflare's edge may reject the default Python-urllib agent.
+            "User-Agent": "aipp-hooks",
+        },
+    )
+    try:
+        with urllib.request.urlopen(  # noqa: S310 - fixed https URL
+            request, timeout=DECISION_TIMEOUT_SECONDS
+        ) as response:
+            body = json.load(response)
+    except (OSError, ValueError) as e:
+        return {"error": str(e).replace(token, "[redacted]")}
+    if body.get("success") is not True:
+        return {"error": str(body.get("errors")).replace(token, "[redacted]")}
+    return body.get("result") or {}
+
+
+DECISION_BACKENDS: dict[str, Callable[[Any, dict[str, Any]], dict[str, Any]]] = {
+    "clef": _decide_with_clef,
+}
+
+
+def decide(state: Any, questions: dict[str, Any]) -> dict[str, Any]:  # noqa: ANN401 - any JSON value
+    """Ask typed questions about a state using the configured backend.
+
+    Backends live in DECISION_BACKENDS, DECISION_BACKEND selects one, and every
+    backend honors this same contract, so callers never change.
+
+    Args:
+        state: context the questions are about (text, object or list).
+        questions: map of question id to ``{"type": "choice"|"score"|"noul", ...}``.
+
+    Returns:
+        dict: ``{"answers": {id: answer}, ...}`` or ``{"error": message}``.
+            It never raises, because a hook must survive a failing backend.
+    """
+    name = os.environ.get("DECISION_BACKEND", "").strip().lower() or "clef"
+    backend = DECISION_BACKENDS.get(name)
+    if backend is None:
+        return {"error": f"Unknown decision backend {name!r}"}
+    try:
+        return backend(state, questions)
+    except Exception as e:
+        return {"error": f"Decision backend {name!r} failed: {e}"}
 
 
 if __name__ == "__main__":

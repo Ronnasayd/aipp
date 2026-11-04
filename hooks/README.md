@@ -77,12 +77,12 @@ Scripts live in [`scripts/`](scripts) and run via
 
 ## Stop / SubagentStop
 
-| Script                               | Purpose                                                                                                |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `stop_lint_gate.py`                  | Re-runs lint on files changed this turn and blocks the stop if any fail.                               |
-| `question_tool_enforcer.py`          | If the last assistant message asked a plain-text question, nudges toward `AskUserQuestion` instead.    |
-| `subagent_response_format_gate.py`   | Blocks a subagent's stop if its response doesn't match the required output format (SubagentStop only). |
-| `ai-memory` stop/subagent-stop hooks | Closes out the session/subagent observation stream.                                                    |
+| Script                               | Purpose                                                                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stop_lint_gate.py`                  | Re-runs lint on files changed this turn and blocks the stop if any fail.                                                                                                                                                                          |
+| `question_tool_enforcer.py`          | If the last assistant message has a `?` and `utils.decide` (Clef; needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`) confirms it asks the user something, nudges toward `AskUserQuestion`. Backend unavailable: the `?` alone triggers it. |
+| `subagent_response_format_gate.py`   | Blocks a subagent's stop if its response doesn't match the required output format (SubagentStop only).                                                                                                                                            |
+| `ai-memory` stop/subagent-stop hooks | Closes out the session/subagent observation stream.                                                                                                                                                                                               |
 
 ## SessionEnd
 

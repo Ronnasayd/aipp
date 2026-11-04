@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """Stop / SubagentStop hook.
 
-If the last assistant message asked a plain-text question (contains '?'),
-remind the agent to use an interactive question tool.
+If the last assistant message contains '?' and a typed decision confirms it
+asks the user something, remind the agent to use an interactive question tool.
+When the decision is unavailable, the '?' alone triggers the reminder.
 """
 
 import json
@@ -11,13 +12,22 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
-from utils import get_by_key, get_hooks_logger, minify_markdown
+from utils import decide, get_by_key, get_hooks_logger, minify_markdown
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 LOG = get_hooks_logger("QuestionToolEnforcer")
+
+QUESTION_ID = "asks_user"
+QUESTION_STATEMENT = (
+    "The assistant message asks the user a question that requires the user's "
+    "answer or decision."
+)
+ASKS_USER_THRESHOLD = 0.5
+# why: questions to the user close a message; the tail bounds latency and cost.
+MAX_STATE_CHARS = 8000
 
 
 def build_rule() -> str:
@@ -84,6 +94,25 @@ def last_assistant_from_transcript(path: str | None) -> str | None:
     return "\n".join(reversed(collected))
 
 
+def asks_user(message: str) -> bool:
+    """Decide whether a message containing '?' really asks the user something.
+
+    Args:
+        message: the assistant message.
+
+    Returns:
+        bool: the decision, or True when no decision is available, so a backend
+            failure degrades to the plain '?' check instead of losing the rule.
+    """
+    question = {"type": "noul", "instructions": QUESTION_STATEMENT}
+    result = decide(message[-MAX_STATE_CHARS:], {QUESTION_ID: question})
+    noul = result.get("answers", {}).get(QUESTION_ID, {}).get("noul")
+    if noul is None:
+        LOG.debug("Decision unavailable: %s", result)
+        return True
+    return noul >= ASKS_USER_THRESHOLD
+
+
 def main() -> None:
     """Read the hook payload from stdin and emit the reminder if warranted."""
     try:
@@ -103,7 +132,7 @@ def main() -> None:
         last_message = last_assistant_from_transcript(
             get_by_key(payload, "transcript_path")
         )
-    if not last_message or "?" not in last_message:
+    if not last_message or "?" not in last_message or not asks_user(last_message):
         sys.exit(0)
 
     output = {
