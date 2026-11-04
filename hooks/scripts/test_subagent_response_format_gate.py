@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 GATE = Path(__file__).parent / "subagent_response_format_gate.py"
+TEMPLATE = Path(__file__).parent.parent / "markdown/SUBAGENT-RESPONSE-TEMPLATE.md"
 
 
 def run_gate(root: Path, message: str) -> str:
@@ -69,3 +70,19 @@ def test_report_with_status_passes(tmp_path: Path) -> None:
         tmp_path: isolated project root.
     """
     assert run_gate(tmp_path, "status: success\nsummary: done") == ""
+
+
+def test_free_text_around_fields_passes(tmp_path: Path) -> None:
+    """Free text before and after the fields does not trip the gate.
+
+    Args:
+        tmp_path: isolated project root.
+    """
+    report = "Note for caller.\n\nstatus: success\nsummary: done\n\n```\nfix: a\n```"
+
+    assert run_gate(tmp_path, report) == ""
+
+
+def test_template_allows_free_text() -> None:
+    """Subagents learn from the injected template that free text is allowed."""
+    assert "free text" in TEMPLATE.read_text(encoding="utf-8")
