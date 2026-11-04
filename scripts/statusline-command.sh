@@ -53,7 +53,11 @@ input=$(cat)
 echo $input > $CLAUDE_CONFIG_DIR/logs/claude_statusline.json
 
 # Extract basic information
-folder=$(basename "$(echo "$input" | jq -r '.workspace.current_dir')")
+current_dir=$(echo "$input" | jq -r '.workspace.current_dir')
+folder=$(basename "$current_dir")
+# OSC 8 hyperlink: clicking the folder segment opens it in VS Code (terminal must support OSC 8)
+vscode_open=$(printf '\e]8;;vscode://file%s\a' "${current_dir// /%20}")
+vscode_close=$(printf '\e]8;;\a')
 model=$(echo "$input" | jq -r '.model.display_name')
 
 # Context window usage percentage (📚 = library/context)
@@ -489,7 +493,7 @@ cc_ver_info=""
 # OSC 8 hyperlink: v<version> -> release notes (degrades to plain text on terminals without support)
 [ -n "$cc_version" ] && cc_ver_info="${SEP}\e]8;;https://github.com/anthropics/claude-code/releases\e\\\\${C_SUBTEXT}v${cc_version}${RESET}\e]8;;\e\\\\"
 echo -e "${email_color}${email_info}${RESET}${transcript_link}"
-echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${readonly_info}${tools_status}${disabled_mcp_info}${cc_ver_info}"
+echo -e "${C_TEAL}${vscode_open}${ICON_FOLDER} $folder${vscode_close}${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${readonly_info}${tools_status}${disabled_mcp_info}${cc_ver_info}"
 echo -e "${C_BLUE}${ICON_CTX} ctx ${ctx_bar} ${ctx_pct_int}% (${ctx_usage_k}k/${ctx_size_k}k)${RESET}${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${SEP}${cache_ttl_info}"
 echo -e "${rate_info}"
 
