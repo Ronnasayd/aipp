@@ -1672,7 +1672,7 @@ def split_on_operators(command: str, protect_exec: bool = False) -> list[str]:
     return [s.replace("\x00", ";").strip() for s in segments if s.strip()]
 
 
-# why: hooks run under a 10s timeout that also pays for interpreter startup.
+# why: hooks run under a short timeout that also pays for interpreter startup.
 DECISION_TIMEOUT_SECONDS = 5
 CLEF_API_URL = (
     "https://api.cloudflare.com/client/v4/accounts/{account}"
@@ -1738,6 +1738,55 @@ def decide(state: Any, questions: dict[str, Any]) -> dict[str, Any]:  # noqa: AN
         return backend(state, questions)
     except Exception as e:
         return {"error": f"Decision backend {name!r} failed: {e}"}
+
+
+def decide_yes(
+    state: Any,  # noqa: ANN401 - any JSON value
+    question_id: str,
+    instructions: str,
+    threshold: float = 0.5,
+) -> bool:
+    """Ask one yes/no question about a state, failing open.
+
+    Args:
+        state: context the question is about.
+        question_id: id of the question in the backend's answer.
+        instructions: the statement the backend judges.
+        threshold: lowest probability that counts as yes.
+
+    Returns:
+        bool: the decision, or True when no decision is available, so an
+            unconfigured or failing backend leaves the hook's plain behavior.
+    """
+    log = get_hooks_logger("Decision")
+    question = {"type": "noul", "instructions": instructions}
+    started = time.monotonic()
+    result = decide(state, {question_id: question})
+    elapsed = time.monotonic() - started
+    noul = result.get("answers", {}).get(question_id, {}).get("noul")
+    if noul is None:
+        log.debug("%s: unavailable after %.2fs: %s", question_id, elapsed, result)
+        return True
+    log.debug(
+        "%s: noul=%s threshold=%s elapsed=%.2fs", question_id, noul, threshold, elapsed
+    )
+    return noul >= threshold
+
+
+def emit_additional_context(event: str, context: str, logger: logging.Logger) -> None:
+    """Print the hook output that injects context for an event.
+
+    Args:
+        event: hook event name.
+        context: text to inject.
+        logger: the calling hook's logger.
+    """
+    output = {
+        "hookSpecificOutput": {"hookEventName": event, "additionalContext": context}
+    }
+    text = json.dumps(output, ensure_ascii=False)
+    logger.debug("[additionalContext]: %s", text)
+    print(text)  # noqa: T201 - hook stdout protocol
 
 
 if __name__ == "__main__":

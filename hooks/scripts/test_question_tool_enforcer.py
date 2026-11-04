@@ -205,3 +205,38 @@ def test_raising_backend_becomes_error(monkeypatch: pytest.MonkeyPatch) -> None:
     """decide() contains any backend crash, so hooks never die on it."""
     serve(monkeypatch, b"[]")
     assert "error" in utils.decide("s", {})
+
+
+@pytest.mark.parametrize(
+    ("payload", "reason"),
+    [
+        ({"stop_hook_active": True}, "stop_hook_active"),
+        ({"last_assistant_message": ""}, "no assistant message"),
+        ({"last_assistant_message": "Tudo pronto."}, "no '?'"),
+        ({"last_assistant_message": "Por que falha?"}, "does not ask the user"),
+    ],
+)
+def test_skip_reason_is_logged(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    payload: dict[str, Any],
+    reason: str,
+) -> None:
+    """Every silent exit leaves its reason in the log."""
+    serve(monkeypatch, clef_reply(0.01))
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+    with pytest.raises(SystemExit):
+        enforcer.main()
+    assert reason in caplog.text
+
+
+def test_unavailable_decision_is_logged(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A fail-open decision names the question and the backend's error."""
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN")
+    run_hook(monkeypatch, capsys, QUESTION)
+    assert f"{enforcer.QUESTION_ID}: unavailable" in caplog.text
+    assert "Missing CLOUDFLARE_ACCOUNT_ID" in caplog.text

@@ -23,15 +23,15 @@ Scripts live in [`scripts/`](scripts) and run via
 
 ## UserPromptSubmit
 
-| Script                              | Purpose                                                            |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| `turn_base_sha.py`                  | Pins the turn's starting commit SHA for the Stop-time lint gate.   |
-| `skill_activation.py`               | Matches the prompt against local skills, suggests which to invoke. |
-| `checklist_context_watch.py`        | Re-surfaces the active skill's `CHECKLIST.md`.                     |
-| `context7_search.py`                | Looks up Context7 docs relevant to the prompt.                     |
-| `caveman-mode-tracker.js`           | Tracks caveman-mode state across turns.                            |
-| `mcp_manager_context`               | Re-injects mcp-manager catalog.                                    |
-| `ai-memory` user-prompt-submit hook | Records the prompt as a memory observation.                        |
+| Script                              | Purpose                                                                                                                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `turn_base_sha.py`                  | Pins the turn's starting commit SHA for the Stop-time lint gate.                                                                                                         |
+| `skill_activation.py`               | Matches the prompt against local skills, suggests which to invoke.                                                                                                       |
+| `checklist_context_watch.py`        | Re-surfaces the active skill's `CHECKLIST.md`.                                                                                                                           |
+| `context7_search.py`                | Looks up Context7 docs relevant to the prompt. With Clef configured, `utils.decide_yes` skips prompts not worth a search; backend unavailable: every prompt is searched. |
+| `caveman-mode-tracker.js`           | Tracks caveman-mode state across turns.                                                                                                                                  |
+| `mcp_manager_context`               | Re-injects mcp-manager catalog.                                                                                                                                          |
+| `ai-memory` user-prompt-submit hook | Records the prompt as a memory observation.                                                                                                                              |
 
 ## PreToolUse
 

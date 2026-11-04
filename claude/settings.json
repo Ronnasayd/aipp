@@ -313,7 +313,7 @@
           {
             "type": "command",
             "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/context7_search.py",
-            "timeout": 10,
+            "timeout": 15,
             "statusMessage": "Searching context7..."
           },
           {
@@ -511,7 +511,7 @@
           {
             "type": "command",
             "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/context7_search.py",
-            "timeout": 10,
+            "timeout": 15,
             "statusMessage": "Searching context7..."
           },
           {

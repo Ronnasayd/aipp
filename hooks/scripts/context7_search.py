@@ -13,6 +13,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils import (
+    decide_yes,
+    emit_additional_context,
     encode_via_daemon,
     extract_query_text,
     get_by_key,
@@ -33,6 +35,12 @@ DAEMON_SCRIPT = Path(__file__).parent / "embedding_daemon.py"
 DAEMON_START_TIMEOUT = 90
 CACHE_DIR = Path.home() / ".cache" / "context7-search-cache"
 CACHE_TTL_SECONDS = 30 * 24 * 60 * 60
+QUESTION_ID = "worth_context7_search"
+QUESTION_STATEMENT = (
+    "The user's message concerns using, configuring, debugging, migrating or "
+    "choosing a specific library, framework, SDK, API, CLI tool or cloud "
+    "service, so its up-to-date documentation would help."
+)
 
 
 def _cache_path(query: str) -> Path:
@@ -195,6 +203,19 @@ def to_context(r: dict) -> dict:
     }
 
 
+def worth_searching(prompt: str) -> bool:
+    """Decide whether a prompt deserves a context7 search.
+
+    Args:
+        prompt: the user's prompt or answered question.
+
+    Returns:
+        bool: the decision, or True when no decision is available, so the hook
+            keeps searching every prompt without a configured backend.
+    """
+    return decide_yes(prompt, QUESTION_ID, QUESTION_STATEMENT)
+
+
 def main() -> None:
     """Search context7 for libraries relevant to the prompt and emit matches."""
     try:
@@ -206,6 +227,10 @@ def main() -> None:
     prompt = extract_query_text(payload)
     if not prompt:
         LOG.debug("No prompt/answer text in payload — skipping")
+        sys.exit(0)
+
+    if not worth_searching(prompt):
+        LOG.debug("Prompt not worth a context7 search — skipping")
         sys.exit(0)
 
     try:
@@ -226,25 +251,19 @@ def main() -> None:
     hook_event_name = (
         "PostToolUse" if get_by_key(payload, "tool_name") else "UserPromptSubmit"
     )
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": hook_event_name,
-            "additionalContext": minify_json(
-                {
-                    "instruction": (
-                        "these context7 libraries match the user's query; if "
-                        "relevant to the task, call the context7 MCP tools "
-                        "(resolve-library-id then get-library-docs) using the "
-                        "library's project id to fetch up-to-date docs before "
-                        "answering"
-                    ),
-                    "context7_libraries": [to_context(r) for r in matches],
-                }
+    context = minify_json(
+        {
+            "instruction": (
+                "these context7 libraries match the user's query; if "
+                "relevant to the task, call the context7 MCP tools "
+                "(resolve-library-id then get-library-docs) using the "
+                "library's project id to fetch up-to-date docs before "
+                "answering"
             ),
+            "context7_libraries": [to_context(r) for r in matches],
         }
-    }
-    LOG.debug("[additionalContext]: %s", json.dumps(output, ensure_ascii=False))
-    print(json.dumps(output, ensure_ascii=False))  # noqa: T201
+    )
+    emit_additional_context(hook_event_name, context, LOG)
     sys.exit(0)
 
 

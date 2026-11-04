@@ -12,7 +12,13 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
-from utils import decide, get_by_key, get_hooks_logger, minify_markdown
+from utils import (
+    decide_yes,
+    emit_additional_context,
+    get_by_key,
+    get_hooks_logger,
+    minify_markdown,
+)
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
@@ -25,7 +31,6 @@ QUESTION_STATEMENT = (
     "The assistant message asks the user a question that requires the user's "
     "answer or decision."
 )
-ASKS_USER_THRESHOLD = 0.5
 # why: questions to the user close a message; the tail bounds latency and cost.
 MAX_STATE_CHARS = 8000
 
@@ -104,13 +109,7 @@ def asks_user(message: str) -> bool:
         bool: the decision, or True when no decision is available, so a backend
             failure degrades to the plain '?' check instead of losing the rule.
     """
-    question = {"type": "noul", "instructions": QUESTION_STATEMENT}
-    result = decide(message[-MAX_STATE_CHARS:], {QUESTION_ID: question})
-    noul = result.get("answers", {}).get(QUESTION_ID, {}).get("noul")
-    if noul is None:
-        LOG.debug("Decision unavailable: %s", result)
-        return True
-    return noul >= ASKS_USER_THRESHOLD
+    return decide_yes(message[-MAX_STATE_CHARS:], QUESTION_ID, QUESTION_STATEMENT)
 
 
 def main() -> None:
@@ -122,6 +121,7 @@ def main() -> None:
         sys.exit(0)
 
     if get_by_key(payload, "stop_hook_active"):
+        LOG.debug("Skipping: stop_hook_active set")
         sys.exit(0)
 
     event = get_by_key(payload, "hook_event_name") or "Stop"
@@ -132,17 +132,17 @@ def main() -> None:
         last_message = last_assistant_from_transcript(
             get_by_key(payload, "transcript_path")
         )
-    if not last_message or "?" not in last_message or not asks_user(last_message):
+    if not last_message:
+        LOG.debug("Skipping: no assistant message found")
+        sys.exit(0)
+    if "?" not in last_message:
+        LOG.debug("Skipping: no '?' in message")
+        sys.exit(0)
+    if not asks_user(last_message):
+        LOG.debug("Skipping: message does not ask the user")
         sys.exit(0)
 
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": event,
-            "additionalContext": minify_markdown(RULE),
-        }
-    }
-    LOG.debug("[additionalContext]: %s", json.dumps(output, ensure_ascii=False))
-    print(json.dumps(output, ensure_ascii=False))  # noqa: T201 - hook stdout protocol
+    emit_additional_context(event, minify_markdown(RULE), LOG)
     sys.exit(0)
 
 
