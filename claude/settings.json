@@ -976,7 +976,8 @@
     "caveman@caveman": true,
     "rag-rat@rag-rat": true,
     "ponytail@ponytail": true,
-    "router@alexei-led-claude-router": false
+    "router@alexei-led-claude-router": false,
+    "egm@egm": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -1001,6 +1002,12 @@
       "source": {
         "source": "github",
         "repo": "alexei-led/claude-router"
+      }
+    },
+    "egm": {
+      "source": {
+        "source": "github",
+        "repo": "google/elephant-goldfish-model"
       }
     }
   },
