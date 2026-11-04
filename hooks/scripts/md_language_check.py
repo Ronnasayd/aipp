@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """PreToolUse hook.
 
-Denies writes of .md files into language-controlled docs directories when the
-content is not in the configured language. Silent when content is fine.
+Asks the user before writes of .md files into language-controlled docs
+directories when the content is not in the configured language. Silent when
+content is fine.
 """
 
 import fnmatch
@@ -68,7 +69,7 @@ def _looks_portuguese(text: str) -> bool:
 
 
 def main() -> None:
-    """Read the tool payload from stdin and emit a language reminder."""
+    """Read the tool payload from stdin and ask about off-language content."""
     target = load_md_write_target(LOG)
     if target is None:
         sys.exit(0)
@@ -87,15 +88,15 @@ def main() -> None:
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
+            "permissionDecision": "ask",
             "permissionDecisionReason": (
                 f"{Path(file_path).name} is in a language-controlled docs "
-                f"directory: content must be in {MD_LANGUAGE}, but it looks "
-                "Portuguese. Rewrite it and retry."
+                f"directory: content should be in {MD_LANGUAGE}, but it looks "
+                "Portuguese. Save anyway?"
             ),
         }
     }
-    LOG.debug("[blocked]: %s", json.dumps(output, ensure_ascii=False))
+    LOG.debug("[asked]: %s", json.dumps(output, ensure_ascii=False))
     print(json.dumps(output, ensure_ascii=False))  # noqa: T201
     sys.exit(0)
 
