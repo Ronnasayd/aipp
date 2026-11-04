@@ -1,0 +1,5 @@
+{
+  "name": "skill-model-enforcer",
+  "version": "0.1.0",
+  "description": "Applies a skill's model frontmatter to the rest of its turn when Claude Code ignores it"
+}
