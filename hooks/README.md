@@ -49,7 +49,7 @@ Scripts live in [`scripts/`](scripts) and run via
 | `Read\|Edit\|Write` | `dir_context_refs.py`         | Walks parent dirs for `CONTEXT.md`/`CLAUDE.md`/`AGENTS.md` and announces them.                                                                                                          |
 | `Read`              | `large_file_read_warning.py`  | Warns when reading a large file without offset/limit.                                                                                                                                   |
 | _(all)_             | `tooluse_context_rules.py`    | Generic rule engine: injects `additionalContext` when a rule's `match(payload)` is true.                                                                                                |
-| _(all)_             | `subagent_guidelines.py`      | Injects guidelines when a subagent starts.                                                                                                                                              |
+| _(all)_             | `subagent_guidelines.py`      | Injects launch guidelines for the caller.                                                                                                                                               |
 | _(all)_             | `protect_files.py`            | Blocks reads/writes/exfiltration of protected paths (secrets, home dir, etc.), hardened against compound/obfuscated commands.                                                           |
 | _(all)_             | `ai-memory` pre-tool-use hook | Records tool-call observation.                                                                                                                                                          |
 | _(all)_             | `agent-flow/hook.js`          | External agent-flow integration hook.                                                                                                                                                   |
@@ -95,6 +95,7 @@ Scripts live in [`scripts/`](scripts) and run via
 
 | Script                          | Purpose                                                    |
 | ------------------------------- | ---------------------------------------------------------- |
+| `subagent_guidelines.py`        | Injects the response template into every subagent.         |
 | `ai-memory` subagent-start hook | Starts a memory observation stream scoped to the subagent. |
 
 ## PreCompact
