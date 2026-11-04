@@ -33,7 +33,8 @@ export function bucket(tool: string): keyof Counts {
 }
 
 export function format(c: Counts): string {
-  return `Bash ${c.bash} · Read ${c.read} · Write ${c.write} · MCP ${c.mcp} · Skill ${c.skill} · Others ${c.others}`;
+  const total = Object.values(c).reduce((sum, n) => sum + n, 0);
+  return `Bash ${c.bash} · Read ${c.read} · Write ${c.write} · MCP ${c.mcp} · Skill ${c.skill} · Others ${c.others} · Total ${total}`;
 }
 
 export const register: Register = (on) => {

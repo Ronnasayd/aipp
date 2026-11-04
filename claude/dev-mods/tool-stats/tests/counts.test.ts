@@ -12,7 +12,7 @@ test("counts tools per session, resets on new session id, mirrors to per-session
 
   await $.session.start({ cwd: "/", surface: "terminal", isInteractive: true });
   expect(files["/tmp/claude-tool-stats-s1.txt"]).toBe(
-    "Bash 0 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0"
+    "Bash 0 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0 · Total 0"
   );
 
   await Promise.all([
@@ -30,17 +30,17 @@ test("counts tools per session, resets on new session id, mirrors to per-session
     $.tool.call({ tool: "Skill" } as never)
   ]);
   expect(files["/tmp/claude-tool-stats-s1.txt"]).toBe(
-    "Bash 2 · Read 1 · Write 1 · MCP 1 · Skill 1 · Others 1"
+    "Bash 2 · Read 1 · Write 1 · MCP 1 · Skill 1 · Others 1 · Total 7"
   );
 
   // why: /clear switches session id without firing session.start; counts must still restart.
   sid = "s2";
   await $.tool.call({ tool: "Bash", command: "ls" });
   expect(files["/tmp/claude-tool-stats-s2.txt"]).toBe(
-    "Bash 1 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0"
+    "Bash 1 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0 · Total 1"
   );
   expect(files["/tmp/claude-tool-stats-s1.txt"]).toBe(
-    "Bash 2 · Read 1 · Write 1 · MCP 1 · Skill 1 · Others 1"
+    "Bash 2 · Read 1 · Write 1 · MCP 1 · Skill 1 · Others 1 · Total 7"
   );
   expect(statusCalls).toBe(0);
 });

@@ -492,6 +492,6 @@ fi
 tool_stats_file="/tmp/claude-tool-stats-${session_id}.txt"
 # why: /clear switches session_id without session.start, so the new id has no file until its first tool call
 if [ -n "$session_id" ]; then
-    tool_stats=$(cat "$tool_stats_file" 2>/dev/null || echo "Bash 0 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0")
+    tool_stats=$(cat "$tool_stats_file" 2>/dev/null || echo "Bash 0 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0 · Total 0")
     echo -e "${C_SUBTEXT}${ICON_WRENCH} ${tool_stats}${RESET}"
 fi
