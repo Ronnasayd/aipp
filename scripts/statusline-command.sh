@@ -36,8 +36,10 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_MEAN=$'\U000003BC'
     ICON_READONLY=$'\U0000F023'
     ICON_TASK=$'\U0000F0AE'
+    ICON_MCP=$'\U0000F1E6'
 else
     ICON_TASK="📋"
+    ICON_MCP="🔌"
     ICON_READONLY="🔏"
     ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙" ICON_WRENCH="🔧"
     ICON_EMAIL="📧" ICON_SERENA="🧭" ICON_MEMORY="💾" ICON_RAGRAT="🐀" ICON_COST="💰"
@@ -332,6 +334,12 @@ for d in "$serena_dot" "$memory_dot" "$ragrat_dot" "$caveman_dot" "$ponytail_dot
 done
 tools_status="${SEP}${ICON_TOOLS} \e]8;;file://${TOOLS_LOG}\e\\\\tools(${tools_dots})\e]8;;\e\\\\"
 
+# why: .claude.json keys projects by the path Claude Code was opened in, which is project_dir, not a subdir cwd
+project_dir=$(echo "$input" | jq -r '.workspace.project_dir // .workspace.current_dir')
+disabled_mcps=$(jq -r --arg p "$project_dir" '.projects[$p].disabledMcpServers // [] | select(length > 0) | length' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.claude.json" 2>/dev/null)
+disabled_mcp_info=""
+[ -n "$disabled_mcps" ] && disabled_mcp_info="${SEP}${C_YELLOW}${ICON_MCP} mcp/disabled(${disabled_mcps})${RESET}"
+
 # Session duration (wall clock)
 duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // empty')
 dur_info=""
@@ -481,7 +489,7 @@ cc_ver_info=""
 # OSC 8 hyperlink: v<version> -> release notes (degrades to plain text on terminals without support)
 [ -n "$cc_version" ] && cc_ver_info="${SEP}\e]8;;https://github.com/anthropics/claude-code/releases\e\\\\${C_SUBTEXT}v${cc_version}${RESET}\e]8;;\e\\\\"
 echo -e "${email_color}${email_info}${RESET}${transcript_link}"
-echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${readonly_info}${tools_status}${cc_ver_info}"
+echo -e "${C_TEAL}${ICON_FOLDER} $folder${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${readonly_info}${tools_status}${disabled_mcp_info}${cc_ver_info}"
 echo -e "${C_BLUE}${ICON_CTX} ctx ${ctx_bar} ${ctx_pct_int}% (${ctx_usage_k}k/${ctx_size_k}k)${RESET}${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${SEP}${cache_ttl_info}"
 echo -e "${rate_info}"
 
