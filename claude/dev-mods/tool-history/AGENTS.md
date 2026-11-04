@@ -42,3 +42,18 @@
   settled out of order and the terminal kept stale handles
   (`ui.press: no Button of tool-history is held under handle …`). Nothing
   redraws the band mid-turn, so clicks died until the turn ended.
+
+## Errors tab (⚠)
+
+- Fourth tab lists only tool calls whose result has `isError`; no messages.
+  Empty text: "No failed tool calls." `tests/errors-tab.test.tsx` asserts it.
+- In tests, `isError`/`text` sit at the top of the `tool.call` answer, not
+  inside `result` (`{ result: {}, text, isError: true }`).
+
+## Duration per call
+
+- `durationMs` = `$.clock.now()` after `next(e)` minus before; shown in the
+  card header as `40ms` / `2.3s`. Uses `$.clock`, not `Date.now()`, so tests
+  drive it with `mock.clock`. `tests/duration.test.tsx` asserts it.
+- `setupHooks` mocks the clock for every test (nothing else answers
+  `clock.now`) and returns it; don't call `mock.clock` again in a test.

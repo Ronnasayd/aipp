@@ -58,6 +58,15 @@ function summarize(e: Record<string, unknown>): string {
     : `${oneLine.slice(0, SUMMARY_CHARS_SHOWN)}…`;
 }
 
+/**
+ * Formats a tool call's run time for its card header.
+ * @param ms - Elapsed milliseconds between the call starting and its result.
+ * @returns "40ms" under a second, else seconds with one decimal ("2.3s").
+ */
+function formatDuration(ms: number): string {
+  return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
 const RESULT_LINES_SHOWN = 4;
 // why: engine's ui.render chokes past ~100k chars in one draw (observed crash)
 const RESULT_CHARS_SHOWN = 2000;
@@ -219,6 +228,7 @@ export const register: Register = (on) => {
       at: Date.now()
     };
     await update($, calls, (list) => [...list, record].slice(-200));
+    const startedAt = await $.clock.now();
     const args = e as unknown as Record<string, unknown>;
     if (e.tool === "Agent" && typeof args.prompt === "string") {
       const delegation: AgentMessageRecord = {
@@ -232,6 +242,7 @@ export const register: Register = (on) => {
       await update($, messages, (list) => [...list, delegation].slice(-200));
     }
     const ran = await next(e);
+    const durationMs = (await $.clock.now()) - startedAt;
     const rawText = "text" in ran ? ran.text : undefined;
     const resultText = trimResult(rawText);
     const isError = "isError" in ran ? ran.isError : undefined;
@@ -239,7 +250,7 @@ export const register: Register = (on) => {
     await update($, calls, (list) => {
       trimmed = list.map((one) =>
         one.id === record.id
-          ? { ...one, isDone: true, resultText, isError }
+          ? { ...one, isDone: true, resultText, isError, durationMs }
           : one
       );
       return trimmed;
@@ -387,6 +398,14 @@ export const register: Register = (on) => {
           🔀
         </Button>
         <Button
+          key="errors"
+          plain
+          variant={tab === "errors" ? "primary" : "secondary"}
+          onPress={selectTab("errors")}
+        >
+          ⚠
+        </Button>
+        <Button
           key="collapse"
           plain
           onPress={onBand($, () => setCollapsed($, true))}
@@ -405,8 +424,11 @@ export const register: Register = (on) => {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const { Box, Text, Button, Markdown } = $.ui.resolve(e);
     const tab = await read($, activeTab);
-    const msgs = tab === "calls" ? [] : await read($, messages);
-    const callList = tab === "messages" ? [] : await read($, calls);
+    const msgs =
+      tab === "calls" || tab === "errors" ? [] : await read($, messages);
+    const allCalls = tab === "messages" ? [] : await read($, calls);
+    const callList =
+      tab === "errors" ? allCalls.filter((call) => call.isError) : allCalls;
     const results = await read($, fullResults);
 
     const messageCard = (msg: AgentMessageRecord) => (
@@ -452,6 +474,11 @@ export const register: Register = (on) => {
             <Text bold color={borderColor}>
               {`${call.agentLabel} - ${icon} ${call.tool.toUpperCase()}`}
             </Text>
+            {call.durationMs !== undefined && (
+              <Text key={`duration-${call.id}`} dimColor>
+                {formatDuration(call.durationMs)}
+              </Text>
+            )}
             {results[call.id] && (
               <Button
                 key={`open-${call.id}`}
@@ -487,7 +514,9 @@ export const register: Register = (on) => {
         ? "No tool calls yet."
         : tab === "messages"
           ? "No agent messages yet."
-          : "Nothing yet.";
+          : tab === "errors"
+            ? "No failed tool calls."
+            : "Nothing yet.";
 
     return (
       <Box key="root" flexDirection="column">

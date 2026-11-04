@@ -1,3 +1,5 @@
+import { mock } from "claude-code/testing";
+
 export const PANE = {
   plugin: "tool-history",
   component: "Pane",
@@ -35,7 +37,10 @@ export const paneScroll = (offset: number) =>
     bodyRows: 20
   }) as never;
 
-export function setupHooks(on: any) {
+// why: the mod reads $.clock.now() to time each tool call; nothing beneath
+// the plugins answers it unless a test mocks the clock, so every test gets one.
+export function setupHooks(on: any, now = 0) {
+  const clock = mock.clock(on, { now });
   on("command.register", () => ({ value: { command: "tool-history" } }));
   on("ui.render", { component: "AbovePrompt" }, ($: any, e: any) => {
     const { Text } = $.ui.resolve(e);
@@ -44,4 +49,5 @@ export function setupHooks(on: any) {
   on("ui.scroll", () => ({}));
   on("session.start", (_: any, e: any) => ({ cwd: e.cwd }));
   on("command.run", () => ({ text: "" }));
+  return clock;
 }

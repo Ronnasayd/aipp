@@ -1,12 +1,11 @@
-import { expect, mock, test } from "claude-code/testing";
+import { expect, test } from "claude-code/testing";
 import { BAND, setupHooks } from "./helpers";
 
 // why: with router wrapping AbovePrompt, two band renders settle out of order
 // and the terminal keeps handles of the stale one ("no Button of tool-history
 // is held under handle"); nothing redraws the band mid-turn to heal it.
 test("a band press asks for one more redraw once the renders settled", async ($, on) => {
-  setupHooks(on);
-  const clock = mock.clock(on);
+  const clock = setupHooks(on);
   const invalidated: string[] = [];
   on("ui.open", () => ({ value: { isPlaced: true } }) as never);
   on("ui.invalidate", (_: any, e: any) => {
