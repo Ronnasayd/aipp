@@ -80,17 +80,21 @@ else
 fi
 
 # Context bar (20 segments, 5% each) + k-formatted tokens
+render_bar() {
+    local filled=$1 total=$2 bar="" i
+    for i in $(seq 1 "$total"); do
+        if [ "$i" -le "$filled" ]; then
+            bar="${bar}▰"
+        else
+            bar="${bar}▱"
+        fi
+    done
+    echo "$bar"
+}
 ctx_filled=$(( ctx_pct_int / 5 ))
 [ "$ctx_filled" -gt 20 ] && ctx_filled=20
 [ "$ctx_filled" -lt 0 ] && ctx_filled=0
-ctx_bar=""
-for i in $(seq 1 20); do
-    if [ "$i" -le "$ctx_filled" ]; then
-        ctx_bar="${ctx_bar}▰"
-    else
-        ctx_bar="${ctx_bar}▱"
-    fi
-done
+ctx_bar=$(render_bar "$ctx_filled" 20)
 ctx_usage_k=$(( ctx_usage / 1000 ))
 ctx_size_k=$(( ctx_size / 1000 ))
 
@@ -188,12 +192,14 @@ effort_level=$(echo "$input" | jq -r '.effort.level // empty')
 effort_info=""
 if [ -n "$effort_level" ]; then
     case "$effort_level" in
-        low)    effort_color="$C_GREEN" ;;
-        medium) effort_color="$C_YELLOW" ;;
-        high|xhigh|max) effort_color="$C_RED" ;;
-        *)      effort_color="" ;;
+        low)    effort_color="$C_GREEN";  effort_filled=1 ;;
+        medium) effort_color="$C_YELLOW"; effort_filled=2 ;;
+        high)   effort_color="$C_RED";    effort_filled=3 ;;
+        xhigh)  effort_color="$C_RED";    effort_filled=4 ;;
+        max)    effort_color="$C_RED";    effort_filled=5 ;;
+        *)      effort_color="";          effort_filled=0 ;;
     esac
-    effort_info="${SEP}${effort_color}${ICON_EFFORT} ${effort_level}${RESET}"
+    effort_info="${SEP}${effort_color}${ICON_EFFORT} $(render_bar "$effort_filled" 5) ${effort_level}${RESET}"
 fi
 
 # email proxy status
