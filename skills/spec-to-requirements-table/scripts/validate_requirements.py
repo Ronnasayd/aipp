@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-validate_requirements.py - deterministic checks for a spec-to-requirements-table output.
+"""Deterministic checks for a spec-to-requirements-table output.
 
 Turns the spec-to-requirements-table skill's step-7 verification and
 anti-pattern list into a checkable pass/fail run BEFORE the table is handed
@@ -20,7 +19,8 @@ What it checks (heuristic markdown inspection, not a full parser):
            (e.g. a standalone number, or a quoted literal) - possible lookup
   WARN   - no Glossary section, or an abbreviation used in the body
            (FR/NR/SP/EP) is not defined in it
-  WARN   - a source line (Spec/Design/Tasks path) is missing
+  WARN   - a source line is missing: Spec and Design, unless the table names a
+           tlc-spec-lean Plan or Checks source
 
 Usage:
   python3 <skill-dir>/scripts/validate_requirements.py [target] [--strict]
@@ -33,6 +33,7 @@ Exit codes: 0 pass, 1 errors found (or warnings under --strict), 2 usage error.
 """
 
 import argparse
+from collections.abc import Callable, Iterator
 import os
 import re
 import sys
@@ -42,21 +43,46 @@ PATH_TAG_RE = re.compile(r"\b(SP|EP)\b")
 BARE_NUMBER_RE = re.compile(r"(?<![\w.#-])\d{2,}(?![\w.-])")
 QUOTED_LITERAL_RE = re.compile(r'"[^"]{2,}"|\'[^\']{2,}\'')
 SOURCE_LINE_RE = re.compile(
-    r"^\*\*(Spec|Design|Tasks|BDD):\*\*\s*`([^`]+)`", re.MULTILINE
+    r"^\*\*(Spec|Design|Tasks|BDD|Plan|Checks):\*\*\s*`([^`]+)`", re.MULTILINE
 )
 
+Table = tuple[list[str], list[list[str]]]
 
-def split_row(line):
+
+def split_row(line: str) -> list[str]:
+    """Split a markdown table line into its cells.
+
+    Args:
+        line: The table line.
+
+    Returns:
+        The stripped cell texts.
+    """
     cells = line.strip().strip("|").split("|")
     return [c.strip() for c in cells]
 
 
-def is_separator(line):
+def is_separator(line: str) -> bool:
+    """Tell whether a line is a markdown table separator.
+
+    Args:
+        line: The line to test.
+
+    Returns:
+        True for a separator line such as `| --- | --- |`.
+    """
     return bool(re.match(r"^\s*\|?[\s:|-]+\|?\s*$", line)) and "-" in line
 
 
-def find_tables(lines):
-    """Yield (header_cells, [data_rows]) for every markdown table in the doc."""
+def find_tables(lines: list[str]) -> Iterator[Table]:
+    """Walk every markdown table in the document.
+
+    Args:
+        lines: The document's lines.
+
+    Yields:
+        A (header_cells, data_rows) pair per table.
+    """
     i = 0
     while i < len(lines):
         if (
@@ -76,75 +102,126 @@ def find_tables(lines):
             i += 1
 
 
-def check(path):
-    with open(path, "r", encoding="utf-8") as f:
-        text = f.read()
-    lines = text.splitlines()
+def _column(header: list[str], matches: Callable[[str], bool]) -> int | None:
+    """Find the first header cell a predicate accepts.
+
+    Args:
+        header: The header cells.
+        matches: Predicate over a lowercased cell.
+
+    Returns:
+        The column index, or None when no cell matches.
+    """
+    return next((i for i, c in enumerate(header) if matches(c.strip().lower())), None)
+
+
+def _cell(row: list[str], column: int | None) -> str | None:
+    """Read a cell that may not exist.
+
+    Args:
+        row: The row's cells.
+        column: The column index, or None when the table lacks that column.
+
+    Returns:
+        The cell text, or None when the row has no such cell.
+    """
+    return row[column] if column is not None and column < len(row) else None
+
+
+def _check_row(
+    row: list[str], path: str | None, rationale: str | None, expression: str | None
+) -> tuple[list[str], list[str]]:
+    """Check one requirement row.
+
+    Args:
+        row: The row's cells.
+        path: Its Path cell, if any.
+        rationale: Its Complement cell, if any.
+        expression: Its Expression cell, if any.
+
+    Returns:
+        The row's (errors, warnings).
+    """
     errors, warnings = [], []
+    if path is not None and not PATH_TAG_RE.search(path):
+        errors.append(f"row not tagged SP/EP: {row[0][:50]!r}")
+    code = SPEC_CODE_RE.search(rationale) if rationale is not None else None
+    if code:
+        errors.append(
+            f"rationale cites spec code {code.group(0)} instead of explaining: "
+            f"{row[0][:40]!r}"
+        )
+    if expression is not None and (
+        BARE_NUMBER_RE.search(expression) or QUOTED_LITERAL_RE.search(expression)
+    ):
+        warnings.append(
+            "Expression may embed a concrete id/sample value (forces lookup): "
+            f"{row[0][:40]!r}"
+        )
+    return errors, warnings
 
-    tables = list(find_tables(lines))
-    req_tables = [
-        (h, r) for h, r in tables if not any("driven by" in c.lower() for c in h)
-    ]
-    cons_tables = [
-        (h, r) for h, r in tables if any("driven by" in c.lower() for c in h)
-    ]
 
-    # 1. Requirement rows exist, tagged SP/EP, rationale doesn't cite spec codes.
+def _check_requirements(tables: list[Table]) -> tuple[list[str], list[str]]:
+    """Check that rows exist, are tagged, and explain themselves.
+
+    Args:
+        tables: The requirement tables.
+
+    Returns:
+        The (errors, warnings) of all rows.
+    """
+    errors, warnings = [], []
     total_rows = 0
-    for header, rows in req_tables:
-        path_col = next(
-            (
-                idx
-                for idx, c in enumerate(header)
-                if c.strip().lower() in ("path", "sp/ep")
-            ),
-            None,
-        )
-        expr_col = next(
-            (idx for idx, c in enumerate(header) if "expression" in c.lower()), None
-        )
-        comp_col = next(
-            (idx for idx, c in enumerate(header) if "complement" in c.lower()), None
-        )
+    for header, rows in tables:
+        path_col = _column(header, lambda c: c in ("path", "sp/ep"))
+        expr_col = _column(header, lambda c: "expression" in c)
+        comp_col = _column(header, lambda c: "complement" in c)
+        total_rows += len(rows)
         for row in rows:
-            total_rows += 1
-            if path_col is not None and path_col < len(row):
-                if not PATH_TAG_RE.search(row[path_col]):
-                    errors.append(f"row not tagged SP/EP: {row[0][:50]!r}")
-            if comp_col is not None and comp_col < len(row):
-                m = SPEC_CODE_RE.search(row[comp_col])
-                if m:
-                    errors.append(
-                        f"rationale cites spec code {m.group(0)} instead of explaining: {row[0][:40]!r}"
-                    )
-            if expr_col is not None and expr_col < len(row):
-                cell = row[expr_col]
-                if BARE_NUMBER_RE.search(cell) or QUOTED_LITERAL_RE.search(cell):
-                    warnings.append(
-                        f"Expression may embed a concrete id/sample value (forces lookup): {row[0][:40]!r}"
-                    )
-
+            row_errors, row_warnings = _check_row(
+                row, _cell(row, path_col), _cell(row, comp_col), _cell(row, expr_col)
+            )
+            errors.extend(row_errors)
+            warnings.extend(row_warnings)
     if total_rows == 0:
         errors.append("no data rows found in any requirement table")
+    return errors, warnings
 
-    # 2. Accepted consequences section + Driven by back-links.
+
+def _check_consequences(text: str, tables: list[Table]) -> list[str]:
+    """Check the Accepted consequences section and its back-links.
+
+    Args:
+        text: The document.
+        tables: The tables with a Driven by column.
+
+    Returns:
+        The errors found.
+    """
     if not re.search(r"^#{1,3}\s.*consequence", text, re.IGNORECASE | re.MULTILINE):
-        errors.append("missing 'Accepted consequences' section")
-    elif not cons_tables:
-        errors.append("consequences section has no table with a 'Driven by' column")
-    else:
-        for header, rows in cons_tables:
-            driven_col = next(
-                idx for idx, c in enumerate(header) if "driven by" in c.lower()
-            )
-            for row in rows:
-                if driven_col >= len(row) or not row[driven_col].strip():
-                    errors.append(
-                        f"consequence row has empty 'Driven by' back-link: {row[0][:40]!r}"
-                    )
+        return ["missing 'Accepted consequences' section"]
+    if not tables:
+        return ["consequences section has no table with a 'Driven by' column"]
+    errors: list[str] = []
+    for header, rows in tables:
+        driven_col = _column(header, lambda c: "driven by" in c)
+        errors.extend(
+            f"consequence row has empty 'Driven by' back-link: {row[0][:40]!r}"
+            for row in rows
+            if not (_cell(row, driven_col) or "").strip()
+        )
+    return errors
 
-    # 3. Glossary covers abbreviations actually used.
+
+def _check_glossary(text: str) -> list[str]:
+    """Check that the Glossary covers the abbreviations in use.
+
+    Args:
+        text: The document.
+
+    Returns:
+        The warnings found.
+    """
     body_upper = text.upper()
     used_abbrevs = {
         a for a in ("FR", "NR", "SP", "EP") if re.search(rf"\b{a}\b", body_upper)
@@ -152,30 +229,72 @@ def check(path):
     gloss_match = re.search(
         r"^#{1,3}\s*Glossary\s*$", text, re.IGNORECASE | re.MULTILINE
     )
-    if not gloss_match and used_abbrevs:
-        warnings.append(
-            f"no Glossary section, but abbreviations used: {sorted(used_abbrevs)}"
-        )
-    elif gloss_match:
-        gloss_body = text[gloss_match.end() :]
-        undefined = [
-            a for a in used_abbrevs if not re.search(rf"\*\*{a}\*\*", gloss_body)
-        ]
-        if undefined:
-            warnings.append(
-                f"abbreviations used but not defined in Glossary: {sorted(undefined)}"
-            )
+    if not gloss_match:
+        if used_abbrevs:
+            return [
+                f"no Glossary section, but abbreviations used: {sorted(used_abbrevs)}"
+            ]
+        return []
+    gloss_body = text[gloss_match.end() :]
+    undefined = [a for a in used_abbrevs if not re.search(rf"\*\*{a}\*\*", gloss_body)]
+    if undefined:
+        return [f"abbreviations used but not defined in Glossary: {sorted(undefined)}"]
+    return []
 
-    # 4. Source lines present.
+
+def _check_sources(text: str) -> list[str]:
+    """Check the source lines at the top of the file.
+
+    Args:
+        text: The document.
+
+    Returns:
+        The warnings found.
+    """
     sources = dict(SOURCE_LINE_RE.findall(text))
-    for label in ("Spec", "Design"):
-        if label not in sources:
-            warnings.append(f"no **{label}**: source line at top of file")
+    # why: a tlc-spec-lean feature has plan.md/checks.md instead of spec.md/design.md.
+    required = () if sources.keys() & {"Plan", "Checks"} else ("Spec", "Design")
+    return [
+        f"no **{label}**: source line at top of file"
+        for label in required
+        if label not in sources
+    ]
 
+
+def check(path: str | os.PathLike[str]) -> tuple[list[str], list[str]]:
+    """Run every check over a requirements.md.
+
+    Args:
+        path: The file to check.
+
+    Returns:
+        The (errors, warnings) found.
+    """
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+
+    tables = list(find_tables(text.splitlines()))
+    cons_tables = [
+        t for t in tables if _column(t[0], lambda c: "driven by" in c) is not None
+    ]
+    req_tables = [t for t in tables if t not in cons_tables]
+
+    errors, warnings = _check_requirements(req_tables)
+    errors.extend(_check_consequences(text, cons_tables))
+    warnings.extend(_check_glossary(text))
+    warnings.extend(_check_sources(text))
     return errors, warnings
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
+    """Run the command line.
+
+    Args:
+        argv: Arguments, or None to read them from the process.
+
+    Returns:
+        The exit code: 0 pass, 1 findings, 2 usage error.
+    """
     p = argparse.ArgumentParser(
         prog="validate_requirements.py",
         description="Deterministic checks for a spec-to-requirements-table output.",
@@ -188,17 +307,18 @@ def main(argv=None):
     if os.path.isdir(path):
         path = os.path.join(path, "requirements.md")
     if not os.path.isfile(path):
-        print(f"validate_requirements: file not found: {path}", file=sys.stderr)
+        sys.stderr.write(f"validate_requirements: file not found: {path}\n")
         return 2
 
     errors, warnings = check(path)
     for w in warnings:
-        print(f"  WARN  {w}")
+        sys.stdout.write(f"  WARN  {w}\n")
     for e in errors:
-        print(f"  ERROR {e}")
+        sys.stdout.write(f"  ERROR {e}\n")
     fail = errors or (warnings and args.strict)
-    print(
-        f"\nvalidate_requirements: {len(errors)} error(s), {len(warnings)} warning(s) in {path}"
+    sys.stdout.write(
+        f"\nvalidate_requirements: {len(errors)} error(s), "
+        f"{len(warnings)} warning(s) in {path}\n"
     )
     return 1 if fail else 0
 

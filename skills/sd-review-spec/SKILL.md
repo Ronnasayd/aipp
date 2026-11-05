@@ -1,12 +1,12 @@
 ---
 name: sd-review-spec
-description: "Review and correct a feature's spec documents (spec.md, design.md, tasks.md, requirements.md, context-map.md, ADRs) by verifying every claim against the real code, classifying gaps by severity, and applying fixes. Use when user says 'review this spec', 'audit the spec against the code', 'find gaps in the spec', 'check spec inconsistencies', 'find implicit requirements', or 'validate design.md and tasks.md'."
+description: "Review and correct a feature's spec documents (spec.md, design.md, tasks.md, plan.md, checks.md, requirements.md, context-map.md, ADRs) by verifying every claim against the real code, classifying gaps by severity, and applying fixes. Use when user says 'review this spec', 'audit the spec against the code', 'find gaps in the spec', 'check spec inconsistencies', 'find implicit requirements', 'validate design.md and tasks.md', or 'validate plan.md and checks.md'."
 model: opus
 ---
 
 ## Guide: Technical Spec Review (gaps, inconsistencies, implicit requirements)
 
-Audit spec docs (spec.md, design.md, tasks.md, requirements.md, context-map.md, cited ADRs) against actual code, then apply corrections. Spec = hypothesis, never truth. Ask user once before editing (Step 4).
+Audit spec docs (spec.md, design.md, tasks.md, or tlc-spec-lean's plan.md and checks.md, plus requirements.md, context-map.md, cited ADRs) against actual code, then apply corrections. Spec = hypothesis, never truth. Ask user once before editing (Step 4).
 
 | #   | Step                 | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Output / Gate                                                          |
 | --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
@@ -26,7 +26,7 @@ Audit spec docs (spec.md, design.md, tasks.md, requirements.md, context-map.md, 
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | High                            | Breaks existing contract (API, CLI output, component props, exported signature, error/exit behavior); cited command/API/flag missing in installed version; corrupted/truncated content in doc; validation rejecting a real system case (e.g. input in format not guaranteed by its producer); missing invariant/constraint that logic assumes; success criterion with no real test |
 | Medium                          | External dependency (relation, service, file, env var) can be absent on valid path; justification doesn't match cited code; task underestimates blast radius of contract change; accepted consequence unrecorded; unspecified data normalization/format                                                                                                                            |
-| Inconsistencies / implicit reqs | Docs stale vs each other (one superseded another); declared deps diverge from real tracker; incomplete "files to modify"; broken req ID ↔ task ID traceability; out-of-scope item unrelated to card; type/value specified but unused in any rule                                                                                                                                   |
+| Inconsistencies / implicit reqs | Docs stale vs each other (one superseded another); declared deps diverge from real tracker; incomplete "files to modify"; broken req ID ↔ task ID traceability (lean: criterion ↔ check); out-of-scope item unrelated to card; type/value specified but unused in any rule                                                                                                         |
 
 Notes:
 
@@ -54,5 +54,5 @@ Notes:
 ## Reference files
 
 - [references/verification-checklist.md](references/verification-checklist.md) — 10-point stack-agnostic code verification list (entry points, access control, data contracts, runtime inputs, errors, reused patterns, versions, state write paths, affected tests, atomicity/side effects)
-- [references/fix-by-file.md](references/fix-by-file.md) — per-file edit rules (spec, design, tasks, requirements, context-map, ADRs)
+- [references/fix-by-file.md](references/fix-by-file.md) — per-file edit rules (spec, design, tasks, plan, checks, requirements, context-map, ADRs)
 - [references/taskmaster-sync.md](references/taskmaster-sync.md) — disposable-script procedure to sync tracker derived fields

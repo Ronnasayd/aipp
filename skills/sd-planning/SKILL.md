@@ -2,6 +2,9 @@
 name: sd-planning
 description: Generate a feature plan through iterative problem breakdown, codebase research, and clarifying questions before handing off to tlc-spec-driven and requirements-table generation. Use when user says 'plan this feature step by step', 'help me plan this properly', 'generate a plan for this problem', or 'walk through planning this feature'.
 model: opus
+metadata:
+  author: Ronnasayd Machado - github.com/Ronnasayd
+  version: "2.0.0"
 ---
 
 # Steps

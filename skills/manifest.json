@@ -839,6 +839,18 @@
       "test-merge.sh"
     ]
   },
+  "sd-lean-execute": {
+    "skill_md": "sd-lean-execute/SKILL.md",
+    "files": [
+      "CHECKLIST.md",
+      "references/diagram.md",
+      "references/troubleshooting.md"
+    ]
+  },
+  "sd-lean-planning": {
+    "skill_md": "sd-lean-planning/SKILL.md",
+    "files": ["CHECKLIST.md", "references/diagram.md"]
+  },
   "sd-planning": {
     "skill_md": "sd-planning/SKILL.md",
     "files": ["CHECKLIST.md", "references/diagram.md", "references/docs-adr.md"]
@@ -869,7 +881,10 @@
   },
   "spec-to-requirements-table": {
     "skill_md": "spec-to-requirements-table/SKILL.md",
-    "files": ["scripts/validate_requirements.py"]
+    "files": [
+      "scripts/test_validate_requirements.py",
+      "scripts/validate_requirements.py"
+    ]
   },
   "srs-generator": {
     "skill_md": "srs-generator/SKILL.md",

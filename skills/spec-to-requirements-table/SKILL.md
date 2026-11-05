@@ -1,6 +1,6 @@
 ---
 name: spec-to-requirements-table
-description: Derive a flat, self-contained requirements review table from a feature's spec.md, design.md and tasks.md — one row per acceptance criterion, tagged success or error path — so a non-implementer can scan it and judge whether each rule makes sense. Use when the user says 'the spec is too technical', 'make a requirements table', 'build a review sheet for these requirements', 'turn this spec into a requirements table', or supplies a table template and asks to fill it from an existing spec.
+description: Derive a flat, self-contained requirements review table from a feature's spec.md, design.md and tasks.md, or from a tlc-spec-lean plan.md and checks.md — one row per acceptance criterion, tagged success or error path — so a non-implementer can scan it and judge whether each rule makes sense. Use when the user says 'the spec is too technical', 'make a requirements table', 'build a review sheet for these requirements', 'turn this spec into a requirements table', or supplies a table template and asks to fill it from an existing spec.
 argument-hint: "<spec-dir> <language> [template-path] [id-scheme]: (Required) Feature spec directory and output language. Optional template file path and id scheme. Ask the user before invoking if the language is unknown."
 context: fork
 background: false
@@ -39,14 +39,17 @@ Test: assume the reviewer has never seen example data. Every row still reads →
 
 ## Sources
 
-Read all three in full before writing a row. Partial reading yields rows that
-restate criteria without rationale — a reformatted spec, not a review sheet.
+Read every source the feature has in full before writing a row. Partial reading
+yields rows that restate criteria without rationale — a reformatted spec, not a
+review sheet.
 
-| Document    | Read it for                                                                         | Lands in                                        |
-| ----------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `spec.md`   | acceptance criteria, edge cases, decision table, open notes, out-of-scope table     | Scenario + Expression; Complement; Consequences |
-| `design.md` | rationale, mechanism, architecture decisions, risk table, trade-offs                | Complement; Consequences                        |
-| `tasks.md`  | "done when" checklists (behaviors no criterion states); phase order → section order | extra rows; grouping                            |
+| Document    | Read it for                                                                                                                                                                              | Lands in                                                  |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `spec.md`   | acceptance criteria, edge cases, decision table, open notes, out-of-scope table                                                                                                          | Scenario + Expression; Complement; Consequences           |
+| `design.md` | rationale, mechanism, architecture decisions, risk table, trade-offs                                                                                                                     | Complement; Consequences                                  |
+| `tasks.md`  | "done when" checklists (behaviors no criterion states); phase order → section order                                                                                                      | extra rows; grouping                                      |
+| `plan.md`   | lean: `Criteria`, `Out of scope`, `Assumptions`; `Problem`, `Shape`, `Landing` for rationale and trade-offs; slice order → section order                                                 | Scenario + Expression; Complement; Consequences; grouping |
+| `checks.md` | lean: `Coverage` members and `Swept` landings no criterion states; alone, its `## Intent` and claims are the criteria. It may not exist yet when the table is built before plan approval | extra rows                                                |
 
 `bdd.md` / Gherkin is a **supplement** — confirm nothing missed, check phrasing.
 Never the primary input: it carries the register this artifact replaces.
@@ -58,7 +61,7 @@ design, work breakdown = tasks.
 
 | #   | Step                    | Action                                                                                                                                                                                                                                | Gate                                                                    |
 | --- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| 1   | Read sources            | All three end to end; extract behaviors, rationale, consequences separately                                                                                                                                                           | rationale + consequences captured, not just criteria                    |
+| 1   | Read sources            | All of them end to end; extract behaviors, rationale, consequences separately                                                                                                                                                         | rationale + consequences captured, not just criteria                    |
 | 2   | Settle format decisions | **Take from Input, don't assume**: language (spec's ≠ user's often), id scheme (sequential if not given)                                                                                                                              | both global; retrofitting = full rewrite                                |
 | 3   | Enumerate               | One row per criterion; sweep `tasks.md` for uncovered "done when" items                                                                                                                                                               | six cases existing for six reasons = six rows, never merged             |
 | 4   | Group                   | Sections follow system execution order, not story order                                                                                                                                                                               | each section readable given only sections above it                      |
@@ -94,20 +97,20 @@ contract changes needing coordinated deploy; policies deferred to a later decisi
 
 - Reviewer has seen no example data. Does every row still read?
 - Three random rows — judgeable without scrolling elsewhere?
-- Every `spec.md` criterion maps to ≥1 row?
+- Every `spec.md` or `plan.md` criterion maps to ≥1 row?
 - Consequences names every trade-off, or does one appear only implicitly?
 
 ## Output shape
 
 Write to the feature's own directory, beside its sources — typically
-`requirements.md` next to `spec.md`.
+`requirements.md` next to `spec.md` or `plan.md`.
 
 ```
 # <Feature> — Requirements Table
 
 **Spec:** `path/spec.md`      ← one bold-label line per source that exists,
 **Design:** `path/design.md`     backticked paths (add **BDD:** when a bdd.md exists)
-**Tasks:** `path/tasks.md`
+**Tasks:** `path/tasks.md`     (lean features: **Plan:** and **Checks:** instead)
 **Status:** Draft
 **Created:** YYYY-MM-DD
 

@@ -143,11 +143,11 @@ skills:
 - name:
   - sd-review-spec
   description: Review and correct a feature's spec documents (spec.md, design.md,
-    tasks.md, requirements.md, context-map.md, ADRs) by verifying every claim against
-    the real code, classifying gaps by severity, and applying fixes. Use when user
-    says 'review this spec', 'audit the spec against the code', 'find gaps in the
-    spec', 'check spec inconsistencies', 'find implicit requirements', or 'validate
-    design.md and tasks.md'.
+    tasks.md, plan.md, checks.md, requirements.md, context-map.md, ADRs) by verifying
+    every claim against the real code, classifying gaps by severity, and applying
+    fixes. Use when user says 'review this spec', 'audit the spec against the code',
+    'find gaps in the spec', 'check spec inconsistencies', 'find implicit requirements',
+    'validate design.md and tasks.md', or 'validate plan.md and checks.md'.
 - name:
   - plan-generator
   description: Generate structured plans for tasks and projects, saved as date-stamped
@@ -278,6 +278,13 @@ skills:
     conflicts', 'help me merge this branch', 'there are conflict markers in this file',
     or 'rebase is failing with conflicts'.
 - name:
+  - sd-lean-execute
+  description: Build and verify a tlc-spec-lean feature while syncing taskmaster per
+    slice and per check, so the taskmaster tag mirrors real progress without driving
+    the build. Use when user says 'execute lean feature', 'build this lean plan',
+    'sd-lean-execute', 'run the checks for this feature tag', or 'continue the lean
+    build and keep taskmaster in sync'.
+- name:
   - copilot-sdk
   description: 'Use this skill whenever the user wants to build Python applications
     or scripts using the GitHub Copilot SDK. Triggers include: building Copilot-powered
@@ -307,10 +314,18 @@ skills:
 - name:
   - sd-insert-taskmaster
   description: Convert tasks.md spec files into TaskMaster JSON format (.taskmaster/tasks/tasks.json),
-    falling back to one synthetic task per requirement from spec.md when tasks.md
-    doesn't exist. Use when user says 'convert tasks.md to taskmaster json', 'transform
+    registering a tlc-spec-lean checks.md as one task per slice with one subtask per
+    check, and falling back to one synthetic task per requirement from spec.md when
+    neither exists. Use when user says 'convert tasks.md to taskmaster json', 'transform
     tasks.md to .taskmaster format', 'generate taskmaster json from this spec', or
     'register this feature in taskmaster'.
+- name:
+  - sd-lean-planning
+  description: Generate a lean feature plan with tlc-spec-lean, a requirements table
+    and an independent review, stopping at frozen, proof-backed checks with no task
+    breakdown. Use when user says 'lean plan', 'plan this feature lean', 'plan with
+    spec-lean', 'sd-lean-planning', or wants one reviewed plan and obligations instead
+    of a spec, design and task list.
 - name:
   - prd-from-codebase
   description: 'Generates a complete Product Requirements Document (PRD) in Markdown
@@ -503,12 +518,12 @@ skills:
 - name:
   - spec-to-requirements-table
   description: Derive a flat, self-contained requirements review table from a feature's
-    spec.md, design.md and tasks.md — one row per acceptance criterion, tagged success
-    or error path — so a non-implementer can scan it and judge whether each rule makes
-    sense. Use when the user says 'the spec is too technical', 'make a requirements
-    table', 'build a review sheet for these requirements', 'turn this spec into a
-    requirements table', or supplies a table template and asks to fill it from an
-    existing spec.
+    spec.md, design.md and tasks.md, or from a tlc-spec-lean plan.md and checks.md
+    — one row per acceptance criterion, tagged success or error path — so a non-implementer
+    can scan it and judge whether each rule makes sense. Use when the user says 'the
+    spec is too technical', 'make a requirements table', 'build a review sheet for
+    these requirements', 'turn this spec into a requirements table', or supplies a
+    table template and asks to fill it from an existing spec.
 - name:
   - react-composition-patterns
   description: React composition patterns that scale. Use when refactoring components
