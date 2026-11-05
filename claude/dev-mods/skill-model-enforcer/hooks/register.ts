@@ -1,4 +1,11 @@
-import type { Register } from "claude-code";
+import type { EngineInterface, Register } from "claude-code";
+
+// why: the statusline JSON only carries the session model, so a skill's override is invisible
+// there; scripts/statusline-command.sh reads this file by session_id.
+const modelFile = (sid: string) => `/tmp/claude-model-${sid}.txt`;
+
+const mirror = async ($: EngineInterface, model: string) =>
+  $.fs.write(modelFile(await $.session.id()), model).catch(() => {});
 
 export const register: Register = (on) => {
   // why: a reload dropping this value only loses the override for one turn, so it needs no $.state contract
@@ -18,12 +25,18 @@ export const register: Register = (on) => {
   });
 
   on("turn.step", async function* ($, e, next) {
-    const isOverridden = pinned !== undefined && e.agentId === undefined;
-    return yield* next(isOverridden ? { ...e, model: pinned as string } : e);
+    if (e.agentId !== undefined) return yield* next(e);
+    const model = pinned ?? e.model;
+    await mirror($, model);
+    return yield* next({ ...e, model });
   });
 
-  on("turn.complete", ($, e, next) => {
-    if (e.agentId === undefined) pinned = undefined;
+  on("turn.complete", async ($, e, next) => {
+    if (e.agentId === undefined) {
+      pinned = undefined;
+      // why: no step runs between turns, so the file would keep showing the expired override
+      await mirror($, await $.session.model());
+    }
     return next(e);
   });
 };

@@ -512,4 +512,11 @@ tool_stats_file="/tmp/claude-tool-stats-${session_id}.txt"
 if [ -n "$session_id" ]; then
     tool_stats=$(cat "$tool_stats_file" 2>/dev/null || echo "Bash 0 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0 · Total 0")
     echo -e "${C_SUBTEXT}${ICON_WRENCH} ${tool_stats}${RESET}"
+    # why: skill-model-enforcer mirrors the model actually served; .model only has the session's
+    served_model=$(cat "/tmp/claude-model-${session_id}.txt" 2>/dev/null)
+    # why: the file holds the engine's id while $model is the display name, so both must be compared
+    model_id=$(echo "$input" | jq -r '.model.id // empty')
+    if [ -n "$served_model" ] && [ "$served_model" != "$model" ] && [ "$served_model" != "$model_id" ]; then
+        echo -e "${C_LAVENDER}${ICON_MODEL} ${served_model}${RESET}"
+    fi
 fi
