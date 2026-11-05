@@ -443,11 +443,11 @@ done
 
 # Get all skills and commands
 get_skills_tlc
-# get_skills_anthropic
-# get_skills_ecc
-# get_skills_mattpocock
-# get_skills_agent-toolkit
-# get_skills_skill-inspector
-# get_skills_rea
-# get_commands_awesome_claude_code_toolkit
+get_skills_anthropic
+get_skills_ecc
+get_skills_mattpocock
+get_skills_agent-toolkit
+get_skills_skill-inspector
+get_skills_rea
+get_commands_awesome_claude_code_toolkit
 
