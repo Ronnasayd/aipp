@@ -43,7 +43,7 @@
   (`ui.press: no Button of tool-history is held under handle …`). Nothing
   redraws the band mid-turn, so clicks died until the turn ended.
 
-## Errors tab (⚠)
+## Errors tab (🚨)
 
 - Fourth tab lists only tool calls whose result has `isError`; no messages.
   Empty text: "No failed tool calls." `tests/errors-tab.test.tsx` asserts it.

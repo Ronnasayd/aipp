@@ -403,7 +403,7 @@ export const register: Register = (on) => {
           variant={tab === "errors" ? "primary" : "secondary"}
           onPress={selectTab("errors")}
         >
-          ⚠
+          🚨
         </Button>
         <Button
           key="collapse"
