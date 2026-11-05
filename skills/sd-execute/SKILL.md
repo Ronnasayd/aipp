@@ -2,6 +2,7 @@
 name: sd-execute
 description: "Execute a spec-driven feature's implementation phase while syncing taskmaster status after each task or batch, so the taskmaster tag mirrors real progress without driving execution order itself. Use when user says 'execute feature', 'run tasks for this feature tag', 'implement this taskmaster feature', or 'continue executing the spec and keep taskmaster in sync'."
 model: sonnet
+effort: medium
 disable-model-invocation: true
 metadata:
   author: Ronnasayd Machado - github.com/Ronnasayd

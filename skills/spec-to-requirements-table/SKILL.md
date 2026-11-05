@@ -4,7 +4,8 @@ description: Derive a flat, self-contained requirements review table from a feat
 argument-hint: "<spec-dir> <language> [template-path] [id-scheme]: (Required) Feature spec directory and output language. Optional template file path and id scheme. Ask the user before invoking if the language is unknown."
 context: fork
 background: false
-model: sonnet
+model: opus
+effort: high
 ---
 
 # Spec → Requirements Review Table

@@ -357,7 +357,7 @@
     "tech-leads-club:tlc-plan": false,
     "tech-leads-club:tlc-spec-driven": true,
     "tech-leads-club:tlc-spec-lean": true,
-    "technical-decision-helper": true,
+    "technical-decision-helper": false,
     "test-coverage-review": false,
     "tests:my-tdd-workflow": false,
     "tests:tdd": false,

@@ -2,6 +2,7 @@
 name: sd-grilling
 description: Explore the codebase and relentlessly interview the user about a plan, feature, or idea until shared understanding is reached. Use when user says 'plan this feature step by step', 'help me plan this properly', 'generate a plan for this problem', 'walk through planning this feature', 'grill me about X', or uses any 'grill' trigger phrases.
 model: opus
+effort: high
 disable-model-invocation: true
 ---
 

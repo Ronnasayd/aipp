@@ -194,19 +194,21 @@ fi
 cc_version=$(claude --version 2>/dev/null | awk '{print $1}')
 
 # Thinking effort level (🧠 = thinking). Absent if model doesn't support it.
+effort_badge() {
+    local color filled
+    case "$1" in
+        low)    color="$C_GREEN";  filled=1 ;;
+        medium) color="$C_YELLOW"; filled=2 ;;
+        high)   color="$C_RED";    filled=3 ;;
+        xhigh)  color="$C_RED";    filled=4 ;;
+        max)    color="$C_RED";    filled=5 ;;
+        *)      color="";          filled=0 ;;
+    esac
+    printf '%s' "${color}${ICON_EFFORT} $(render_bar "$filled" 5) $1${RESET}"
+}
 effort_level=$(echo "$input" | jq -r '.effort.level // empty')
 effort_info=""
-if [ -n "$effort_level" ]; then
-    case "$effort_level" in
-        low)    effort_color="$C_GREEN";  effort_filled=1 ;;
-        medium) effort_color="$C_YELLOW"; effort_filled=2 ;;
-        high)   effort_color="$C_RED";    effort_filled=3 ;;
-        xhigh)  effort_color="$C_RED";    effort_filled=4 ;;
-        max)    effort_color="$C_RED";    effort_filled=5 ;;
-        *)      effort_color="";          effort_filled=0 ;;
-    esac
-    effort_info="${SEP}${effort_color}${ICON_EFFORT} $(render_bar "$effort_filled" 5) ${effort_level}${RESET}"
-fi
+[ -n "$effort_level" ] && effort_info="${SEP}$(effort_badge "$effort_level")"
 
 # email proxy status
 email_info=""
@@ -512,11 +514,16 @@ tool_stats_file="/tmp/claude-tool-stats-${session_id}.txt"
 if [ -n "$session_id" ]; then
     tool_stats=$(cat "$tool_stats_file" 2>/dev/null || echo "Bash 0 · Read 0 · Write 0 · MCP 0 · Skill 0 · Others 0 · Total 0")
     echo -e "${C_SUBTEXT}${ICON_WRENCH} ${tool_stats}${RESET}"
-    # why: skill-model-enforcer mirrors the model actually served; .model only has the session's
-    served_model=$(cat "/tmp/claude-model-${session_id}.txt" 2>/dev/null)
+    # why: skill-model-enforcer mirrors what was actually served; the payload only has the session's
+    served_file="/tmp/claude-served-${session_id}.json"
+    served_model=$(jq -r '.model // empty' "$served_file" 2>/dev/null)
+    served_effort=$(jq -r '.effort // empty' "$served_file" 2>/dev/null)
     # why: the file holds the engine's id while $model is the display name, so both must be compared
     model_id=$(echo "$input" | jq -r '.model.id // empty')
-    if [ -n "$served_model" ] && [ "$served_model" != "$model" ] && [ "$served_model" != "$model_id" ]; then
-        echo -e "${C_LAVENDER}${ICON_MODEL} ${served_model}${RESET}"
+    if { [ -n "$served_model" ] && [ "$served_model" != "$model" ] && [ "$served_model" != "$model_id" ]; } ||
+        { [ -n "$served_effort" ] && [ "$served_effort" != "$effort_level" ]; }; then
+        served_effort_info=""
+        [ -n "$served_effort" ] && served_effort_info="${SEP}$(effort_badge "$served_effort")"
+        echo -e "${C_LAVENDER}${ICON_MODEL} ${served_model}${RESET}${served_effort_info}"
     fi
 fi

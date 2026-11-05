@@ -2,6 +2,7 @@
 name: sd-lean-planning
 description: Generate a lean feature plan with tlc-spec-lean, a requirements table and an independent review, stopping at frozen, proof-backed checks with no task breakdown. Use when user says 'lean plan', 'plan this feature lean', 'plan with spec-lean', 'sd-lean-planning', or wants one reviewed plan and obligations instead of a spec, design and task list.
 model: opus
+effort: high
 disable-model-invocation: true
 metadata:
   author: Ronnasayd Machado - github.com/Ronnasayd
