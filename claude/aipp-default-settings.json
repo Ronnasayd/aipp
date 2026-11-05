@@ -198,6 +198,7 @@
     "frontend-design": false,
     "frontend-patterns": false,
     "gan-style-harness": false,
+    "gcloud-mcp-oauth-setup": false,
     "generate-design-md": false,
     "generate-docs": true,
     "generate-pr-description": true,
