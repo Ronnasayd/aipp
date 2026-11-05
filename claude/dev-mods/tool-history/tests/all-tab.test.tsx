@@ -32,7 +32,7 @@ test("all tab interleaves messages and tool calls in arrival order", async ($, o
   const list = await pane.find({ type: "Box", key: "list" });
   expect(list?.props?.gap).toBe(0);
   const text = list?.text ?? "";
-  const order = ["first ask", "BASHls", "second ask", "BASHpwd"].map((s) =>
+  const order = ["first ask", "BASH0msls", "second ask", "BASH0mspwd"].map((s) =>
     text.indexOf(s)
   );
   expect(order.every((i) => i >= 0)).toBe(true);
@@ -78,5 +78,5 @@ test("all tab stamps text when it streams, not when the step ends", async ($, on
 
   const text = (await pane.find({ type: "Box", key: "list" }))?.text ?? "";
   expect(text.indexOf("let me look")).toBeGreaterThanOrEqual(0);
-  expect(text.indexOf("let me look")).toBeLessThan(text.indexOf("BASHls"));
+  expect(text.indexOf("let me look")).toBeLessThan(text.indexOf("BASH0msls"));
 });

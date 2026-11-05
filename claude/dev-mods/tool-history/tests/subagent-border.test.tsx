@@ -30,8 +30,8 @@ test("tool calls never get the yellow subagent border", async ($, on) => {
     expect(sub?.props?.borderColor).not.toBe("yellow");
     expect(sub?.props?.borderColor).toBe(main?.props?.borderColor);
     // why: the agent is named inside each card, not in a "── Main ──" divider.
-    expect(main?.text).toBe("Main - $ BASHls");
-    expect(sub?.text).toBe("a1 - $ BASHls");
+    expect(main?.text).toBe("Main - $ BASH0msls");
+    expect(sub?.text).toBe("a1 - $ BASH0msls");
     await pane.unmount();
   }
 });
