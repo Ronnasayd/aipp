@@ -7,7 +7,11 @@ CLAUDE_JSON="$CLAUDE_CONFIG_DIR/.claude.json"
 CREDENTIALS_JSON="$CLAUDE_CONFIG_DIR/.credentials.json"
 ACCOUNTS_DIR="$CLAUDE_CONFIG_DIR/accounts"
 BACKUPS_DIR="$CLAUDE_CONFIG_DIR/backups"
+# Claude Code suffixes the Keychain service with sha256(CLAUDE_CONFIG_DIR)[:8] when the var is set.
 KEYCHAIN_SERVICE="Claude Code-credentials"
+if [ "$(uname -s)" = "Darwin" ] && [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
+    KEYCHAIN_SERVICE="$KEYCHAIN_SERVICE-$(printf %s "$CLAUDE_CONFIG_DIR" | shasum -a 256 | cut -c1-8)"
+fi
 
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >&2; }
 die() { log "error: $*"; exit 1; }
