@@ -570,13 +570,13 @@ skills:
     tasks with a gate and a commit each, and one check per criterion with the test
     that proves it. Captures that come with the request bind, and each screen is judged
     against them. Ships deterministic Python scripts so the gates are enforced by
-    code, not memory; the proofs run once at the end, and an independent Verifier
-    (author != verifier) spends its time on mutations and judgement. Use when (1)
-    planning features, (2) implementing with verification and atomic commits, (3)
-    validating an implementation against a spec. Triggers on "specify feature", "discuss
-    feature", "design", "tasks", "implement", "validate", "verify work", "UAT", "record
-    decision", "pause work", "resume work". Do NOT use for pure architecture decomposition
-    analysis or standalone technical design documents.
+    code, not memory; the project's own tests run once at the end, and an independent
+    Verifier (author != verifier) judges each check's test. Use when (1) planning
+    features, (2) implementing with verification and atomic commits, (3) validating
+    an implementation against a spec. Triggers on "specify feature", "discuss feature",
+    "design", "tasks", "implement", "validate", "verify work", "UAT", "record decision",
+    "pause work", "resume work". Do NOT use for pure architecture decomposition analysis
+    or standalone technical design documents.
 - name:
   - figma-implement-design
   description: Translate Figma nodes into production-ready code with 1:1 visual fidelity
@@ -631,11 +631,10 @@ skills:
     gh-fix-ci), or general Git operations.
 - name:
   - tlc-discover
-  description: Interviews an unshaped idea into a verdict and a design document -
-    decisions, flows, schema, contracts - that anyone can plan from without having
-    been in the room. Use when the user says "research this", "help me understand
-    this problem", "should we build this", "discovery", "explore this problem", or
-    "tlc-discover". Do NOT use to cut a finished design into tasks, or to implement.
+  description: 'Thinks through new or large projects: turns a vague idea into a design
+    doc with a clear product problem and the technical solution. Use when exploring
+    a new project, planning or designing a big project or system, or asked for a "design
+    doc". Do NOT use for clear features or projects (use tlc-spec-lean or tlc-spec-driven).'
 - name:
   - perf-web-optimization
   description: 'Optimize web performance: bundle size, images, caching, lazy loading,
@@ -783,6 +782,16 @@ skills:
     data fetching, bundle optimization, or performance improvements. Do NOT use for
     component API architecture or composition patterns (use react-composition-patterns
     instead).
+- name:
+  - demo
+  description: Record a demo video of a web app feature or flow on a real desktop
+    (Docker, Xvfb, XFCE, real X cursor), producing an mp4 plus a click/hover/scroll/type
+    telemetry file. Takes a flow description, an existing demo name or path, or init.
+    Use when the user says "record a demo of the checkout", "gravar um demo dessa
+    feature", "make a screencast of this flow", "video for the changelog", "re-record
+    the checkout demo", "refresh the demo video", or "demo init". Do NOT use for general
+    browser testing or automation that needs no video (use playwright-skill), page
+    debugging or network inspection (use chrome-devtools), or static screenshots.
 - name:
   - spec-driven-eval
   description: Scores how completely an implementation fulfills a PRD/spec, case by
