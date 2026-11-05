@@ -496,7 +496,7 @@ echo -e "${rate_info}"
 # why: same per-tag "first pending" rule as hooks/scripts/taskmaster_next_task.py
 TASKS_FILE="$CLAUDE_PROJECT_DIR/.taskmaster/tasks/tasks.json"
 if [ -f "$TASKS_FILE" ]; then
-    next_tasks=$(jq -r 'to_entries[] | .key as $t | (.value.tasks // [] | map(select(.status == "pending")) | first) // empty | "\($t): #\(.id) \(.title)"' "$TASKS_FILE" 2>/dev/null)
+    next_tasks=$(jq -r 'to_entries[] | .key as $t | (.value.tasks // []) as $all | ($all | map(select(.status == "pending")) | first) // empty | "\($t)(\($all | length)): #\(.id) \(.title)"' "$TASKS_FILE" 2>/dev/null)
     while IFS= read -r t; do
         [ -n "$t" ] && echo -e "${C_TEAL}${ICON_TASK} ${t}${RESET}"
     done <<< "$next_tasks"
