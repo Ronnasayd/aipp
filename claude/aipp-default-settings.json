@@ -101,6 +101,7 @@
     "database-migrations": false,
     "deep-research": false,
     "deep-research-web": false,
+    "demo": false,
     "deployment-patterns": false,
     "design-image-diff": false,
     "diagnosing-bugs": false,
