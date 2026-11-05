@@ -2,15 +2,7 @@
 
 ## CODEX
 source "$(dirname "${BASH_SOURCE[0]}")/_git-exclude.sh"
-python3 "$SOURCE/scripts/md2toml.py" "$SOURCE/agents/" "$HOME/.codex/agents/"
-
-###########################################################################################
-## Rename 'prompt' to 'developer_instructions' in all agent TOML files
-for agent_toml in "$HOME/.codex/agents/"*.toml; do
-    if [ -f "$agent_toml" ]; then
-        sed -i 's/^prompt = /developer_instructions = /' "$agent_toml"
-    fi
-done
+python3 "$SOURCE/scripts/md2toml.py" "$SOURCE/agents/" "$HOME/.codex/agents/" --codex
 
 ########################################################################################
 mkdir -p "$HOME/.codex/skills/"

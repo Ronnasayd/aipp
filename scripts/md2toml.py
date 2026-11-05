@@ -4,7 +4,11 @@ import yaml
 import json
 
 
-def convert_file(input_file: Path, output_dir: Path):
+# Codex agent loader rejects unknown fields, so only these frontmatter keys pass through.
+CODEX_AGENT_KEYS = ("name", "description")
+
+
+def convert_file(input_file: Path, output_dir: Path, codex: bool = False):
     with open(input_file, "r", encoding="utf-8") as f:
         content = f.read()
 
@@ -22,6 +26,10 @@ def convert_file(input_file: Path, output_dir: Path):
 
     prompt = parts[2].strip()
     escaped_instructions = prompt.replace('"""', '\\"\\"\\"')
+
+    if codex:
+        frontmatter = {k: v for k, v in frontmatter.items() if k in CODEX_AGENT_KEYS}
+    body_key = "developer_instructions" if codex else "prompt"
 
     metadata_lines = []
     for key, value in frontmatter.items():
@@ -43,11 +51,8 @@ def convert_file(input_file: Path, output_dir: Path):
 
     metadata_section = "\n".join(metadata_lines) if metadata_lines else ""
 
-    toml_content = f"""[metadata]
-{metadata_section}
-
-[content]
-prompt = \"\"\"{escaped_instructions}
+    toml_content = f"""{metadata_section}
+{body_key} = \"\"\"{escaped_instructions}
 \"\"\"
 """
 
@@ -64,19 +69,20 @@ prompt = \"\"\"{escaped_instructions}
     print(f"Generated: {output_file}")
 
 
-def convert_directory(source_dir: str, output_dir: str):
+def convert_directory(source_dir: str, output_dir: str, codex: bool = False):
     source = Path(source_dir)
     output = Path(output_dir)
 
     output.mkdir(parents=True, exist_ok=True)
 
     for md_file in source.glob("*.md"):
-        convert_file(md_file, output)
+        convert_file(md_file, output, codex)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python md2toml.py <source_dir> <output_dir>")
+    args = [a for a in sys.argv[1:] if a != "--codex"]
+    if len(args) != 2:
+        print("Usage: python md2toml.py <source_dir> <output_dir> [--codex]")
         sys.exit(1)
 
-    convert_directory(sys.argv[1], sys.argv[2])
+    convert_directory(args[0], args[1], codex="--codex" in sys.argv)
