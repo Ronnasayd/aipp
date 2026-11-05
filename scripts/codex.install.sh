@@ -94,3 +94,7 @@ if ! grep -q "$HOME/.codex/instructions/agent.instructions.md" $HOME/.codex/AGEN
     ln -s "$SOURCE/instructions/agent.instructions.md" "$HOME/.codex/instructions/agent.instructions.md"
     echo -e "\n- $HOME/.codex/instructions/agent.instructions.md" >> $HOME/.codex/AGENTS.md
 fi
+############################################################################################
+# codex-tool-history: tabbed tool-call viewer for Codex sessions (run in a side split)
+source "$(dirname "${BASH_SOURCE[0]}")/_link-with-backup.sh"
+link_with_backup "$SOURCE/scripts/codex_tool_history.py" "$HOME/.local/bin/codex-tool-history"
