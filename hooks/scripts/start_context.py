@@ -26,9 +26,6 @@ CONTEXT_EMIT_EVERY = 5
 
 LOG = get_hooks_logger("StartContext")
 
-with open(os.path.join(script_dir, "..", "markdown/START.md"), encoding="utf-8") as f:
-    RULES = f.read()
-
 
 def package_json(payload: dict) -> str:
     """Render package.json scripts as a markdown section.
@@ -416,17 +413,27 @@ def main() -> None:
     except json.JSONDecodeError:
         sys.exit(0)  # erro no parse não bloqueia nada
 
+    cwd = project_dir(payload)
+
     hook_event_name = get_by_key(payload, "hook_event_name") or "SessionStart"
 
     if hook_event_name == "UserPromptSubmit":
         session_id = get_session_id_short(get_by_key(payload, "session_id") or "")
-        cwd = project_dir(payload)
+
         count = read_loop_count(cwd, "start-context-calls", session_id) + 1
         bump_loop_count(cwd, "start-context-calls", session_id, count)
         if count % CONTEXT_EMIT_EVERY != 0:
             sys.exit(0)
 
-    additional_context = f"{RULES}\n\n{documentation_lang()}\n\n{communication_lang()}"
+    with open(
+        os.path.join(cwd, ".claude/instructions/agent.instructions.md"),
+        encoding="utf-8",
+    ) as f:
+        agent_instructions = f.read()
+
+    additional_context = (
+        f"{agent_instructions}\n\n{documentation_lang()}\n\n{communication_lang()}"
+    )
     package_text = package_json(payload)
     if package_text:
         additional_context += f"\n\n{package_text}"

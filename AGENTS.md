@@ -55,7 +55,6 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 
 <!-- INIT:AUTO-GENERATED-CONTEXT:DO-NOT-MODIFY -->
 
-
 ## Mandatory rules — always follow
 
 - User question → interactive tool, never plain text. Claude: `AskUserQuestion`. Many questions: `grilling` skill.
@@ -84,6 +83,8 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 
 - Anytime: evaluate what worth saving as permanent memory. Save only what next session needs and can't rediscover from code, Git, or CLAUDE.md — _reason_ behind decision, non-obvious invariant, user preference. Already in repo or only relevant to this conversation → don't save. Persist via `ai-memory-durable-pages` skill.
 
+- Self-contained task (no dependency on history, clear input, concise output, intermediate work not required in the main conversation) → use a sub-agent.
+
 ## Mandatory rules — hallucination protection
 
 - "I don't know" allowed: uncertain or info missing → say so explicitly (e.g. "I don't have enough information to confidently assess this"). Never fill gaps with guesses.
@@ -97,5 +98,7 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 ## Context-Specific Rules
 
 The following rules apply to specific file types:
+
 - [code.instructions](.claude/instructions/code.instructions.md) — applies to: `**/*.ts, **/*.js, **/*.py, **/*.java, **/*.go, **/*.css, **/*.cpp, **/*.c, **/*.vue, **/*.jsx, **/*.tsx`
+
 <!-- END:AUTO-GENERATED-CONTEXT:DO-NOT-MODIFY -->

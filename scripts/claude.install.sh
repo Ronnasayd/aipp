@@ -64,6 +64,7 @@ while read -r rule; do
 
     if [[ "$applyto" == "**/*" ]]; then
         instructions+=$'\n'"$(extract_body "$rule_file")"
+        ln -s "$SOURCE/instructions/$rule" "$DEFAULT_FOLDER/instructions/$rule"
     else
         ln -s "$SOURCE/instructions/$rule" "$DEFAULT_FOLDER/instructions/$rule"
         references+=$'\n'"- [$(basename "$rule_file" .md)]($DEFAULT_FOLDER/instructions/$(basename "$rule_file")) — applies to: \`$applyto\`"
