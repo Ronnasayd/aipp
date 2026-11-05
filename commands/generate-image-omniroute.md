@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 # How to Generate Images with OmniRoute (local)
 
 ## Prerequisite

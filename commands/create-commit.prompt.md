@@ -2,6 +2,7 @@
 model: haiku
 context: fork
 background: false
+disable-model-invocation: true
 ---
 
 Thoroughly analyze the changes and create a clear, concise commit message following the _Conventional Commits_ format. Do not start the commit message with anything other than: feat, fix, docs, style, refactor, perf, test, or chore. Do not include emojis. Ensure the message accurately reflects the changes made.

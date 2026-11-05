@@ -1,5 +1,6 @@
 ---
 model: sonnet
+disable-model-invocation: true
 ---
 
 Verify that a Claude Code hook script actually works end to end. Argument: the hook script path (e.g. `hooks/scripts/jest_coverage_report.py`) or its name.

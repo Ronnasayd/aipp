@@ -1,3 +1,7 @@
+---
+disable-model-invocation: true
+---
+
 ## Sync AGENTS.md with docs/SUMMARY.md
 
 1. **Read source of truth.** Load the project's canonical doc summary (e.g. `docs/SUMMARY.md`) to see full scope: tech stack, architecture layers, features, commands, testing.

@@ -2,6 +2,7 @@
 name: sd-lean-execute
 description: "Build and verify a tlc-spec-lean feature while syncing taskmaster per slice and per check, so the taskmaster tag mirrors real progress without driving the build. Use when user says 'execute lean feature', 'build this lean plan', 'sd-lean-execute', 'run the checks for this feature tag', or 'continue the lean build and keep taskmaster in sync'."
 model: sonnet
+disable-model-invocation: true
 metadata:
   author: Ronnasayd Machado - github.com/Ronnasayd
   version: "1.0.0"

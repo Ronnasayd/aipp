@@ -1,1 +1,6 @@
+---
+model: sonnet
+disable-model-invocation: true
+---
+
 Write a step-by-step account of how you arrived at this final result. Write in an impersonal and generic way, so that this step-by-step process can be reused or transformed into a skill in the future.
