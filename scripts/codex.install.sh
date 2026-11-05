@@ -42,10 +42,6 @@ mkdir -p "$CODEX_DIR"
     echo "# Spawned agent nesting depth root session starts at 0 (Codex default: 1)"
     echo "max_depth = 1"
     echo ""
-
-[mcp_servers.taskmaster.env]
-TASK_MASTER_ALLOW_METADATA_UPDATES = "true"
-    echo ""
 } > "$CODEX_DIR/agents.toml"
 
 for agent_toml in "$HOME/.codex/agents/"*.toml; do
