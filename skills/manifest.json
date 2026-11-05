@@ -15,6 +15,14 @@
     "skill_md": "agent-toolkit/skill-judge/SKILL.md",
     "files": ["README.md"]
   },
+  "aipp-guide": {
+    "skill_md": "aipp-guide/SKILL.md",
+    "files": [
+      "references/extend.md",
+      "references/setup.md",
+      "references/workflows.md"
+    ]
+  },
   "analyze-comfyui-workflow-json": {
     "skill_md": "analyze-comfyui-workflow-json/SKILL.md",
     "files": []

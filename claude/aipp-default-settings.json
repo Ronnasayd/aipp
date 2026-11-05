@@ -55,6 +55,7 @@
     "ai-memory-retrieval": false,
     "ai-memory-routing-install": false,
     "ai-regression-testing": false,
+    "aipp-guide": true,
     "algorithmic-art": false,
     "analyze-comfyui-workflow-json": false,
     "anthropics:algorithmic-art": false,
