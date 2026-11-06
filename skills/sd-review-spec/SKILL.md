@@ -2,6 +2,7 @@
 name: sd-review-spec
 description: "Review and correct a feature's spec documents (spec.md, design.md, tasks.md, plan.md, checks.md, requirements.md, context-map.md, ADRs) by verifying every claim against the real code, classifying gaps by severity, and applying fixes. Use when user says 'review this spec', 'audit the spec against the code', 'find gaps in the spec', 'check spec inconsistencies', 'find implicit requirements', 'validate design.md and tasks.md', or 'validate plan.md and checks.md'."
 model: opus
+effort: high
 ---
 
 ## Guide: Technical Spec Review (gaps, inconsistencies, implicit requirements)
