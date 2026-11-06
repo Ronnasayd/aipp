@@ -58,6 +58,7 @@ ALLOWED_PATTERNS = [
     f"{home_dir}/develop/public/**",
     *(f"{home_dir}/Desktop/*.{ext}" for ext in ("md", "png", "jpeg", "json")),
     f"{CLAUDE_CONFIG_DIR}/projects/**/memory/*.md",
+    f"{home_dir}/.claude/plugins/**:rx",
 ]
 
 # why: must be exported before launching Claude Code — this hook process
