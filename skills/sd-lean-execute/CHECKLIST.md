@@ -1,6 +1,6 @@
 Checklist for `sd-lean-execute` skill, sequential:
 
-1. **Validate feature** — `checks.md` exists, `validate_checks.py` exits 0. Red → stop.
+1. **Validate feature** — `checks.md` exists, `validate_checks.py --execute` exits 0. Red → stop.
 2. **Read lean skill** — invoke `/tlc-spec-lean`; read `build.md` + `verify.md`, `verify-screens.md` with captures, `memory.md` on resume.
 3. **Build** — as documented, up to before `check_proofs.py`.
 4. **Sync docs** — `generate-docs` update mode, committed. Skip if no doc-worthy change.

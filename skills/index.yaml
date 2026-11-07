@@ -279,11 +279,11 @@ skills:
     or 'rebase is failing with conflicts'.
 - name:
   - sd-lean-execute
-  description: Build and verify a tlc-spec-lean feature with slice-by-slice Build, a
-    docs sync, a UI regression gate, proofs and an independent Verifier, ending at a
-    green validate_verification.py. Use when user says 'execute lean feature', 'build
-    this lean plan', 'sd-lean-execute', 'run the checks for this feature', or 'continue
-    the lean build'.
+  description: Build and verify a tlc-spec-lean feature with slice-by-slice Build,
+    a docs sync, a UI regression gate, proofs and an independent Verifier, ending
+    at a green validate_verification.py. Use when user says 'execute lean feature',
+    'build this lean plan', 'sd-lean-execute', 'run the checks for this feature',
+    or 'continue the lean build'.
 - name:
   - copilot-sdk
   description: 'Use this skill whenever the user wants to build Python applications
@@ -324,17 +324,17 @@ skills:
 - name:
   - sd-insert-taskmaster
   description: Convert tasks.md spec files into TaskMaster JSON format (.taskmaster/tasks/tasks.json),
-    registering a tlc-spec-lean checks.md as one task per slice with one subtask per
-    check, and falling back to one synthetic task per requirement from spec.md when
-    neither exists. Use when user says 'convert tasks.md to taskmaster json', 'transform
+    falling back to one synthetic task per requirement from spec.md when tasks.md does
+    not exist. Use when user says 'convert tasks.md to taskmaster json', 'transform
     tasks.md to .taskmaster format', 'generate taskmaster json from this spec', or
     'register this feature in taskmaster'.
 - name:
   - sd-lean-planning
   description: Generate a lean feature plan with tlc-spec-lean and an independent
-    review, stopping at frozen, proof-backed checks with no task breakdown. Use when user says 'lean plan', 'plan this feature lean', 'plan with
-    spec-lean', 'sd-lean-planning', or wants one reviewed plan and obligations instead
-    of a spec, design and task list.
+    review, stopping at frozen, proof-backed checks with no task breakdown. Use when
+    user says 'lean plan', 'plan this feature lean', 'plan with spec-lean', 'sd-lean-planning',
+    or wants one reviewed plan and obligations instead of a spec, design and task
+    list.
 - name:
   - prd-from-codebase
   description: 'Generates a complete Product Requirements Document (PRD) in Markdown

@@ -2,8 +2,6 @@
 name: spec-to-requirements-table
 description: Derive a flat, self-contained requirements review table from a feature's spec.md, design.md and tasks.md, or from a tlc-spec-lean plan.md and checks.md — one row per acceptance criterion, tagged success or error path — so a non-implementer can scan it and judge whether each rule makes sense. Use when the user says 'the spec is too technical', 'make a requirements table', 'build a review sheet for these requirements', 'turn this spec into a requirements table', or supplies a table template and asks to fill it from an existing spec.
 argument-hint: "<spec-dir> <language> [template-path] [id-scheme]: (Required) Feature spec directory and output language. Optional template file path and id scheme. Ask the user before invoking if the language is unknown."
-context: fork
-background: false
 model: opus
 effort: high
 ---

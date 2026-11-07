@@ -41,7 +41,7 @@ Critical path traversal example: `T01 → T02 → T05 → T06 → T08 → T12 �
 | `dependencies` | **Depends on** field converted to array of ints                                                        |
 | `details`      | Combine: **Where** + **Done when** + **Gate** + **Cmd**                                                |
 | `testStrategy` | **Tests** field — describe test cases if present; `"none"` if absent                                   |
-| `subtasks`     | `[]`, except lean mode: one per check, see "Lean mode" in SKILL.md                                     |
+| `subtasks`     | `[]`                                                                                                   |
 | `metadata`     | Object with `wave` (number) and `onCriticalPath` (boolean)                                             |
 
 ## Full task entry example (tasks.json)

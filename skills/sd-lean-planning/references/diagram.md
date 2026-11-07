@@ -14,6 +14,7 @@ flowchart TD
     apply fixes (/sd-review-spec steps 4-7)"]
     V3 --> V
     V2 -- no --> P["4. Present plan
+    offer optional requirements table
     STOP for approval"]
     P --> K["5. Write checks.md
     fresh criterion-to-check review
