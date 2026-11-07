@@ -44,7 +44,7 @@ For tlc-spec-lean features, which have `checks.md` and no `tasks.md`. Lean has n
 2. One task per slice heading `### S<n> - <title>`: `id` = `<n>`, `title` = `S<n> - <title>`, `description` = the slice's outcome line in `plan.md`, or its title when there is no plan. A `checks.md` with no slice heading gets a single task `S1` titled after the feature.
 3. `priority` = `"high"` for a slice marked `(P1)` in `plan.md`, `"medium"` otherwise. `dependencies: []`, `wave 1`, `onCriticalPath: false`: slice order belongs to the builder.
 4. `details` = the check range (`Checks C1-C7`). `testStrategy` = `"proofs per subtask"`.
-5. One subtask per check `**C<n>** - <claim>`: `id` sequential inside the slice from 1, `title` = `C<n> - <claim>`, `description` = the claim, `status: "pending"`, `dependencies: []`, `details` = every `Proof:` line of that check. The `C<n>` prefix is how `sd-lean-execute` finds the subtask, so keep it.
+5. One subtask per check `**C<n>** - <claim>`: `id` sequential inside the slice from 1, `title` = `C<n> - <claim>`, `description` = the claim, `status: "pending"`, `dependencies: []`, `details` = every `Proof:` line of that check. The `C<n>` prefix ties the subtask back to its check, so keep it.
 6. Proceed to Step 5 (field mapping is already done above) then Steps 6-7 unchanged.
 
 `merge-tasks.py` replaces the whole tag, so running this again resets progress. A check appended during the build goes in with taskmaster's `add_subtask`, not by registering the feature again.

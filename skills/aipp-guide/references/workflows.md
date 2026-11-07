@@ -33,12 +33,12 @@ The `sd-*` planning and execution skills set `disable-model-invocation: true`, s
 
 ### Lean path: `/sd-lean-planning` then `/sd-lean-execute`
 
-1. `/sd-lean-planning` writes `plan.md` with `tlc-spec-lean`, adds the requirements table and an independent review, then waits for approval.
+1. `/sd-lean-planning` writes `plan.md` with `tlc-spec-lean`, adds an independent review, then waits for approval.
 2. After approval it writes `checks.md` and freezes it with `validate_checks.py`. It stops there and does not build.
 3. A change under roughly three files with no one-way door takes a short path: only `checks.md`.
-4. `/sd-lean-execute` needs `checks.md` passing `validate_checks.py` and a matching Task Master tag. It builds slice by slice, then runs `check_proofs.py`, a Verifier and `validate_verification.py`.
+4. `/sd-lean-execute` needs `checks.md` passing `validate_checks.py`. It builds slice by slice, then runs `check_proofs.py`, a Verifier and `validate_verification.py`.
 
-Both execute skills need the Task Master tag. If the feature was not registered, run `sd-insert-taskmaster` first.
+`/sd-execute` needs the Task Master tag. If the feature was not registered, run `sd-insert-taskmaster` first. The lean path does not use Task Master.
 
 ## Agents
 
