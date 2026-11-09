@@ -132,7 +132,7 @@ Twisted==25.5.0
 typing-inspection==0.4.1
 typing_extensions==4.14.0
 urllib3==2.5.0
-urwid==2.6.16
+urwid==4.0.7
 uvicorn==0.35.0
 w3lib==2.3.1
 wcwidth==0.2.13
