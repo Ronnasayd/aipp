@@ -1,4 +1,45 @@
 {
+  "discovery-process": {
+    "skill_md": "Product-Manager-Skills/discovery-process/SKILL.md",
+    "files": [
+      "examples/sample-lifesciences.md",
+      "examples/sample.md",
+      "template.md"
+    ]
+  },
+  "prd-development": {
+    "skill_md": "Product-Manager-Skills/prd-development/SKILL.md",
+    "files": [
+      "examples/sample-industrial.md",
+      "examples/sample.md",
+      "template.md"
+    ]
+  },
+  "user-story": {
+    "skill_md": "Product-Manager-Skills/user-story/SKILL.md",
+    "files": [
+      "examples/sample-industrial.md",
+      "examples/sample.md",
+      "scripts/user-story-template.py",
+      "template.md"
+    ]
+  },
+  "user-story-mapping": {
+    "skill_md": "Product-Manager-Skills/user-story-mapping/SKILL.md",
+    "files": [
+      "examples/sample-industrial.md",
+      "examples/sample.md",
+      "template.md"
+    ]
+  },
+  "user-story-splitting": {
+    "skill_md": "Product-Manager-Skills/user-story-splitting/SKILL.md",
+    "files": [
+      "examples/sample-industrial.md",
+      "examples/sample.md",
+      "template.md"
+    ]
+  },
   "skill-inspector": {
     "skill_md": "SkillSpector/skill-inspector/SKILL.md",
     "files": []
@@ -894,6 +935,8 @@
   "spec-to-requirements-table": {
     "skill_md": "spec-to-requirements-table/SKILL.md",
     "files": [
+      "scripts/__pycache__/test_validate_requirements.cpython-313-pytest-9.2.0.pyc",
+      "scripts/__pycache__/validate_requirements.cpython-313.pyc",
       "scripts/test_validate_requirements.py",
       "scripts/validate_requirements.py"
     ]
@@ -1306,6 +1349,7 @@
       "references/tasks.md",
       "references/validate.md",
       "references/verify-screens.md",
+      "scripts/__pycache__/check_proofs.cpython-313.pyc",
       "scripts/__pycache__/lean_config.cpython-312.pyc",
       "scripts/__pycache__/lean_config.cpython-313.pyc",
       "scripts/__pycache__/runners.cpython-312.pyc",
@@ -1337,6 +1381,7 @@
       "references/plan.md",
       "references/verify-screens.md",
       "references/verify.md",
+      "scripts/__pycache__/lean_config.cpython-313.pyc",
       "scripts/check_commit.py",
       "scripts/check_proofs.py",
       "scripts/fixtures/checks.md",

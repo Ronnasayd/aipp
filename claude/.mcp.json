@@ -148,6 +148,10 @@
     "aipp:gcloud": {
       "command": "npx",
       "args": ["-y", "@google-cloud/gcloud-mcp"]
+    },
+    "aipp:expo": {
+      "url": "https://mcp.expo.dev/mcp",
+      "type": "http"
     }
   }
 }

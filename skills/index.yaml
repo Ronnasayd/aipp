@@ -182,6 +182,31 @@ skills:
     utility classes, configuring Tailwind, setting up dark mode, or customizing the
     theme.
 - name:
+  - user-story
+  description: Create user stories with Mike Cohn format and Gherkin acceptance criteria.
+    Use when turning user needs into development-ready work with clear outcomes and
+    testable conditions.
+- name:
+  - prd-development
+  description: Build a structured PRD that connects problem, users, solution, and
+    success criteria. Use when turning discovery notes into an engineering-ready document
+    for a major initiative.
+- name:
+  - user-story-splitting
+  description: Break a large story or epic into smaller deliverable stories using
+    proven split patterns. Use when backlog items are too big for estimation, sequencing,
+    or independent release.
+- name:
+  - user-story-mapping
+  description: Create a user story map that lays out activities, steps, tasks, and
+    release slices. Use when planning a workflow, backlog, or MVP around the user
+    journey.
+- name:
+  - discovery-process
+  description: Run a full discovery cycle from problem hypothesis to validated solution.
+    Use when a team needs a structured path through framing, interviews, synthesis,
+    and experiments.
+- name:
   - my-python-patterns
   description: Pythonic idioms, PEP 8 standards, type hints, and best practices for
     building robust, efficient, and maintainable Python applications.
@@ -324,8 +349,8 @@ skills:
 - name:
   - sd-insert-taskmaster
   description: Convert tasks.md spec files into TaskMaster JSON format (.taskmaster/tasks/tasks.json),
-    falling back to one synthetic task per requirement from spec.md when tasks.md does
-    not exist. Use when user says 'convert tasks.md to taskmaster json', 'transform
+    falling back to one synthetic task per requirement from spec.md when tasks.md
+    does not exist. Use when user says 'convert tasks.md to taskmaster json', 'transform
     tasks.md to .taskmaster format', 'generate taskmaster json from this spec', or
     'register this feature in taskmaster'.
 - name:

@@ -428,6 +428,25 @@ for skill in "${SKILLS[@]}"; do
 done
 }
 
+get_skills_product_manager_skills(){
+# Product Manager Skills
+BASE_URL="https://github.com/deanpeters/Product-Manager-Skills/tree/main/skills"
+SKILLS=(
+  "user-story"
+  "user-story-mapping"
+  "user-story-splitting"
+  "prd-development"
+  "discovery-process"
+)
+for skill in "${SKILLS[@]}"; do
+  ignore_name="Product-Manager-Skills:${skill}"
+  echo "━━━ ${skill} ━━━"
+  gghget "${BASE_URL}/${skill}" "skills/Product-Manager-Skills/${skill}"
+  python3 "$SOURCE/scripts/aipp_settings.py" register-if-absent "$SOURCE" skills "${ignore_name}" false
+  echo ""
+done
+}
+
 get_commands_awesome_claude_code_toolkit(){
 # awesome-claude-code-toolkit
 BASE_URL="https://github.com/rohitg00/awesome-claude-code-toolkit/tree/main/commands"
@@ -449,5 +468,6 @@ get_skills_mattpocock
 get_skills_agent-toolkit
 get_skills_skill-inspector
 get_skills_rea
+get_skills_product_manager_skills
 get_commands_awesome_claude_code_toolkit
 
