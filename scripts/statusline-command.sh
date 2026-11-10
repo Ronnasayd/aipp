@@ -487,7 +487,10 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
         mult_info=" / ${mult_color}×${mult}${RESET}"
     fi
 
-    rate_info="(${ICON_5H} 5h ${five_color}${five_int}%${RESET} -${time_left} / ${C_MAUVE}${ICON_SESSION}+${five_sess}%${RESET}${mult_info} / ${pace_info})${SEP}(${ICON_WEEK} 7d ${seven_color}${seven_int}%${RESET} ${reset_label})"
+    # why: render_bar's loop already saturates out-of-range fills, so no clamp needed.
+    five_bar=$(render_bar $(( five_int / 5 )) 20)
+    seven_bar=$(render_bar $(( seven_int / 5 )) 20)
+    rate_info="(${ICON_5H} 5h ${five_color}${five_bar} ${five_int}% -${time_left}${RESET} / ${C_MAUVE}${ICON_SESSION}+${five_sess}%${RESET}${mult_info} / ${pace_info})${SEP}(${ICON_WEEK} 7d ${seven_color}${seven_bar} ${seven_int}%${RESET} ${reset_label})"
 fi
 
 # Output the complete status line
