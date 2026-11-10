@@ -447,23 +447,14 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
     # Calculate next weekly reset day from resets_at timestamp
     seven_resets_at=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')
     if [ -n "$seven_resets_at" ]; then
-        reset_date=$(date -d "@$seven_resets_at" "+%b %-d")
-        reset_day=$(date -d "@$seven_resets_at" "+%-d")
+        reset_label=$(date -d "@$seven_resets_at" "+%d/%m - %H:%M")
     else
         # Fallback: next Sunday
         dow=$(date +%u)
         days_until_sun=$(( (7 - dow) % 7 ))
         [ "$days_until_sun" -eq 0 ] && days_until_sun=7
-        reset_date=$(date -v+"${days_until_sun}d" "+%b %-d")
-        reset_day=$(date -v+"${days_until_sun}d" "+%-d")
+        reset_label=$(date -v+"${days_until_sun}d" "+%d/%m")
     fi
-    case "$reset_day" in
-        1|21|31) reset_suffix="st" ;;
-        2|22)    reset_suffix="nd" ;;
-        3|23)    reset_suffix="rd" ;;
-        *)       reset_suffix="th" ;;
-    esac
-    reset_label="${reset_date}${reset_suffix}"
 
     # why: rate_limits is account-wide; baseline at first sighting per session isolates this session's share
     five_state="/tmp/claude-statusline-5h-${session_id:-default}"
