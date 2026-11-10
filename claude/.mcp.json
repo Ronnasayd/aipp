@@ -152,6 +152,24 @@
     "aipp:expo": {
       "url": "https://mcp.expo.dev/mcp",
       "type": "http"
+    },
+    "aipp:google-workspace": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "workspace-mcp",
+        "--tools",
+        "gmail",
+        "drive",
+        "calendar",
+        "docs",
+        "sheets"
+      ],
+      "env": {
+        "GOOGLE_OAUTH_CLIENT_ID": "${MCP_GOOGLE_OAUTH_CLIENT_ID:-add-value-to-env-vars}",
+        "GOOGLE_OAUTH_CLIENT_SECRET": "${MCP_GOOGLE_OAUTH_CLIENT_SECRET:-add-value-to-env-vars}",
+        "OAUTHLIB_INSECURE_TRANSPORT": "1"
+      }
     }
   }
 }
