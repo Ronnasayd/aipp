@@ -134,6 +134,10 @@ def judge_block(block: list[tuple[int, str]]) -> str | None:
 
     if DIRECTIVE_RE.search(first_text):
         return None
+    # why: JSDoc/TSDoc is API documentation, the JS analogue of a Python
+    # docstring (which tree-sitter never reports as a comment node).
+    if first_text.startswith("/**"):
+        return None
     if GENERATED_RE.search(first_text) and not MARKER_RE.search(first_text):
         return None
 
