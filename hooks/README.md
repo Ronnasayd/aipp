@@ -25,6 +25,7 @@ Scripts live in [`scripts/`](scripts) and run via
 
 | Script                              | Purpose                                                                                                                                                                                                                          |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `secret_guard.py`                   | Blocks prompts carrying plain-text credentials (detect-secrets via `secret_scan.py` plus a `pass:`/`senha=`/`token:` keyword regex); `# pragma: allowlist secret` bypasses a line.                                               |
 | `turn_base_sha.py`                  | Pins the turn's starting commit SHA for the Stop-time lint gate.                                                                                                                                                                 |
 | `skill_activation.py`               | Matches the prompt against local skills, suggests which to invoke.                                                                                                                                                               |
 | `checklist_context_watch.py`        | Re-surfaces the active skill's `CHECKLIST.md`.                                                                                                                                                                                   |
@@ -110,7 +111,7 @@ Scripts live in [`scripts/`](scripts) and run via
 - `embedding_daemon.py` — SentenceTransformer daemon over a Unix socket, backing semantic-search hooks.
 - `merge_coverage.py` — merges a partial Istanbul coverage run into the project's coverage dir; used by `jest_coverage_incremental.py`.
 - `log_hooks.py` — logs every hook invocation (wired on nearly every event, with `JSON_COLORIZE=1`).
-- `secret_scan.py` — shared secret-detection logic used by both `protect_files.py` (PreToolUse, deny on match) and `scan_secrets_output.py` (PostToolUse, redact on match).
+- `secret_scan.py` — shared secret-detection logic used by `protect_files.py` (PreToolUse, deny on match), `scan_secrets_output.py` (PostToolUse, redact on match) and `secret_guard.py` (UserPromptSubmit, block on match).
 - `unused/` — retired scripts, not wired anywhere.
 
 Cross-cutting hooks not in `scripts/` (external, run via `node`/shell directly

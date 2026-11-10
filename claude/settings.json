@@ -489,6 +489,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/secret_guard.py",
+            "timeout": 20
+          },
+          {
+            "type": "command",
             "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/turn_base_sha.py",
             "timeout": 10
           },

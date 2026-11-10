@@ -56,8 +56,12 @@ ALLOWED_PATTERNS = [
     f"{AI_PROJECT_ROOT_DIR}/instructions/**:rx",
     f"{AI_PROJECT_ROOT_DIR}/hooks/**:rx",
     f"{home_dir}/develop/public/**",
-    *(f"{home_dir}/Desktop/*.{ext}" for ext in ("md", "png", "jpeg", "json")),
-    f"{CLAUDE_CONFIG_DIR}/projects/**/memory/*.md",
+    *(
+        f"{home_dir}/Desktop/*.{ext}"
+        for ext in ("md", "png", "jpeg", "json", "txt", "csv")
+    ),
+    f"{CLAUDE_CONFIG_DIR}/projects/**:r",
+    f"{CLAUDE_CONFIG_DIR}/logs/**:r",
     f"{home_dir}/.claude/plugins/**:rx",
 ]
 
