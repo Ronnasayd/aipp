@@ -37,9 +37,11 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_READONLY=$'\U0000F023'
     ICON_TASK=$'\U0000F0AE'
     ICON_MCP=$'\U0000F1E6'
+    ICON_DISABLED=$'\U0001F6C7'
 else
     ICON_TASK="📋"
     ICON_MCP="🔌"
+    ICON_DISABLED="🛇"
     ICON_READONLY="🔏"
     ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙" ICON_WRENCH="🔧"
     ICON_EMAIL="📧" ICON_SERENA="🧭" ICON_MEMORY="💾" ICON_RAGRAT="🐀" ICON_COST="💰"
@@ -344,7 +346,7 @@ tools_status="${SEP}${ICON_TOOLS} \e]8;;file://${TOOLS_LOG}\e\\\\tools(${tools_d
 project_dir=$(echo "$input" | jq -r '.workspace.project_dir // .workspace.current_dir')
 disabled_mcps=$(jq -r --arg p "$project_dir" '.projects[$p].disabledMcpServers // [] | select(length > 0) | length' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.claude.json" 2>/dev/null)
 disabled_mcp_info=""
-[ -n "$disabled_mcps" ] && disabled_mcp_info="${SEP}${C_YELLOW}${ICON_MCP} mcp/disabled(${disabled_mcps})${RESET}"
+[ -n "$disabled_mcps" ] && disabled_mcp_info="${SEP}${C_YELLOW}${ICON_DISABLED} mcp(${disabled_mcps})${RESET}"
 
 # Session duration (wall clock)
 duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // empty')
