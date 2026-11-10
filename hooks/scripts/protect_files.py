@@ -6,6 +6,7 @@
 # pylint: disable=too-many-lines
 
 from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 import fnmatch
 import glob
 import json
@@ -55,6 +56,11 @@ ALLOWED_PATTERNS = [
     f"{AI_PROJECT_ROOT_DIR}/skills/**:rx",
     f"{AI_PROJECT_ROOT_DIR}/instructions/**:rx",
     f"{AI_PROJECT_ROOT_DIR}/hooks/**:rx",
+    # why: projects symlink toolkit files (lefthook.yml, .mcp.json) into the
+    # aipp root; realpath lands outside the project. Read-only — writes through
+    # the symlink still need their own check, and PROTECTED_PATTERNS still apply.
+    f"{AI_PROJECT_ROOT_DIR}/**:r",
+    f"{CLAUDE_CONFIG_DIR}/skills/**:r",
     f"{home_dir}/develop/public/**",
     *(
         f"{home_dir}/Desktop/*.{ext}"
@@ -199,6 +205,23 @@ PROTECTED_PATTERNS = [
     os.path.join(CLAUDE_PROJECT_DIR, ".claude", "settings.json"),
     os.path.join(CLAUDE_PROJECT_DIR, ".claude", "settings.local.json"),
 ]
+
+# why: these guard against tampering, not disclosure — reading a hook script
+# or settings.json leaks nothing, so only writes are denied.
+WRITE_ONLY_PROTECTED_PATTERNS = frozenset(
+    {
+        "**/.git/hooks/**",
+        os.path.join(CLAUDE_PROJECT_DIR, ".claude", "hooks", "**"),
+        os.path.join(CLAUDE_PROJECT_DIR, ".claude", "settings.json"),
+    }
+)
+
+# why: committed templates (.env.example, example.env) hold placeholders,
+# not secrets; denying them blocked routine setup reads.
+ENV_PATTERNS = frozenset({".env", ".env.*", "**/*.env"})
+ENV_TEMPLATE_RE = re.compile(
+    r"(?:^|[._-])(?:example|sample|template|dist)(?:[._-]|$)", re.I
+)
 
 READ_COMMANDS = {
     "cat",
@@ -412,7 +435,7 @@ def is_allowed(path: str, *, needs: str = "w") -> bool:
     return False
 
 
-def matches_pattern(path: str) -> tuple[bool, str]:
+def matches_pattern(path: str, mode: str = "w") -> tuple[bool, str]:
     """Match against protected patterns using pathlib semantics.
 
     Matching is case-folded so a case-insensitive filesystem (macOS,
@@ -421,14 +444,21 @@ def matches_pattern(path: str) -> tuple[bool, str]:
 
     Args:
         path: Normalized path string to check.
+        mode: Access requested ("r", "w" or "x"); WRITE_ONLY_PROTECTED_PATTERNS
+            only match "w".
 
     Returns:
         A (matched, pattern) tuple; pattern is empty when matched is False.
     """
     path_lower = path.lower()
     p = Path(path_lower)
+    is_env_template = bool(ENV_TEMPLATE_RE.search(p.name))
 
     for pattern in PROTECTED_PATTERNS:
+        if mode != "w" and pattern in WRITE_ONLY_PROTECTED_PATTERNS:
+            continue
+        if is_env_template and pattern in ENV_PATTERNS:
+            continue
         pattern_lower = pattern.lower()
 
         # direct fnmatch (string-based)
@@ -767,6 +797,37 @@ def _extract_find_exec_targets(it: Iterator[str]) -> list[str]:
     return targets
 
 
+FIND_VALUE_PREDICATES = frozenset(
+    {
+        "-name",
+        "-iname",
+        "-path",
+        "-ipath",
+        "-wholename",
+        "-iwholename",
+        "-regex",
+        "-iregex",
+        "-lname",
+        "-ilname",
+        "-type",
+        "-xtype",
+        "-maxdepth",
+        "-mindepth",
+        "-size",
+        "-perm",
+        "-user",
+        "-group",
+        "-mtime",
+        "-mmin",
+        "-atime",
+        "-amin",
+        "-ctime",
+        "-cmin",
+        "-printf",
+    }
+)
+
+
 def _extract_find_targets(it: Iterator[str]) -> list[str]:
     """Collect file/search-path targets from a `find` command's remaining args.
 
@@ -782,6 +843,9 @@ def _extract_find_targets(it: Iterator[str]) -> list[str]:
             break
         if arg in ("-exec", "-execdir"):
             targets.extend(_extract_find_exec_targets(it))
+        elif arg in FIND_VALUE_PREDICATES:
+            # why: a name glob like '*.env' is a match pattern, not a file read
+            next(it, None)
         elif not arg.startswith("-"):
             # leading search path(s), e.g. `find /home/x -name *.pem -delete`
             # — matched files inherit this path, so it must be checked too
@@ -1074,15 +1138,70 @@ def _extract_copy_like_targets(it: Iterator[str]) -> list[str]:
 # return (target, mode) pairs — kept in their own dict (distinct type from
 # _EXACT_NAME_HANDLERS below) so _dispatch_command_targets can pass their
 # output straight through instead of re-wrapping it in another mode tag.
+FIND_WRITE_PREDICATES = frozenset(
+    {
+        "-delete",
+        "-fprint",
+        "-fprint0",
+        "-fprintf",
+        "-fls",
+        "-exec",
+        "-execdir",
+        "-ok",
+        "-okdir",
+    }
+)
+
+
+def _extract_find_tagged(it: Iterator[str]) -> list[tuple[str, str]]:
+    """Tag find's targets "r" for a pure search, "w" when it deletes/execs/writes.
+
+    Args:
+        it: Iterator positioned just after the `find` token.
+
+    Returns:
+        (target, mode) pairs from _extract_find_targets.
+    """
+    args = list(it)
+    mode = "w" if FIND_WRITE_PREDICATES.intersection(args) else "r"
+    return [(t, mode) for t in _extract_find_targets(iter(args))]
+
+
+SOURCE_DEST_COMMANDS = frozenset({"cp", "rsync", "scp", "install"})
+
+
+def _extract_source_dest_tagged(it: Iterator[str]) -> list[tuple[str, str]]:
+    """Tag cp-like sources "r" and the destination "w".
+
+    Args:
+        it: Iterator positioned just after the command token.
+
+    Returns:
+        (target, mode) pairs; every target is "w" when a `-t` target
+        directory may be in play, since the dest is then not the last arg.
+    """
+    args = list(it)
+    targets = _extract_copy_like_targets(iter(args))
+    target_dir_flag = any(
+        a.startswith("--target-directory")
+        or (a.startswith("-") and not a.startswith("--") and "t" in a[1:])
+        for a in args
+    )
+    if target_dir_flag or len(targets) < 2:
+        return [(t, "w") for t in targets]
+    return [(t, "r") for t in targets[:-1]] + [(targets[-1], "w")]
+
+
 _PRETAGGED_HANDLERS: dict[str, Callable[[Iterator[str]], list[tuple[str, str]]]] = {
     "eval": _extract_eval_targets,
     "xargs": _extract_xargs_targets,
+    "find": _extract_find_tagged,
+    **dict.fromkeys(SOURCE_DEST_COMMANDS, _extract_source_dest_tagged),
 }
 
 # invariant: checked in order; a command matching more than one group
 # (impossible today, since the groups are disjoint) would only hit the first
 _EXACT_NAME_HANDLERS: dict[str, Callable[[Iterator[str]], list[str]]] = {
-    "find": _extract_find_targets,
     "docker": _extract_docker_targets,
     "git": _extract_git_targets,
 }
@@ -1098,17 +1217,170 @@ _GROUP_HANDLERS: list[tuple[frozenset[str], Callable[[Iterator[str]], list[str]]
 ]
 
 
-# hazard: sed/awk/xxd/openssl are in READ_COMMANDS but each has its own
-# write-in-place flag (`sed -i`, `xxd -r -o`, `openssl ... -out file`).
-# _extract_copy_like_targets can't tell a flag's argument from a plain
-# positional, so these stay "w" instead of the blanket "x".
-_WRITE_CAPABLE_READ_COMMANDS = frozenset({"sed", "awk", "xxd", "openssl"})
+# hazard: xxd/openssl are in READ_COMMANDS but each has its own write flag
+# (`xxd -r -o`, `openssl ... -out file`). _extract_copy_like_targets can't
+# tell a flag's argument from a plain positional, so these stay "w".
+_WRITE_CAPABLE_READ_COMMANDS = frozenset({"xxd", "openssl"})
 
-# why: families whose targets are only run/read need just "x", covered by
-# a ":rx"-only allowlist entry. Every other family (copy, destructive,
-# perm, network, raw-socket, redirection) needs "w" since its targets can
-# overwrite, delete, or exfiltrate the path.
-_EXEC_ONLY_COMMANDS = frozenset(READ_COMMANDS - _WRITE_CAPABLE_READ_COMMANDS)
+# why: read-family targets need just "r", so a ":r" allowlist entry covers
+# `cat`/`grep` as well as the Read tool. Every other family (copy,
+# destructive, perm, network, raw-socket, redirection) needs "w" since its
+# targets can overwrite, delete, or exfiltrate the path.
+_READ_ONLY_COMMANDS = frozenset(READ_COMMANDS - _WRITE_CAPABLE_READ_COMMANDS)
+
+# why: sed/awk/grep take a script/pattern as first positional (`sed -n '/## /,$p' f`),
+# not a path; treating it as one denied ~100 real commands as "outside_project".
+# Per command: short script flags ('f' = script from file), short non-path value
+# flags, long script flags, long value flags.
+_SCRIPT_COMMAND_SPEC: dict[str, tuple[str, str, frozenset[str], frozenset[str]]] = {
+    "sed": (
+        "ef",
+        "l",
+        frozenset({"--expression", "--file"}),
+        frozenset({"--line-length"}),
+    ),
+    "grep": (
+        "ef",
+        "ABCmdD",
+        frozenset({"--regexp", "--file"}),
+        frozenset(
+            {
+                "--after-context",
+                "--before-context",
+                "--context",
+                "--max-count",
+                "--include",
+                "--exclude",
+                "--exclude-dir",
+                "--label",
+            }
+        ),
+    ),
+    "awk": (
+        "fe",
+        "Fvi",
+        frozenset({"--file", "--source"}),
+        frozenset({"--field-separator", "--assign"}),
+    ),
+}
+
+# hazard: sed's script can write (`w file`) or read (`r file`) files itself
+_SED_FILE_COMMAND_RE = re.compile(r"(?:^|[;{}\n/])\s*([wWrR])\s+([^;}\n]+)")
+
+
+@dataclass
+class _ScriptArgs:
+    """Mutable parse state for one sed/awk/grep invocation."""
+
+    files: list[str] = field(default_factory=list)
+    scripts: list[str] = field(default_factory=list)
+    first_positional: str | None = None
+    script_given: bool = False
+    write: bool = False
+
+
+def _parse_script_long_flag(
+    cmd: str, arg: str, it: Iterator[str], st: _ScriptArgs
+) -> None:
+    """Consume one `--long[=value]` flag of sed/awk/grep."""
+    _, _, long_script, long_value = _SCRIPT_COMMAND_SPEC[cmd]
+    name, eq, val = arg.partition("=")
+    if name == "--in-place":
+        st.write = True
+    elif name in long_script:
+        st.script_given = True
+        value = val if eq else next(it, "")
+        (st.files if name == "--file" else st.scripts).append(value)
+    elif name in long_value and not eq:
+        next(it, None)
+
+
+def _parse_script_short_flags(
+    cmd: str, arg: str, it: Iterator[str], st: _ScriptArgs
+) -> None:
+    """Consume one bundled short-flag token (`-ne`, `-i.bak`, `-F/`) of sed/awk/grep."""
+    script_letters, value_letters, _, _ = _SCRIPT_COMMAND_SPEC[cmd]
+    letters = arg[1:]
+    for idx, ch in enumerate(letters):
+        rest = letters[idx + 1 :]
+        if cmd == "sed" and ch == "i":
+            st.write = True
+            return
+        if ch in script_letters:
+            st.script_given = True
+            value = rest or next(it, "")
+            (st.files if ch == "f" else st.scripts).append(value)
+            return
+        if ch in value_letters:
+            value = rest or next(it, "")
+            if cmd == "awk" and ch == "i":
+                _apply_awk_include(value, st)
+            return
+
+
+def _apply_awk_include(value: str, st: _ScriptArgs) -> None:
+    """Record gawk's `-i` value: `inplace` edits files, anything else is read."""
+    if value == "inplace":
+        st.write = True
+    else:
+        st.files.append(value)
+
+
+def _script_refs(cmd: str, scripts: list[str]) -> list[tuple[str, str]]:
+    """Pull file references out of sed/awk script text."""
+    refs: list[tuple[str, str]] = []
+    for script in scripts:
+        if cmd == "sed":
+            refs.extend(
+                (m.group(2).strip(), "w" if m.group(1) in "wW" else "r")
+                for m in _SED_FILE_COMMAND_RE.finditer(script)
+            )
+        elif cmd == "awk":
+            # hazard: awk can `print > "file"` or getline from one; mode
+            # unknown, so stay strict
+            refs.extend((ref, "w") for ref in extract_inline_code_refs(script))
+    return refs
+
+
+def _extract_script_command_targets(
+    cmd: str, it: Iterator[str]
+) -> list[tuple[str, str]]:
+    """Collect (target, mode) pairs from sed/awk/grep, skipping the script/pattern arg.
+
+    Args:
+        cmd: "sed", "awk" or "grep".
+        it: Iterator positioned just after the command token.
+
+    Returns:
+        Input files ("w" when editing in place, else "r") plus file refs
+        found inside a sed/awk script.
+    """
+    st = _ScriptArgs()
+    positional_only = False
+    for arg in it:
+        if arg in SHELL_OPERATORS:
+            break
+        if positional_only or arg == "-" or not arg.startswith("-"):
+            if st.first_positional is None:
+                st.first_positional = arg
+            else:
+                st.files.append(arg)
+        elif arg == "--":
+            positional_only = True
+        elif arg.startswith("--"):
+            _parse_script_long_flag(cmd, arg, it, st)
+        else:
+            _parse_script_short_flags(cmd, arg, it, st)
+
+    # invariant: with -e/-f the first positional is a file, not the script
+    if st.first_positional is not None:
+        if st.script_given:
+            st.files.insert(0, st.first_positional)
+        else:
+            st.scripts.append(st.first_positional)
+
+    mode = "w" if st.write else "r"
+    return [(f, mode) for f in st.files if f] + _script_refs(cmd, st.scripts)
 
 
 def _resolve_untagged_targets(cmd: str, it: Iterator[str]) -> list[str]:
@@ -1144,7 +1416,7 @@ def _dispatch_command_targets(cmd: str, it: Iterator[str]) -> list[tuple[str, st
         own extractors compute the real mode per target, e.g. a write
         redirect inside `bash -c "... > file"` stays "w" even though the
         outer command is an interpreter) — never re-tagged here. Every
-        other family gets a single fixed mode: "x" for exec-only families
+        other family gets a single fixed mode: "r" for read-only families
         (read commands), "w" otherwise (copy, destructive, perm, network,
         raw-socket, redirection — their targets can overwrite, delete, or
         exfiltrate the path). Empty list if cmd matches no known family.
@@ -1154,8 +1426,10 @@ def _dispatch_command_targets(cmd: str, it: Iterator[str]) -> list[tuple[str, st
         return pretagged(it)
     if cmd in INTERPRETER_COMMANDS:
         return _extract_interpreter_targets(cmd, it)
+    if cmd in _SCRIPT_COMMAND_SPEC:
+        return _extract_script_command_targets(cmd, it)
 
-    mode = "x" if cmd in _EXEC_ONLY_COMMANDS else "w"
+    mode = "r" if cmd in _READ_ONLY_COMMANDS else "w"
     targets = _resolve_untagged_targets(cmd, it)
     return [(t, mode) for t in targets]
 
@@ -1183,6 +1457,8 @@ def _extract_redirection_targets(tokens: list[str]) -> list[str]:
     """
     targets = []
     for i, tok in enumerate(tokens):
+        if tok in HEREDOC_OPERATORS:
+            continue
         if tok in REDIRECT_OPERATORS or tok in INPUT_REDIRECT_OPERATORS:
             nxt = tokens[i + 1] if i + 1 < len(tokens) else None
             if nxt is not None and nxt not in SHELL_OPERATORS:
@@ -1191,7 +1467,27 @@ def _extract_redirection_targets(tokens: list[str]) -> list[str]:
         glued = _glued_redirect_target(tok)
         if glued is not None:
             targets.append(glued)
-    return targets
+    return [t for t in map(_strip_fd_dup, targets) if t]
+
+
+# why: `<<EOF` / `<<- EOF` name a heredoc delimiter and `<<<` a literal
+# string, never a file; treating them as targets denied heredocs after `cd`.
+HEREDOC_OPERATORS = frozenset({"<<", "<<-", "<<<"})
+_FD_DUP_RE = re.compile(r"&(\d+|-)")
+
+
+def _strip_fd_dup(target: str) -> str | None:
+    """Drop fd duplication (`2>&1` → "&1"); unwrap `>&file` to "file".
+
+    Args:
+        target: A redirection target as extracted.
+
+    Returns:
+        The file target, or None when it only names a file descriptor.
+    """
+    if _FD_DUP_RE.fullmatch(target):
+        return None
+    return target[1:] if target.startswith("&") else target
 
 
 def _glued_redirect_target(tok: str) -> str | None:
@@ -1201,12 +1497,38 @@ def _glued_redirect_target(tok: str) -> str | None:
         tok: A single shlex token, e.g. `>file` or `2>&log`.
 
     Returns:
-        The part after the redirect prefix, or None if tok isn't one.
+        The part after the redirect prefix, or None if tok isn't one (or
+        is a glued heredoc/herestring like `<<EOF`).
     """
+    if tok.startswith("<<"):
+        return None
     m = _REDIRECT_PREFIX_RE.match(tok)
     if m and m.end() < len(tok):
         return tok[m.end() :]
     return None
+
+
+def _without_redirections(tokens: list[str]) -> list[str]:
+    """Drop redirection operators, their targets and heredoc delimiters.
+
+    Args:
+        tokens: The shlex-tokenized argv of one command segment.
+
+    Returns:
+        The argv a command actually receives.
+    """
+    # why: already covered by _extract_redirection_targets; left in, `<<EOF`
+    # and `2>/dev/null` reach the command's own extractor as fake file args.
+    args: list[str] = []
+    skip_next = False
+    for tok in tokens:
+        if skip_next:
+            skip_next = False
+        elif tok in REDIRECT_OPERATORS | INPUT_REDIRECT_OPERATORS | HEREDOC_OPERATORS:
+            skip_next = True
+        elif not (tok.startswith("<<") or _glued_redirect_target(tok)):
+            args.append(tok)
+    return args
 
 
 def extract_targets_from_tokens(tokens: list[str]) -> list[tuple[str, str]]:
@@ -1220,12 +1542,70 @@ def extract_targets_from_tokens(tokens: list[str]) -> list[tuple[str, str]]:
         command-family target's mode comes from _dispatch_command_targets.
     """
     targets = [(t, "w") for t in _extract_redirection_targets(tokens)]
-    it = iter(tokens)
+    it = iter(_without_redirections(tokens))
     for token in it:
         cmd = os.path.basename(token)
         targets.extend(_dispatch_command_targets(cmd, it))
         break
     return targets
+
+
+CD_COMMANDS = frozenset({"cd", "pushd"})
+
+
+def _tokenize_segment(segment: str) -> list[str]:
+    """Shlex-split one command segment with its $(...) spans neutralized.
+
+    Args:
+        segment: One operator-separated command segment.
+
+    Returns:
+        The segment's argv tokens.
+    """
+    # why: nested $(...) / `...` / <(...) are scanned separately in
+    # extract_file_targets; left raw, `cat $(echo .env)` shlex-splits into
+    # garbage tokens and `grep x <(sed -n '/a/p' f)` makes the sed script a path.
+    neutralized = PROCESS_SUBSTITUTION_RE.sub(
+        "__PROCSUB__", neutralize_subshells(segment)
+    )
+    try:
+        return shlex.split(neutralized)
+    except ValueError:
+        return neutralized.split()
+
+
+def _cd_destination(cwd: str | None, args: list[str]) -> str | None:
+    """Return the directory a `cd`/`pushd` moves to, or None if unknowable.
+
+    Args:
+        cwd: Directory tracked so far, None meaning the hook's own cwd.
+        args: The cd command's arguments.
+
+    Returns:
+        The absolute destination; None for `cd -` (previous dir unknown).
+    """
+    positional = [a for a in args if not a.startswith("-") or a == "-"]
+    if not positional:
+        return str(Path.home())
+    if positional[0] == "-":
+        return None
+    dest = os.path.expanduser(expand_env_vars(positional[0]))
+    return os.path.join(cwd or os.getcwd(), dest)
+
+
+def _rebase(target: str, cwd: str | None) -> str:
+    """Join a relative target onto the tracked cd directory.
+
+    Args:
+        target: A file-like target as written in the command.
+        cwd: Directory from a preceding `cd`, or None.
+
+    Returns:
+        The target, made absolute against cwd when it is relative.
+    """
+    if not cwd or not target or target.startswith(("/", "~", "$")):
+        return target
+    return os.path.join(cwd, target)
 
 
 def extract_file_targets(command: str) -> list[tuple[str, str]]:
@@ -1238,34 +1618,34 @@ def extract_file_targets(command: str) -> list[tuple[str, str]]:
 
     Returns:
         (target, mode) pairs found across the command and its subshells;
-        mode is "w" (write/destroy) or "x" (execute/read-only) — see
+        mode is "w" (write/destroy), "r" (read) or "x" (run a script) — see
         _dispatch_command_targets.
     """
     targets: list[tuple[str, str]] = []
 
-    raw_commands = split_on_operators(command, protect_exec=True)
+    main_commands = split_on_operators(command, protect_exec=True)
+    nested_commands: list[str] = []
     for sub in extract_subshells(command):
-        raw_commands.extend(split_on_operators(sub, protect_exec=True))
+        nested_commands.extend(split_on_operators(sub, protect_exec=True))
     for m in PROCESS_SUBSTITUTION_RE.finditer(command):
-        raw_commands.extend(split_on_operators(m.group(1), protect_exec=True))
+        nested_commands.extend(split_on_operators(m.group(1), protect_exec=True))
 
-    raw_commands = [
-        c
-        for c in raw_commands
-        if not is_shell_structural(c) and not is_standalone_assignment(c)
-    ]
-
-    for sub in raw_commands:
-        # nested $(...) / `...` inside this segment are scanned separately
-        # via extract_subshells() above — neutralize them here so shlex
-        # doesn't choke tokenizing them as literal argument text (e.g.
-        # `cat $(echo .env)` shlex-splits into garbage tokens otherwise).
-        neutralized = neutralize_subshells(sub)
-        try:
-            tokens = shlex.split(neutralized)
-        except ValueError:
-            tokens = neutralized.split()
-        targets.extend(extract_targets_from_tokens(tokens))
+    # why: `cd sub && cat ../f` must resolve against sub, not the hook's cwd —
+    # ignoring it both denied in-project reads and let `cd /etc && cat passwd`
+    # resolve inside the project. Nested subshell segments keep the hook cwd.
+    for segments, track_cd in ((main_commands, True), (nested_commands, False)):
+        cwd: str | None = None
+        for sub in segments:
+            if is_shell_structural(sub) or is_standalone_assignment(sub):
+                continue
+            tokens = _tokenize_segment(sub)
+            if track_cd and tokens and tokens[0] in CD_COMMANDS:
+                cwd = _cd_destination(cwd, tokens[1:])
+                continue
+            targets.extend(
+                (_rebase(t, cwd), mode)
+                for t, mode in extract_targets_from_tokens(tokens)
+            )
 
     # hazard: eval/xargs can smuggle a target through stdin the per-subcommand
     # tokenizer can't resolve (e.g. `echo .env | xargs cat`) — fall back to a
@@ -1293,14 +1673,24 @@ def deny(file_path: str, pattern: str, source: str) -> None:
         pattern: The PROTECTED_PATTERNS entry that matched.
         source: Short tag identifying which check triggered the deny.
     """
+    resolved = normalize(expand_env_vars(file_path))
+    if pattern == "outside_project":
+        # why: agents retried variations of the same command when the reason
+        # was just "outside_project"; naming the resolved path exposes
+        # symlinks and points at the real fix.
+        reason = (
+            f"outside_project: path resolves to {resolved}, outside "
+            f"{CLAUDE_PROJECT_DIR}. Do not retry variations; if access is "
+            "intended, ask the user to add it to PROTECT_FILES_EXTRA_ALLOWED "
+            "(exported before launching Claude Code)."
+        )
+    else:
+        reason = f"matches protected pattern '{pattern}'"
+        if resolved != file_path:
+            reason += f" (resolved: {resolved})"
     print(  # noqa: T201 - hook protocol: decision JSON goes on stderr
         json.dumps(
-            {
-                "decision": "deny",
-                "file": file_path,
-                "source": source,
-                "reason": f"matches protected pattern '{pattern}'",
-            }
+            {"decision": "deny", "file": file_path, "source": source, "reason": reason}
         ),
         file=sys.stderr,
     )
@@ -1404,7 +1794,7 @@ def _check_direct_file_access(tool_input: Mapping, tool_name: str) -> str | None
     if not allowed and not is_within_project(norm):
         deny(file_path, "outside_project", "path_escape")
 
-    blocked, pattern = matches_pattern(norm)
+    blocked, pattern = matches_pattern(norm, "w" if tool_name in WRITE_TOOLS else "r")
     if blocked:
         deny(file_path, pattern, "file_path")
 
@@ -1460,14 +1850,21 @@ def _check_shell_command(tool_input: Mapping) -> None:
         _check_shell_command_target(command, target, mode)
 
 
+_COMMAND_SOURCE_BY_MODE = {
+    "r": "command_read",
+    "w": "command_write",
+    "x": "command_exec",
+}
+
+
 def _check_shell_command_target(command: str, target: str, mode: str) -> None:
     """Deny one shell-command target that resolves to a protected path.
 
     Args:
         command: The raw shell command text, used only for the debug log.
         target: One file-like target extracted from command.
-        mode: The access mode needed — "w" (write/destroy) or "x"
-            (execute/read-only), from extract_file_targets.
+        mode: The access mode needed — "w" (write/destroy), "r" (read)
+            or "x" (run a script), from extract_file_targets.
     """
     norm = normalize(target)
     allowed = is_allowed(norm, needs=mode)
@@ -1477,9 +1874,9 @@ def _check_shell_command_target(command: str, target: str, mode: str) -> None:
     if not allowed and not is_within_project(norm):
         deny(target, "outside_project", "command_path_escape")
 
-    blocked, pattern = matches_pattern(norm)
+    blocked, pattern = matches_pattern(norm, mode)
     if blocked:
-        deny(target, pattern, "command_read")
+        deny(target, pattern, _COMMAND_SOURCE_BY_MODE.get(mode, "command_read"))
 
     logger.debug("Allowed command: %s access: %s", command, target)
 
