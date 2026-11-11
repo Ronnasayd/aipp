@@ -30,13 +30,19 @@ export const register: Register = (on) => {
     // invariant: projects without aipp's install have no index symlink; register nothing.
     if (await $.fs.exists(INDEX)) {
       const text = await $.fs.read(INDEX);
+      // why: a skill installed locally or by a plugin (`plugin:name`) already has a
+      // command; registering rs-<name> too would duplicate it.
+      const local = new Set(
+        (await $.command.list()).map((c) => c.name.split(":").pop())
+      );
       if (typeof text === "string")
         for (const { name, description } of parseIndex(text))
-          await $.command.register({
-            name: PREFIX + name,
-            description,
-            argumentHint: "[task]"
-          });
+          if (!local.has(name))
+            await $.command.register({
+              name: PREFIX + name,
+              description,
+              argumentHint: "[task]"
+            });
     }
     return next(e);
   });
