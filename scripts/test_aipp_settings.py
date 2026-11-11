@@ -18,8 +18,10 @@ SCRIPT_PATH = Path(__file__).parent / "aipp_settings.py"
 
 
 def _run_cli(args, home_dir):
-    """Run the CLI with HOME redirected to home_dir, so SETTINGS_PATH ($CLAUDE_CONFIG_DIR/...)
-    never touches the real user config."""
+    """Run the CLI with HOME redirected to home_dir.
+
+    SETTINGS_PATH ($CLAUDE_CONFIG_DIR/...) then never touches the real user config.
+    """
     env = {**os.environ, "HOME": str(home_dir)}
     return subprocess.run(
         [sys.executable, str(SCRIPT_PATH), *args],
@@ -490,3 +492,47 @@ def test_cli_sync_catalog_runs_and_exits_zero(tmp_path):
     assert result.returncode == 0
     catalog = json.loads((source / "claude" / "aipp-default-settings.json").read_text())
     assert catalog["skills"] == {"fresh-skill": False}
+
+
+def test_reset_projects_overwrites_every_project_with_catalog(tmp_path):
+    target = tmp_path / "aipp-settings.json"
+    source = tmp_path / "source"
+    source.mkdir()
+    _write_default_settings(source, skills={"a": True, "b": False}, agents={"x": True})
+    settings.save(
+        {
+            "projects": {
+                "/p1": {"skills": {"a": False, "extra": True}, "agents": {}},
+                "/p2": {
+                    "skills": {},
+                    "agents": {"x": False},
+                    "instructions": {"r": True},
+                },
+            }
+        },
+        target,
+    )
+
+    reset = settings.reset_projects(str(source), target)
+
+    expected = {
+        "skills": {"a": True, "b": False},
+        "agents": {"x": True},
+        "instructions": {},
+    }
+    data = settings.load(target)
+    assert data["projects"] == {"/p1": expected, "/p2": expected}
+    assert sorted(reset) == ["/p1", "/p2"]
+
+
+def test_reset_cli_prints_reset_projects(tmp_path):
+    target = tmp_path / "aipp-settings.json"
+    source = tmp_path / "source"
+    source.mkdir()
+    _write_default_settings(source, skills={"a": True})
+    settings.save({"projects": {"/p": {"skills": {"a": False}}}}, target)
+
+    with patch.object(settings, "SETTINGS_PATH", target):
+        assert settings.main(["reset", str(source)]) == 0
+
+    assert settings.load(target)["projects"]["/p"]["skills"] == {"a": True}

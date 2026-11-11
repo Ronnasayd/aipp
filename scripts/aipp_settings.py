@@ -9,6 +9,7 @@ CLI subcommands (see design.md):
     register-if-absent <project_path> <category> <name> <default: true|false>
     get <project_path> <category>
     sync-catalog <source_path>
+    reset <source_path>
 """
 
 import argparse
@@ -327,6 +328,29 @@ def sync_catalog(source_path: str, settings_path: Path = SETTINGS_PATH) -> dict:
     return new_items
 
 
+def reset_projects(source_path: str, settings_path: Path = SETTINGS_PATH) -> list:
+    """Overwrite every project's entry with source_path's default-settings catalog.
+
+    Items absent from the catalog are dropped; catalog values replace any
+    per-project choice. Projects keep their keys; none are added or removed.
+
+    Args:
+        source_path: Toolkit root path holding the default-settings catalog.
+        settings_path: Settings file to read from and write to.
+
+    Returns:
+        Project paths that were reset.
+    """
+    defaults_file = Path(source_path) / DEFAULT_SETTINGS_FILENAME
+    catalog = json.loads(defaults_file.read_text(encoding="utf-8"))
+    data = load(settings_path)
+    projects = data.setdefault("projects", {})
+    for path in projects:
+        projects[path] = {c: dict(catalog.get(c, {})) for c in CATEGORIES}
+    save(data, settings_path)
+    return list(projects)
+
+
 def set_item(
     project_path: str,
     category: str,
@@ -394,6 +418,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_sync.add_argument("source_path")
 
+    p_reset = sub.add_parser(
+        "reset",
+        help="overwrite every project's settings with the default-settings catalog",
+    )
+    p_reset.add_argument("source_path")
+
     return parser
 
 
@@ -422,6 +452,9 @@ def main(argv: list | None = None) -> int:
         elif args.command == "sync-catalog":
             new_items = sync_catalog(args.source_path)
             print(json.dumps(new_items))  # noqa: T201 -- CLI stdout output
+        elif args.command == "reset":
+            reset = reset_projects(args.source_path, SETTINGS_PATH)
+            print(json.dumps(reset))  # noqa: T201 -- CLI stdout output
     except json.JSONDecodeError as exc:
         print(  # noqa: T201 -- CLI stderr output
             f"error: malformed JSON in {SETTINGS_PATH}: {exc}", file=sys.stderr
