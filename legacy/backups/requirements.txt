@@ -74,7 +74,7 @@ onnxruntime==1.23.2
 packaging==25.0
 parsel==1.10.0
 passlib==1.7.4
-pillow==11.3.0
+pillow==13.0.0
 playwright==1.55.0
 pluggy==1.6.0
 propcache==0.3.2
