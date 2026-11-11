@@ -1,0 +1,5 @@
+{
+  "name": "remote-skills",
+  "version": "0.1.0",
+  "description": "Slash command /rs-<name> per remote skill; loads SKILL.md from skill-loader on demand"
+}
