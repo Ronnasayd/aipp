@@ -41,6 +41,12 @@
     "vue.instructions.md": false
   },
   "skills": {
+    "tech-leads-club:demo": false,
+    "Product-Manager-Skills:prd-development": false,
+    "Product-Manager-Skills:discovery-process": false,
+    "Product-Manager-Skills:user-story": false,
+    "Product-Manager-Skills:user-story-mapping": false,
+    "Product-Manager-Skills:user-story-splitting": false,
     "dynamic-programming-analysis": false,
     "generate-docs": true,
     "generate-pr-description": false,

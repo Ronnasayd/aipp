@@ -1,4 +1,4 @@
-import { expect, test } from "claude-code/testing";
+import { expect, mock, test } from "claude-code/testing";
 
 const INDEX = `skills:
 - name:
@@ -36,6 +36,32 @@ test("registers /rs-<name> per index.yaml entry with its description", async ($,
   ]);
 });
 
+test("invoking /rs-<name> submits a prompt so the model starts a turn", async ($, on) => {
+  const prompts: any[] = [];
+  const clock = mock.clock(on, { now: 0 });
+  on("mcp.call", () => ({
+    value: {
+      isError: false,
+      content: [{ type: "text", text: JSON.stringify({ content: "# Git" }) }]
+    }
+  }));
+  on("prompt.submit", (_, e: any) => {
+    prompts.push(e);
+    return { text: e.text };
+  });
+
+  await $.command.run({
+    command: "rs-git-guide",
+    args: "rebase my branch"
+  } as never);
+  expect(prompts).toHaveLength(0);
+  await clock.advance(1);
+
+  expect(prompts).toHaveLength(1);
+  expect(prompts[0].text).toContain("git-guide");
+  expect(prompts[0].text).toContain("rebase my branch");
+});
+
 test("invoking /rs-<name> injects SKILL.md as model context", async ($, on) => {
   const calls: any[] = [];
   on("mcp.call", (_, e: any) => {
@@ -48,8 +74,7 @@ test("invoking /rs-<name> injects SKILL.md as model context", async ($, on) => {
             type: "text",
             text: JSON.stringify({
               name: "git-guide",
-              content: "# Git",
-              files: ["a.md"]
+              content: "# Git"
             })
           }
         ]
@@ -60,15 +85,49 @@ test("invoking /rs-<name> injects SKILL.md as model context", async ($, on) => {
   const out = await $.command.run({
     command: "rs-git-guide",
     args: "rebase my branch"
-  });
+  } as never);
 
   expect(calls[0].server).toBe("aipp_skill-loader");
   expect(calls[0].tool).toBe("get_remote_skill");
   expect(calls[0].args).toEqual({ name: "git-guide" });
   expect(out.text).toBe("Skill git-guide carregada.");
   expect(out.context?.[0]).toContain("# Git");
-  expect(out.context?.[0]).toContain("a.md");
   expect(out.context?.[0]).toContain("rebase my branch");
+});
+
+test("invoking /rs-<name> with adjacent files saves the skill under .claude/skills", async ($, on) => {
+  const calls: any[] = [];
+  mock.clock(on, { now: 0 });
+  on("session.root", () => ({ value: "/proj" }));
+  on("mcp.call", (_, e: any) => {
+    calls.push(e);
+    const body =
+      e.tool === "get_remote_skill"
+        ? { name: "git-guide", content: "# Git", files: ["scripts/run.py"] }
+        : {
+            name: "git-guide",
+            dir: "/proj/.claude/skills/git-guide",
+            saved: []
+          };
+    return {
+      value: {
+        isError: false,
+        content: [{ type: "text", text: JSON.stringify(body) }]
+      }
+    };
+  });
+
+  const out = await $.command.run({
+    command: "rs-git-guide",
+    args: ""
+  } as never);
+
+  expect(calls[1].tool).toBe("download_remote_skill");
+  expect(calls[1].args).toEqual({
+    name: "git-guide",
+    dest_dir: "/proj/.claude/skills"
+  });
+  expect(out.context?.[0]).toContain("/proj/.claude/skills/git-guide");
 });
 
 test("skips index entries already available as local or plugin commands", async ($, on) => {
@@ -79,7 +138,7 @@ test("skips index entries already available as local or plugin commands", async 
     value: [
       { name: "skill-advisor", description: "", source: "skills" },
       { name: "other:git-guide-x", description: "", source: "plugin" }
-    ]
+    ] as never
   }));
   on("command.register", (_, e: any) => {
     registered.push(e.name);
