@@ -35,5 +35,7 @@ jobs:
       - name: Tag release
         if: steps.version.outputs.version_type != 'none' && steps.version.outputs.is_tagged == 'false'
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${{ steps.version.outputs.version_tag }}" -m "Release ${{ steps.version.outputs.version_tag }}"
           git push origin "${{ steps.version.outputs.version_tag }}"
