@@ -363,14 +363,18 @@ export const register: Register = (on) => {
         await update($, activeTab, () => target);
         scrollToEnd($);
       });
+    // why: a tall status line (subagents) shrinks maxRows; the bordered
+    // toolbar takes 3 rows and, past that, the band scrolls it apart.
+    const frame =
+      e.props.maxRows >= 3
+        ? { borderStyle: "round" as const, borderColor: "subtle", paddingX: 1 }
+        : {};
     return (
       <Box
         key="toolbar"
         flexDirection="row"
         gap={1}
-        borderStyle="round"
-        borderColor="subtle"
-        paddingX={1}
+        {...frame}
         alignSelf="flex-start"
       >
         <Button
