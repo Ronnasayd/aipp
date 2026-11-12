@@ -23,9 +23,9 @@
         "git+https://github.com/Ronnasayd/mcp-manager.git",
         "mcp-manager",
         "--config",
-        "$HOME/develop/personal/mcp-manager/backends.json",
+        "$MCP_MANAGER_BACKEND",
         "--catalog",
-        "$HOME/develop/personal/mcp-manager/catalog.json",
+        "$MCP_MANAGER_CATALOG",
         "--transport",
         "stdio"
       ],

@@ -30,7 +30,7 @@ LEAKING_PROMPTS = [
 SAFE_PROMPTS = [
     "como criar uma migration no prisma ?",
     "verifique se mongodb mcp esta funcionando",
-    "mongodb+srv://<user>:<pass>@qq-prd.x.mongodb.net/admin",
+    "mongodb+srv://<user>:<pass>@bb-prd.x.mongodb.net/admin",
     'export APY_KEY="[secret]"',
     "password=$DB_PASSWORD",
     "pass=${PASS}",

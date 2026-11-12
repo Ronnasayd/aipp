@@ -126,6 +126,15 @@ fi
 ########################################################################################
 mkdir -p "$HOME/$DEFAULT_FOLDER"
 link_with_backup "$SOURCE/claude/settings.json" "$HOME/$DEFAULT_FOLDER/settings.json"
+# why: CLAUDE_CODE_PLUGIN_DIRS in settings.json points to ~/.claude/dev-mods/<mod>, independent of repo location.
+DEV_MODS_DIR="$HOME/$DEFAULT_FOLDER/dev-mods"
+mkdir -p "$DEV_MODS_DIR"
+find "$DEV_MODS_DIR" -maxdepth 1 -type l | while read -r link; do
+    [[ "$(readlink "$link")" == "$SOURCE/claude/dev-mods/"* ]] && rm "$link"
+done
+for mod_dir in "$SOURCE/claude/dev-mods/"*/; do
+    link_with_backup "${mod_dir%/}" "$DEV_MODS_DIR/$(basename "$mod_dir")"
+done
 ########################################################################################
 mkdir -p "$LOCAL/$DEFAULT_FOLDER"
 LOCAL_SETTINGS="$LOCAL/$DEFAULT_FOLDER/settings.local.json"

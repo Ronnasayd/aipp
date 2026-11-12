@@ -18,7 +18,7 @@ Result: structured report, fix example with exact line, merge blocked until fixe
 
 ### Example 2: Architecture violation — wrong layer
 
-User says: "analyze PR #98 in LINGOPASS/lingo_digitalpass"
+User says: "analyze PR #98 in <owner>/<repo>"
 
 1. Collect metadata + files in parallel
 2. Full diff

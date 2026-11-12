@@ -260,11 +260,3 @@ def search_codebase(
 
     filtered = bm25_filter(snippets, query)
     return semantic_rerank(filtered, query, top_n)
-
-
-if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(level=logging.INFO)
-    _base_dir = "$HOME/develop/lingopass/lingospace-backend"
-    logging.info(search_codebase("token image", base_dir=_base_dir))

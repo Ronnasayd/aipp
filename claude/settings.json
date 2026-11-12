@@ -14,7 +14,7 @@
     "QUESTION_TOOL_LANG": "Portuguese",
     "MD_LANGUAGE": "English",
     "PROTECT_FILES_EXTRA_ALLOWED": "",
-    "CLAUDE_CODE_PLUGIN_DIRS": "~/develop/personal/aipp/claude/dev-mods/tool-history:~/develop/personal/aipp/claude/dev-mods/cache-warmup:~/develop/personal/aipp/claude/dev-mods/tool-stats:~/develop/personal/aipp/claude/dev-mods/skill-model-enforcer:~/develop/personal/aipp/claude/dev-mods/remote-skills",
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/dev-mods/tool-history:~/.claude/dev-mods/cache-warmup:~/.claude/dev-mods/tool-stats:~/.claude/dev-mods/skill-model-enforcer:~/.claude/dev-mods/remote-skills",
     "CLAUDE_CODE_PROMPT_CACHE_TTL": "5m",
     "CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL": "5m"
   },
@@ -396,7 +396,7 @@
           },
           {
             "type": "command",
-            "command": "uvx --from git+https://github.com/Ronnasayd/mcp-manager.git mcp_manager_context $HOME/develop/personal/mcp-manager/catalog.json | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh McpManagerContext",
+            "command": "uvx --from git+https://github.com/Ronnasayd/mcp-manager.git mcp_manager_context $MCP_MANAGER_CATALOG | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh McpManagerContext",
             "timeout": 10
           },
           {
@@ -521,7 +521,7 @@
           },
           {
             "type": "command",
-            "command": "uvx --from git+https://github.com/Ronnasayd/mcp-manager.git mcp_manager_context $HOME/develop/personal/mcp-manager/catalog.json | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh McpManagerContext",
+            "command": "uvx --from git+https://github.com/Ronnasayd/mcp-manager.git mcp_manager_context $MCP_MANAGER_CATALOG | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh McpManagerContext",
             "timeout": 10
           },
           {

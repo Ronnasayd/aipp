@@ -140,7 +140,7 @@ Validate tasks/.taskmaster/tasks/tasks.json against requirements in docs/SPEC.md
 ### With Context
 
 ```
-I created tasks for the Lingopass design system. Validate them against ACTION-PLAN.md requirements and report any gaps.
+I created tasks for the <enterprise> design system. Validate them against ACTION-PLAN.md requirements and report any gaps.
 ```
 
 ## Output Format
