@@ -47,6 +47,19 @@ function engine($: Harness[0], on: Harness[1]) {
   });
   const skill = (frontmatter: Record<string, string | number>) =>
     $.skill.prompt({ skill: "probe", text: "go", frontmatter });
+  // why: the Skill tool expands the prompt inside its own tool.call, the only event that names the calling loop
+  let toolFrontmatter: Record<string, string | number> = {};
+  on("tool.call", { tool: "Skill" }, async () => {
+    await skill(toolFrontmatter);
+    return { result: { success: true, commandName: "probe" } } as never;
+  });
+  const subagentSkill = (
+    agentId: string,
+    frontmatter: Record<string, string | number>
+  ) => {
+    toolFrontmatter = frontmatter;
+    return $.tool.call({ tool: "Skill", skill: "probe", agentId } as never);
+  };
   const step = async (
     index: number,
     agentId?: string,
@@ -79,6 +92,7 @@ function engine($: Harness[0], on: Harness[1]) {
     applied,
     stored,
     skill,
+    subagentSkill,
     step,
     complete
   };
@@ -362,4 +376,44 @@ test("a refusal lasts one turn", async ($, on) => {
   await step(0);
 
   expect(served).toEqual([SESSION_MODEL, "claude-sonnet-5-5"]);
+});
+
+test("a subagent's skill overrides only that subagent's steps", async ($, on) => {
+  const { served, efforts, subagentSkill, step } = engine($, on);
+
+  await subagentSkill("agent-1", { model: "haiku", effort: "low" });
+  await step(0);
+  await step(1, "agent-1");
+
+  expect(served).toEqual([SESSION_MODEL, "haiku"]);
+  expect(efforts).toEqual([SESSION_EFFORT, "low"]);
+});
+
+test("the served file shows a subagent's override until it completes", async ($, on) => {
+  const { files, subagentSkill, step, complete } = engine($, on);
+  const shown = () => JSON.parse(files[SERVED_FILE]!);
+
+  await subagentSkill("agent-1", { model: "haiku", effort: "low" });
+  await step(0, "agent-1");
+  expect(shown()).toEqual({ skill: "probe", model: "haiku", effort: "low" });
+
+  await complete("agent-1");
+  expect(shown()).toEqual({ model: SESSION_MODEL });
+});
+
+test("a subagent's end restores the main loop's own override", async ($, on) => {
+  const { files, served, skill, subagentSkill, step, complete } = engine($, on);
+
+  await skill({ model: "haiku" });
+  await subagentSkill("agent-1", { model: "claude-sonnet-5-5" });
+  await step(0);
+  await step(0, "agent-1");
+  await complete("agent-1");
+  expect(JSON.parse(files[SERVED_FILE]!)).toEqual({
+    skill: "probe",
+    model: "haiku"
+  });
+  await step(1);
+
+  expect(served).toEqual(["haiku", "claude-sonnet-5-5", "haiku"]);
 });
