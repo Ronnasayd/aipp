@@ -11,33 +11,10 @@ from pathlib import Path
 import sys
 
 disabled_mcp_servers = [
-    "aipp:sqlite",
-    "aipp:canva",
-    "aipp:atlassian",
-    "aipp:mongodb",
-    "aipp:postgresql",
-    "aipp:mysql",
-    "aipp:keycloak",
-    "claude.ai Canva",
-    "claude.ai Google Drive",
-    "claude.ai Google Calendar",
-    "claude.ai Claude Docs",
-    "claude.ai Gmail",
-    "caveman-shrink",
-    "aipp:figma",
-    "aipp:github",
-    "aipp:omniroute",
-    "aipp:ssh-mcp",
-    "aipp:notion",
-    "aipp:vrep",
-    "aipp:laya",
-    "aipp:krita",
     "aipp:burp",
-    "aipp:gcloud",
+    "aipp:omniroute",
     "plugin:rag-rat:rag-rat",
-    "aipp:figma-console",
-    "aipp:expo",
-    "aipp:google-workspace",
+    "easel",
 ]
 
 parser = argparse.ArgumentParser()

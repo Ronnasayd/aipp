@@ -2,7 +2,8 @@
   "mcpServers": {
     "aipp:notion": {
       "url": "https://mcp.notion.com/mcp",
-      "type": "http"
+      "type": "http",
+      "alwaysLoad": false
     },
     "aipp:ssh-mcp": {
       "command": "npx",
@@ -15,29 +16,34 @@
       ],
       "env": {
         "SSH_MCP_PASSWORD": "${SSH_MCP_PASSWORD:-add-value-to-env-vars}"
-      }
+      },
+      "alwaysLoad": false
     },
     "aipp:omniroute": {
       "url": "http://localhost:20128/api/mcp/stream",
       "type": "http",
       "headers": {
         "Authorization": "Bearer ${OMNIROUTE_ADMIN_TOKEN:-add-value-to-env-vars}"
-      }
+      },
+      "alwaysLoad": false
     },
     "aipp:figma": {
       "url": "https://mcp.figma.com/mcp",
-      "type": "http"
+      "type": "http",
+      "alwaysLoad": false
     },
     "aipp:github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
         "Authorization": "Bearer ${GITHUB_PAT_TOKEN:-add-value-to-env-vars}"
-      }
+      },
+      "alwaysLoad": false
     },
     "aipp:atlassian": {
       "type": "http",
-      "url": "https://mcp.atlassian.com/v1/mcp"
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "alwaysLoad": false
     },
     "aipp:mcp-manager": {
       "command": "uvx",
@@ -52,7 +58,8 @@
         "--transport",
         "stdio"
       ],
-      "type": "stdio"
+      "type": "stdio",
+      "alwaysLoad": true
     },
     "aipp:postgresql": {
       "command": "uvx",
@@ -63,7 +70,8 @@
       ],
       "env": {
         "POSTGRES_URL": "${MCP_POSTGRES_URL:-add-value-to-env-vars}"
-      }
+      },
+      "alwaysLoad": false
     },
     "aipp:mysql": {
       "type": "stdio",
@@ -75,7 +83,8 @@
       ],
       "env": {
         "MYSQL_URL": "${MCP_MYSQL_URL:-add-value-to-env-vars}"
-      }
+      },
+      "alwaysLoad": false
     },
     "aipp:mongodb": {
       "type": "stdio",
@@ -88,7 +97,8 @@
       "env": {
         "MONGODB_URL": "${MCP_MONGODB_URL:-add-value-to-env-vars}",
         "MONGODB_DATABASE": "${MCP_MONGODB_DATABASE:-add-value-to-env-vars}"
-      }
+      },
+      "alwaysLoad": false
     },
     "aipp:sqlite": {
       "type": "stdio",
@@ -100,7 +110,8 @@
       ],
       "env": {
         "SQLITEDB_PATH": "${MCP_SQLITEDB_PATH:-add-value-to-env-vars}"
-      }
+      },
+      "alwaysLoad": false
     },
     "aipp:skill-loader": {
       "type": "stdio",
@@ -109,7 +120,8 @@
         "--from",
         "git+https://github.com/Ronnasayd/AI-pair-programming.git#subdirectory=src",
         "skill-loader-mcp"
-      ]
+      ],
+      "alwaysLoad": true
     },
     "aipp:keycloak": {
       "command": "uvx",
@@ -124,8 +136,10 @@
         "MCP_KEYCLOAK_CLIENT_ID": "${MCP_KEYCLOAK_CLIENT_ID:-add-value-to-env-vars}",
         "MCP_KEYCLOAK_CLIENT_SECRET": "${MCP_KEYCLOAK_CLIENT_SECRET:-add-value-to-env-vars}",
         "MCP_KEYCLOAK_ADMIN_USERNAME": "${MCP_KEYCLOAK_ADMIN_USERNAME:-add-value-to-env-vars}",
-        "MCP_KEYCLOAK_ADMIN_PASSWORD": "${MCP_KEYCLOAK_ADMIN_PASSWORD:-add-value-to-env-vars}"
-      }
+        "MCP_KEYCLOAK_ADMIN_PASSWORD": "${MCP_KEYCLOAK_ADMIN_PASSWORD:-add-value-to-env-vars}",
+        "MCP_KEYCLOAK_DEFAULT_REALM": "${MCP_KEYCLOAK_DEFAULT_REALM:-master}"
+      },
+      "alwaysLoad": false
     },
     "aipp:context7": {
       "command": "npx",
@@ -134,7 +148,8 @@
         "@upstash/context7-mcp",
         "--api-key",
         "${CONTEXT7_API_KEY:-add-value-to-env-vars}"
-      ]
+      ],
+      "alwaysLoad": true
     },
     "aipp:burp": {
       "command": "java",
@@ -143,15 +158,18 @@
         "/home/ronnas/mcp-proxy.jar",
         "--sse-url",
         "http://127.0.0.1:9876/"
-      ]
+      ],
+      "alwaysLoad": false
     },
     "aipp:gcloud": {
       "command": "npx",
-      "args": ["-y", "@google-cloud/gcloud-mcp"]
+      "args": ["-y", "@google-cloud/gcloud-mcp"],
+      "alwaysLoad": false
     },
     "aipp:expo": {
       "url": "https://mcp.expo.dev/mcp",
-      "type": "http"
+      "type": "http",
+      "alwaysLoad": false
     },
     "aipp:google-workspace": {
       "type": "stdio",
@@ -169,7 +187,8 @@
         "GOOGLE_OAUTH_CLIENT_ID": "${MCP_GOOGLE_OAUTH_CLIENT_ID:-add-value-to-env-vars}",
         "GOOGLE_OAUTH_CLIENT_SECRET": "${MCP_GOOGLE_OAUTH_CLIENT_SECRET:-add-value-to-env-vars}",
         "OAUTHLIB_INSECURE_TRANSPORT": "1"
-      }
+      },
+      "alwaysLoad": false
     }
   }
 }
