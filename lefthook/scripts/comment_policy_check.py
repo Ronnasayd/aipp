@@ -233,18 +233,51 @@ def _head_content(project_root: str, rel_path: str) -> str:
     return output if ok else ""
 
 
-def main() -> int:
-    """Scan staged files for undeclared/over-long comment blocks; block on findings.
+def _worktree_paths(project_root: str) -> list[str]:
+    """Dirty or untracked paths in the working tree, relative to project_root."""
+    ok, output = _run(
+        ["git", "status", "--porcelain", "--untracked-files=all"], project_root
+    )
+    if not ok:
+        return []
+    paths = set()
+    for line in output.splitlines():
+        entry = line[3:]
+        if " -> " in entry:
+            entry = entry.split(" -> ", 1)[1]
+        paths.add(entry.strip('"'))
+    return sorted(paths)
+
+
+def _worktree_content(project_root: str, rel_path: str) -> str:
+    """On-disk content for rel_path, or "" if it was deleted."""
+    path = Path(project_root) / rel_path
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Scan changed files for undeclared/over-long comment blocks; block on findings.
+
+    Default scans staged content (lefthook pre-commit). `--worktree` scans
+    dirty/untracked files on disk instead (harness `grind.lintCommand`).
+
+    Args:
+        argv: CLI args; defaults to sys.argv[1:].
 
     Returns:
         1 if any violation is found, else 0.
     """
+    args = sys.argv[1:] if argv is None else argv
     root = str(Path.cwd())
-    files = [p for p in _staged_paths(root) if Path(p).suffix in _EXT_TO_TS_LANG]
+    if "--worktree" in args:
+        list_paths, read_content = _worktree_paths, _worktree_content
+    else:
+        list_paths, read_content = _staged_paths, _staged_content
+    files = [p for p in list_paths(root) if Path(p).suffix in _EXT_TO_TS_LANG]
 
     violations: list[str] = []
     for rel_path in files:
-        new_content = _staged_content(root, rel_path)
+        new_content = read_content(root, rel_path)
         if not new_content:
             continue
         old_content = _head_content(root, rel_path)
