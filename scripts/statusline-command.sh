@@ -514,12 +514,19 @@ if [ -n "$session_id" ]; then
     served_file="/tmp/claude-served-${session_id}.json"
     served_model=$(jq -r '.model // empty' "$served_file" 2>/dev/null)
     served_effort=$(jq -r '.effort // empty' "$served_file" 2>/dev/null)
+    served_skill=$(jq -r '.skill // empty' "$served_file" 2>/dev/null)
     # why: the file holds the engine's id while $model is the display name, so both must be compared
     model_id=$(echo "$input" | jq -r '.model.id // empty')
     if { [ -n "$served_model" ] && [ "$served_model" != "$model" ] && [ "$served_model" != "$model_id" ]; } ||
         { [ -n "$served_effort" ] && [ "$served_effort" != "$effort_level" ]; }; then
         served_effort_info=""
         [ -n "$served_effort" ] && served_effort_info="${SEP}$(effort_badge "$served_effort")"
-        echo -e "${C_LAVENDER}${ICON_MODEL} ${served_model}${RESET}${served_effort_info}"
+        served_line="${C_LAVENDER}${ICON_MODEL} ${served_model}${RESET}${served_effort_info}"
+        if [ -n "$served_skill" ]; then
+            served_effort_info=""
+            [ -n "$served_effort" ] && served_effort_info=" $(effort_badge "$served_effort")"
+            served_line="${C_LAVENDER}${ICON_MODEL} ${served_skill}(${served_model}${RESET}${served_effort_info}${C_LAVENDER})${RESET}"
+        fi
+        echo -e "$served_line"
     fi
 fi

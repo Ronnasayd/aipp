@@ -3,11 +3,12 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import uuid
 
 SCRIPT = Path(__file__).parent / "statusline-command.sh"
-LABEL = "mcp/disabled"
+LABEL = "mcp"
 
 
 def run_statusline(
@@ -157,3 +158,9 @@ def test_served_line_omitted_after_turn_without_effort(tmp_path):
 
 def test_served_line_omitted_without_file(tmp_path):
     assert "claude-opus-5-5" not in run_served(tmp_path, None)
+
+
+def test_served_line_prefixes_skill_name(tmp_path):
+    output = run_served(tmp_path, {"skill": "probe", "model": "haiku", "effort": "low"})
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    assert re.search(r"probe\(haiku \S+ ▰▱▱▱▱ low\)", plain)

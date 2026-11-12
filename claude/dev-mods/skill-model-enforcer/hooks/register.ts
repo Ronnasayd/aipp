@@ -7,10 +7,14 @@ const servedFile = (sid: string) => `/tmp/claude-served-${sid}.json`;
 const mirror = async (
   $: EngineInterface,
   model: string,
-  effort?: TurnStepInput["effort"]
+  effort?: TurnStepInput["effort"],
+  skill?: string
 ) =>
   $.fs
-    .write(servedFile(await $.session.id()), JSON.stringify({ model, effort }))
+    .write(
+      servedFile(await $.session.id()),
+      JSON.stringify({ skill, model, effort })
+    )
     .catch(() => {});
 
 type Level = Exclude<TurnStepInput["effort"], number | undefined>;
@@ -31,6 +35,7 @@ export const register: Register = (on) => {
   let pinned: string | undefined;
   let pinnedEffort: Level | undefined;
   let refused = false;
+  let skill: string | undefined;
 
   on("skill.prompt", async ($, e, next) => {
     const { model, effort, context } = e.frontmatter;
@@ -54,6 +59,7 @@ export const register: Register = (on) => {
     if (!refused) {
       pinned = wanted ?? pinned;
       pinnedEffort = level ?? pinnedEffort;
+      skill = e.skill;
     }
     return next(e);
   });
@@ -64,7 +70,7 @@ export const register: Register = (on) => {
     const model = pinned ?? (refused ? await $.session.model() : e.model);
     const effort =
       pinnedEffort ?? (refused ? await readSessionEffort($) : undefined);
-    await mirror($, model, effort ?? e.effort);
+    await mirror($, model, effort ?? e.effort, skill);
     return yield* next({ ...e, model, ...(effort && { effort }) });
   });
 
@@ -73,6 +79,7 @@ export const register: Register = (on) => {
       pinned = undefined;
       pinnedEffort = undefined;
       refused = false;
+      skill = undefined;
       // why: no step runs between turns, so the file would keep showing the expired override;
       // $.session has no effort getter, so a missing effort means the session's own level
       await mirror($, await $.session.model());

@@ -95,7 +95,7 @@ test("the served file follows the main loop's model and effort", async ($, on) =
 
   await skill({ model: "haiku", effort: "low" });
   await step(1);
-  expect(served()).toEqual({ model: "haiku", effort: "low" });
+  expect(served()).toEqual({ skill: "probe", model: "haiku", effort: "low" });
 
   await complete();
   expect(served()).toEqual({ model: SESSION_MODEL });
@@ -110,6 +110,7 @@ test("a subagent's steps and completion leave the served file alone", async ($, 
   await complete("agent-1");
 
   expect(JSON.parse(files[SERVED_FILE]!)).toEqual({
+    skill: "probe",
     model: "haiku",
     effort: "low"
   });
