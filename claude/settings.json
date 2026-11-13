@@ -987,7 +987,8 @@
     "rag-rat@rag-rat": true,
     "ponytail@ponytail": true,
     "router@alexei-led-claude-router": false,
-    "egm@egm": true
+    "egm@egm": true,
+    "context-mode@context-mode": true
   },
   "extraKnownMarketplaces": {
     "caveman": {
@@ -1018,6 +1019,12 @@
       "source": {
         "source": "github",
         "repo": "google/elephant-goldfish-model"
+      }
+    },
+    "context-mode": {
+      "source": {
+        "source": "github",
+        "repo": "mksglu/context-mode"
       }
     }
   },

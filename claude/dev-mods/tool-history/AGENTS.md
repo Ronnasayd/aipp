@@ -57,3 +57,11 @@
   drive it with `mock.clock`. `tests/duration.test.tsx` asserts it.
 - `setupHooks` mocks the clock for every test (nothing else answers
   `clock.now`) and returns it; don't call `mock.clock` again in a test.
+
+## Result size per call
+
+- `sizeBytes` = UTF-8 byte length of the raw result text (before trimming),
+  shown after the duration as `512B` / `2.0KB` / `3.0MB` (1024-based).
+  Absent when the call returned no text. `tests/size.test.tsx` asserts it.
+- Why: to measure what context-mode saves — the size the tool actually
+  returned to the model.

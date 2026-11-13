@@ -67,6 +67,21 @@ function formatDuration(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
+/**
+ * Formats a tool result's size for its card header.
+ * @param bytes - UTF-8 byte length of the raw result text.
+ * @returns "512B", "2.0KB", "3.0MB" or "1.2GB" (1024-based).
+ */
+function formatSize(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  while (bytes >= 1024 && i < units.length - 1) {
+    bytes /= 1024;
+    i++;
+  }
+  return i === 0 ? `${bytes}B` : `${bytes.toFixed(1)}${units[i]}`;
+}
+
 const RESULT_LINES_SHOWN = 4;
 // why: engine's ui.render chokes past ~100k chars in one draw (observed crash)
 const RESULT_CHARS_SHOWN = 2000;
@@ -246,11 +261,14 @@ export const register: Register = (on) => {
     const rawText = "text" in ran ? ran.text : undefined;
     const resultText = trimResult(rawText);
     const isError = "isError" in ran ? ran.isError : undefined;
+    const sizeBytes = rawText
+      ? new TextEncoder().encode(rawText).length
+      : undefined;
     let trimmed: ToolCallRecord[] = [];
     await update($, calls, (list) => {
       trimmed = list.map((one) =>
         one.id === record.id
-          ? { ...one, isDone: true, resultText, isError, durationMs }
+          ? { ...one, isDone: true, resultText, isError, durationMs, sizeBytes }
           : one
       );
       return trimmed;
@@ -481,6 +499,11 @@ export const register: Register = (on) => {
             {call.durationMs !== undefined && (
               <Text key={`duration-${call.id}`} dimColor>
                 {formatDuration(call.durationMs)}
+              </Text>
+            )}
+            {call.sizeBytes !== undefined && (
+              <Text key={`size-${call.id}`} dimColor>
+                {formatSize(call.sizeBytes)}
               </Text>
             )}
             {results[call.id] && (
