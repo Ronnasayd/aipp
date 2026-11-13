@@ -440,7 +440,11 @@ if [ -n "$five_h" ] || [ -n "$seven_d" ]; then
         else
             pace_color="$C_GREEN"
         fi
-        pace_info="${pace_color}${pace_sign}${pace_diff}%${RESET}"
+        # why: 5h window = 300min for 100%, so 1% of pace equals 3 minutes
+        pace_min=$(( five_int * 3 - elapsed_min ))
+        [ "$pace_min" -lt 0 ] && pace_min=$(( -pace_min ))
+        pace_time=$(printf "%02d:%02d" $(( pace_min / 60 )) $(( pace_min % 60 )))
+        pace_info="${pace_color}${pace_sign}${pace_diff}% - ${pace_time}${RESET}"
     else
         time_left="--:--"
         pace_info=""
