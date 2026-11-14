@@ -1,0 +1,22 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.11"
+      # why: claude/dev-mods tests import `claude-code/testing`, which only exists inside the Claude Code mod runtime, so CI covers the Python suites only.
+      - run: uv sync --dev
+      - run: uv run pytest scripts/ hooks/scripts lefthook/scripts skills/spec-to-requirements-table/scripts -q
