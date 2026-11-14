@@ -9,6 +9,7 @@ export type ToolCallRecord = {
   agentLabel: string;
   at?: number;
   durationMs?: number;
+  sizeBytes?: number;
 };
 
 export type AgentMessageRecord = {

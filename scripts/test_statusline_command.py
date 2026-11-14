@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import time
 import uuid
 
 SCRIPT = Path(__file__).parent / "statusline-command.sh"
@@ -164,3 +165,15 @@ def test_served_line_prefixes_skill_name(tmp_path):
     output = run_served(tmp_path, {"skill": "probe", "model": "haiku", "effort": "low"})
     plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
     assert re.search(r"probe\(haiku \S+ ▰▱▱▱▱ low\)", plain)
+
+
+def test_pace_shows_equivalent_time_in_hours_and_minutes(tmp_path):
+    # why: 3h left = 120 min elapsed; 10% used = 30 min -> 90 min under (1% = 3 min)
+    resets_at = int(time.time()) + 3 * 3600
+    rate_limits = {
+        "five_hour": {"used_percentage": 10, "resets_at": resets_at},
+        "seven_day": {"used_percentage": 5},
+    }
+    output = run_statusline(tmp_path, {}, extra={"rate_limits": rate_limits})
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    assert re.search(r"-\d+\.\d% - 01:30\)", plain)
