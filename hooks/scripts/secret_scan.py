@@ -33,7 +33,14 @@ FALLBACK_SECRET_PATTERNS = [
         re.compile(r"api[_-]?key\s*[:=]\s*[\"'][a-zA-Z0-9]{20,}[\"']", re.IGNORECASE),
     ),
     ("Slack Token", re.compile(r"xox[bpors]-[0-9a-zA-Z-]{10,}")),
-    ("Database URL", re.compile(r"(postgres|mysql|mongodb|redis)://[^:]+:[^@\s]+@")),
+    (
+        "Database URL",
+        # why: `+srv` is MongoDB Atlas' default scheme; the lookahead skips
+        # placeholder passwords (<pass>, $VAR, ${VAR}, [secret], ***).
+        re.compile(
+            r"(postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis)://[^:\s]+:(?![<\[$*{])[^@\s]+@"
+        ),
+    ),
     (
         "JWT Token",
         re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
