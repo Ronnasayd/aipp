@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
 import secret_guard as hook
+import secret_scan
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -40,11 +41,19 @@ SAFE_PROMPTS = [
 ]
 
 
-@pytest.fixture(name="run_hook")
+@pytest.fixture(name="run_hook", params=["detect-secrets", "fallback"])
 def run_hook_fixture(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> Callable[[str], dict | None]:
     """Return a runner that feeds main() a prompt and yields its parsed stdout."""
+    # why: CI has no detect-secrets binary, so the regex fallback must hold
+    # the same contract; running both paths keeps local and CI results equal.
+    if request.param == "fallback":
+        monkeypatch.setattr(secret_scan, "DETECT_SECRETS_BIN", None)
+    elif not secret_scan.DETECT_SECRETS_BIN:
+        pytest.skip("detect-secrets not installed")
 
     def run(prompt: str) -> dict | None:
         payload = {"hook_event_name": "UserPromptSubmit", "prompt": prompt}
