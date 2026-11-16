@@ -1,0 +1,6 @@
+{
+  "name": "quiz-mod",
+  "version": "0.1.0",
+  "description": "Quiz interativo em pane: agente gera perguntas, usuário responde com Buttons, placar e erros no final.",
+  "types": "./types/index.d.ts"
+}
