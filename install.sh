@@ -121,6 +121,7 @@ Options:
   --taskmaster   Execute taskmaster install script
   --gitignore    Execute gitignore install script
   --clean        Remove all symlinks created by the install scripts
+  --doctor       Check system health (tools, symlinks, env, plugins, project links)
   --help, -h     Display this help message
 
 Examples:
@@ -201,6 +202,9 @@ else
       --clean)
         CLEAN_MODE=true
         shift
+        ;;
+      --doctor)
+        exec bash "$SOURCE/scripts/doctor.sh" "$SOURCE"
         ;;
       --help|-h)
         show_help
