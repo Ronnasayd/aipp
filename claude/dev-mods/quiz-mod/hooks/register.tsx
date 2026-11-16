@@ -58,6 +58,18 @@ export const register: Register = (on) => {
 
   on("tool.call", { tool: "mcp__quiz-mod__quiz_start" }, async ($, e) => {
     const questions = (e as unknown as { questions: QuizQuestion[] }).questions;
+    const bad = questions.findIndex(
+      (q) =>
+        q.options.length === 0 ||
+        !Number.isInteger(q.correctIndex) ||
+        q.correctIndex < 0 ||
+        q.correctIndex >= q.options.length
+    );
+    if (bad !== -1) {
+      return {
+        deny: `Question ${bad + 1}: options must be non-empty and correctIndex an integer in 0..options.length-1.`
+      };
+    }
     await update($, quiz, () => ({
       questions,
       current: 0,
@@ -169,20 +181,26 @@ export const register: Register = (on) => {
               key={`opt-${index}`}
               label={option}
               onPress={async () => {
-                const current = await read($, quiz);
-                const answer = {
-                  questionIndex: current.current,
-                  chosenIndex: index,
-                  correct:
-                    index === current.questions[current.current]!.correctIndex
-                };
-                const next = current.current + 1;
-                await update($, quiz, (s) => ({
-                  ...s,
-                  current: next,
-                  answers: [...s.answers, answer],
-                  done: next >= s.questions.length
-                }));
+                // invariant: a press answers only the question it was drawn
+                // for; a second click before the redraw finds `current` moved
+                // on and is dropped.
+                await update($, quiz, (s) => {
+                  if (s.done || s.current !== state.current) return s;
+                  const next = s.current + 1;
+                  return {
+                    ...s,
+                    current: next,
+                    answers: [
+                      ...s.answers,
+                      {
+                        questionIndex: s.current,
+                        chosenIndex: index,
+                        correct: index === s.questions[s.current]!.correctIndex
+                      }
+                    ],
+                    done: next >= s.questions.length
+                  };
+                });
               }}
             />
           ))}
