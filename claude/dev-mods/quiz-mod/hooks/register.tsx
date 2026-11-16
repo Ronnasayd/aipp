@@ -98,7 +98,12 @@ export const register: Register = (on) => {
 
     if (state.questions.length === 0) {
       return (
-        <Box flexDirection="column">
+        <Box
+          flexDirection="column"
+          borderStyle="round"
+          borderColor="subtle"
+          paddingX={1}
+        >
           <Text dimColor>No quiz loaded yet.</Text>
         </Box>
       );
@@ -107,22 +112,35 @@ export const register: Register = (on) => {
     if (state.done) {
       const { correct, total } = score(state);
       const wrong = state.answers.filter((a) => !a.correct);
+      const allCorrect = wrong.length === 0;
 
       return (
-        <Box flexDirection="column">
-          <Text>
-            Score: {correct}/{total}
-          </Text>
-          {wrong.length === 0 && <Text dimColor>No mistakes.</Text>}
+        <Box flexDirection="column" gap={1}>
+          <Box
+            flexDirection="row"
+            gap={1}
+            borderStyle="round"
+            borderColor={allCorrect ? "green" : "yellow"}
+            paddingX={1}
+          >
+            <Text bold color={allCorrect ? "green" : "yellow"}>
+              Score: {correct}/{total}
+            </Text>
+          </Box>
+          {allCorrect && <Text dimColor>No mistakes.</Text>}
           {wrong.map((a) => {
             const q = state.questions[a.questionIndex]!;
             return (
-              <Box flexDirection="column" key={`wrong-${a.questionIndex}`}>
-                <Text>{q.question}</Text>
-                <Text dimColor>
-                  you: {q.options[a.chosenIndex]} — correct:{" "}
-                  {q.options[q.correctIndex]}
-                </Text>
+              <Box
+                key={`wrong-${a.questionIndex}`}
+                flexDirection="column"
+                borderStyle="round"
+                borderColor="danger"
+                paddingX={1}
+              >
+                <Text bold>{q.question}</Text>
+                <Text color="danger">you: {q.options[a.chosenIndex]}</Text>
+                <Text color="green">correct: {q.options[q.correctIndex]}</Text>
               </Box>
             );
           })}
@@ -133,33 +151,42 @@ export const register: Register = (on) => {
     const q = state.questions[state.current]!;
 
     return (
-      <Box flexDirection="column">
-        <Text dimColor>
-          Question {state.current + 1}/{state.questions.length}
-        </Text>
-        <Text>{q.question}</Text>
-        {q.options.map((option, index) => (
-          <Button
-            key={`opt-${index}`}
-            label={option}
-            onPress={async () => {
-              const current = await read($, quiz);
-              const answer = {
-                questionIndex: current.current,
-                chosenIndex: index,
-                correct:
-                  index === current.questions[current.current]!.correctIndex
-              };
-              const next = current.current + 1;
-              await update($, quiz, (s) => ({
-                ...s,
-                current: next,
-                answers: [...s.answers, answer],
-                done: next >= s.questions.length
-              }));
-            }}
-          />
-        ))}
+      <Box flexDirection="column" gap={1}>
+        <Box
+          flexDirection="column"
+          borderStyle="round"
+          borderColor="claude"
+          paddingX={1}
+        >
+          <Text bold dimColor>
+            Question {state.current + 1}/{state.questions.length}
+          </Text>
+          <Text bold>{q.question}</Text>
+        </Box>
+        <Box flexDirection="column" gap={1}>
+          {q.options.map((option, index) => (
+            <Button
+              key={`opt-${index}`}
+              label={option}
+              onPress={async () => {
+                const current = await read($, quiz);
+                const answer = {
+                  questionIndex: current.current,
+                  chosenIndex: index,
+                  correct:
+                    index === current.questions[current.current]!.correctIndex
+                };
+                const next = current.current + 1;
+                await update($, quiz, (s) => ({
+                  ...s,
+                  current: next,
+                  answers: [...s.answers, answer],
+                  done: next >= s.questions.length
+                }));
+              }}
+            />
+          ))}
+        </Box>
       </Box>
     );
   });
