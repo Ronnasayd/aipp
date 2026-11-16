@@ -58,7 +58,8 @@ done
 
 echo "== project ($LOCAL)"
 if [ -d "$LOCAL/.claude" ]; then
-  broken="$(find "$LOCAL/.claude" -xtype l 2>/dev/null)"
+  # why: -xtype is GNU-only; with -L, BSD and GNU find both report only links that do not resolve
+  broken="$(find -L "$LOCAL/.claude" -type l 2>/dev/null)"
   if [ -z "$broken" ]; then ok "no broken symlinks in .claude/"; fi
   while IFS= read -r l; do [ -n "$l" ] && warn "broken symlink: $l"; done <<< "$broken"
 else
