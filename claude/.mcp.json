@@ -137,7 +137,8 @@
         "MCP_KEYCLOAK_CLIENT_SECRET": "${MCP_KEYCLOAK_CLIENT_SECRET:-add-value-to-env-vars}",
         "MCP_KEYCLOAK_ADMIN_USERNAME": "${MCP_KEYCLOAK_ADMIN_USERNAME:-add-value-to-env-vars}",
         "MCP_KEYCLOAK_ADMIN_PASSWORD": "${MCP_KEYCLOAK_ADMIN_PASSWORD:-add-value-to-env-vars}",
-        "MCP_KEYCLOAK_DEFAULT_REALM": "${MCP_KEYCLOAK_DEFAULT_REALM:-master}"
+        "MCP_KEYCLOAK_DEFAULT_REALM": "${MCP_KEYCLOAK_DEFAULT_REALM:-master}",
+        "MCP_KEYCLOAK_READ_ONLY": "${MCP_KEYCLOAK_READ_ONLY:-false}"
       },
       "alwaysLoad": false
     },
