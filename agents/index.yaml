@@ -1,170 +1,42 @@
 agents:
 - name:
-  - cybersecurity-specialist.agent.md
-  description: This custom agent is a cybersecurity specialist responsible for identifying,
-    fixing, and preventing vulnerabilities in software development and operations.
-    Use this agent when you need to ensure the security of applications, infrastructure,
-    and processes throughout the system lifecycle, from design to production and incident
-    response. The agent will autonomously conduct security assessments, implement
-    controls, and respond to incidents with thorough and iterative reasoning, documenting
-    all actions and evidence until the security task is resolved.
-- name:
-  - test-coverage-specialist.agent.md
-  description: This custom agent is a test coverage specialist responsible for verifying
-    task specifications or implemented tasks to ensure comprehensive test coverage.
-    It evaluates whether tests cover all possible scenarios, including edge cases
-    and error paths, and provides detailed feedback on improvements or missing tests.
-    Use this agent to ensure high-quality, robust, and well-tested software.
-- name:
-  - database-specialist.agent.md
-  description: This custom agent is a database specialist responsible for designing,
-    optimizing, and maintaining databases and data pipelines. Use this agent when
-    you need to ensure the performance, integrity, and reliability of your data systems
-    throughout the system lifecycle, from design to production and incident response.
-    The agent will autonomously conduct data assessments, implement optimizations,
-    and respond to data-related incidents with thorough and iterative reasoning, documenting
-    all actions and evidence until the data task is resolved.
-- name:
-  - product-owner-specialist.agent.md
-  description: This custom agent is a product owner specialist responsible for managing
-    product development, defining requirements, and ensuring alignment with business
-    goals. Use this agent when you need to ensure effective product management practices,
-    backlog prioritization, and stakeholder communication. The agent will autonomously
-    conduct market analysis, define user stories, and respond to product-related issues
-    with thorough and iterative reasoning, documenting all actions and evidence until
-    the task is resolved.
-- name:
-  - interview-specialist.agent.md
-  description: This custom agent is an interview specialist responsible for grilling
-    the user about a plan or idea until shared understanding is reached. Use this
-    agent when you need structured requirement elicitation through relentless one-question-at-a-time
-    interrogation before any spec or code gets written — never to generate plans,
-    specs, or code itself. The agent will autonomously conduct the interview, proposing
-    a default for every question, until no structural ambiguity remains, then hand
-    back the synthesized Q&A history.
-- name:
-  - generative-ai-specialist.agent.md
-  description: This custom agent is a generative AI specialist responsible for designing,
-    optimizing, and deploying AI generation workflows for text, images, video, and
-    audio. Use this agent when you need to ensure effective generative AI solutions,
-    prompt engineering, and workflow optimization across modalities. The agent will
-    autonomously conduct problem analysis, implement improvements, and respond to
-    generation-related issues with thorough and iterative reasoning, documenting all
-    actions and evidence until the task is resolved.
-- name:
-  - context-architect-specialist.agent.md
-  description: An agent that helps plan and execute multi-file changes by identifying
-    relevant context and dependencies
-- name:
-  - prd-reviewer-specialist.agent.md
-  description: This custom agent is a PRD (Product Requirements Document) reviewer
-    specialist responsible for critically analyzing and validating PRDs to ensure
-    they are comprehensive, clear, and aligned with business goals. Use this agent
-    when you need to perform a thorough review of PRDs, identify gaps, conflicts,
-    and risks, and provide actionable feedback. The agent will autonomously evaluate
-    the document, document findings, and suggest improvements until the PRD meets
-    quality standards.
-- name:
-  - codebase-rules-extractor-specialist.agent.md
-  description: This custom agent is a codebase analysis specialist responsible for
-    mapping codebases and extracting coding rules, conventions, patterns, and anti-patterns.
-    Use this agent when you need to establish a comprehensive ruleset for code creation,
-    understand codebase conventions, or create documentation of what to do and avoid
-    when writing new code. The agent will autonomously analyze the codebase structure,
-    examine files and patterns, extract explicit and implicit rules, and generate
-    a documented rules reference that serves as the authoritative guide for future
-    code development.
-- name:
-  - design-pattern-specialist.agent.md
-  description: This custom agent is a specialist in software design patterns, responsible
-    for identifying, implementing, and refactoring code using industry-standard patterns.
-    Use this agent when you need to improve code structure, ensure scalability, or
-    solve recurring design problems using Creational, Structural, and Behavioral patterns.
-    The agent will autonomously conduct pattern assessments, suggest architectural
-    improvements, and implement robust solutions with thorough and iterative reasoning.
-- name:
-  - git-specialist.agent.md
-  description: This custom agent is a specialist in Git, GitHub, and GitLab, focused
-    on designing and implementing branching strategies, CI/CD pipelines, and version
-    control best practices. Use this agent for tasks related to repository management,
-    workflow optimization, and collaboration using Git.
+  - explorer-specialist.agent.md
+  description: Fast, cheap, read-only codebase explorer that maps structure, locates
+    symbols and callers, traces data flow, and extracts coding conventions and anti-patterns,
+    returning a compact path:line report. Use for broad searches that would read many
+    files, codebase onboarding, impact analysis before a change, and rule extraction
+    (the codebase-rules-extractor skill delegates its analysis here). It never edits
+    files and never suggests fixes unless asked.
 - name:
   - developer-specialist.agent.md
-  description: This custom agent is a developer specialist responsible for designing,
-    implementing, and maintaining software solutions. Use this agent when you need
-    to ensure effective software development practices, code quality, and system architecture.
-    The agent will autonomously conduct problem analysis, implement improvements,
-    and respond to development-related issues with thorough and iterative reasoning,
-    documenting all actions and evidence until the task is resolved.
-- name:
-  - skill-specialist.agent.md
-  description: Design, review, and optimize Claude Agent Skills. Use when creating
-    new skills, improving existing skills, defining SKILL.md structure, organizing
-    skill directories, designing workflows, or ensuring compliance with Claude Agent
-    Skills best practices.
+  description: Implementer that builds features and fixes bugs end to end with TDD,
+    in thin vertical slices, and returns evidence (test output) that the change works.
+    Use to delegate a well-scoped implementation task, or to run several independent
+    tasks in parallel (pass isolation worktree on the call when tasks touch the same
+    files). Domain knowledge (databases, security, design patterns, frontend) comes
+    from skills, not from separate agents. Do not use it for review or planning.
 - name:
   - qa-specialist.agent.md
-  description: This custom agent is a QA specialist responsible for planning, executing,
-    and reporting on quality assurance activities across a feature or release. Use
-    this agent when you need functional/manual test planning, exploratory testing,
-    regression suites, bug triage, and release sign-off — distinct from test-coverage-specialist,
-    which audits unit/code-level test coverage. The agent will autonomously design
-    test plans, execute test cases, log reproducible bug reports, and iterate with
-    developers until quality gates are met.
+  description: QA engineer that verifies the running system end to end (browser, API,
+    CLI) with Playwright or similar tools, logs reproducible bug reports, and returns
+    a go/no-go verdict with evidence. Use before finalizing UI or behavior changes,
+    for regression passes, and for release sign-off; it keeps noisy browser and test
+    output out of the main conversation. It may write new E2E test files but never
+    edits existing source. Do not use it for code-level coverage audits (use reviewer-specialist
+    with the coverage focus).
 - name:
   - reviewer-specialist.agent.md
-  description: This custom agent is a review and refactor specialist responsible for
-    analyzing, reviewing, and improving existing code. Use this agent when you need
-    to ensure code quality, readability, performance, and consistency with standards
-    and best practices. The agent will autonomously conduct code analysis, implement
-    improvements, and respond to development-related issues with thorough and iterative
-    reasoning, documenting all actions and evidence until the task is resolved.
-- name:
-  - doc-usability-specialist.agent.md
-  description: This custom agent is a usability and documentation specialist responsible
-    for creating, improving, and maintaining clear, accessible, and effective content
-    for software users. Use this agent when you need to ensure the usability, clarity,
-    and accessibility of documentation, tutorials, guides, FAQs, and interface copy
-    throughout the system lifecycle. The agent will autonomously conduct usability
-    assessments, implement improvements, and respond to documentation-related issues
-    with thorough and iterative reasoning, documenting all actions and evidence until
-    the task is resolved.
-- name:
-  - refactor-front-figma-specialist.agent.md
-  description: This custom agent is a frontend specialist responsible for refactoring
-    code exported from Figma plugins. Use this agent when you need to ensure clean,
-    reusable, responsive, accessible, and consistent frontend code. The agent will
-    autonomously analyze, improve, and implement frontend solutions with thorough
-    and iterative reasoning, documenting all actions and evidence until the task is
-    resolved.
-- name:
-  - task-reviewer-specialist.agent.md
-  description: This custom agent is a task reviewer specialist responsible for critically
-    analyzing and validating technical tasks to ensure they are comprehensive, clear,
-    and aligned with product goals. Use this agent when you need to perform a thorough
-    review of tasks, identify gaps, conflicts, and risks, and provide actionable feedback.
-    The agent will autonomously evaluate the task, document findings, and suggest
-    improvements until the task meets quality standards.
-- name:
-  - english-teacher-specialist.agent.md
-  description: This custom agent is an English language teaching specialist responsible
-    for planning, delivering, and assessing lessons across beginner to advanced levels,
-    in academic, professional, and general contexts. Use this agent when you need
-    to ensure effective language instruction, curriculum design, and learner assessment.
-    The agent will autonomously conduct needs analysis, design targeted activities,
-    and respond to learning gaps with thorough and iterative reasoning, documenting
-    all actions and evidence until the learning objectives are achieved.
+  description: Independent read-only reviewer that audits code diffs, test coverage,
+    security, and specs (PRD, task spec, design) against the real code, and returns
+    severity-ranked findings without editing anything. Use after implementation or
+    before approval, when the author must not be the verifier. Spawn several in parallel
+    with different focuses (quality, coverage, security, spec conformance). Never
+    use it to implement or refactor; hand findings to developer-specialist.
 - name:
   - planner-specialist.agent.md
-  description: This custom agent is a senior software development specialist focused
-    on researching, analyzing, and planning software solutions. Use this agent when
-    you need deep technical investigation, architecture design, technology selection,
-    and development planning before implementing software tasks.
-- name:
-  - task-orchestration-specialist.agent.md
-  description: This custom agent is a task orchestration specialist responsible for
-    intelligently distributing work across available specialist agents. Use this agent
-    when you need to analyze a task specification file or an inline task description
-    and map its subtasks to the most appropriate agents based on domain expertise,
-    complexity, and dependencies. Outputs a complete orchestration plan directly in
-    chat — no files created.
+  description: Read-only senior architect that researches the codebase and external
+    documentation, compares approaches, and returns an implementation plan of small
+    vertical slices with risks and open questions. Use before implementing non-trivial
+    features, migrations, refactors, or technology choices, when the research would
+    flood the main conversation. It cannot ask the user questions; it returns open
+    questions for the caller to resolve. It never edits files.

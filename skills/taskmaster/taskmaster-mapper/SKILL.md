@@ -102,10 +102,10 @@ Return the complete enriched structure, not a diff or partial. If the input is l
 {
   "title": "Implement Secure Path Normalization for SVG Assets",
   "description": "Refactor local SVG load logic to use filepath.Join and filepath.Abs",
-  "details": "Replace string concatenation with filepath.Join() ...\n\n---\n**Suggested Skills:** coding-standards, code-review\n**Suggested Agents:** cybersecurity-specialist, developer-specialist",
+  "details": "Replace string concatenation with filepath.Join() ...\n\n---\n**Suggested Skills:** coding-standards, code-review\n**Suggested Agents:** developer-specialist, reviewer-specialist",
   "testStrategy": "Test with traversal paths like ../etc/passwd",
   "suggested_skills": ["coding-standards", "code-review"],
-  "suggested_agents": ["cybersecurity-specialist", "developer-specialist"]
+  "suggested_agents": ["developer-specialist", "reviewer-specialist"]
 }
 ```
 

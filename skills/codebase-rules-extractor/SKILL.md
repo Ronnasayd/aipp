@@ -7,7 +7,7 @@ metadata:
   version: "1.0.0"
 ---
 
-MANDATORY: Use codebase-rules-extractor-specialist agent
+MANDATORY: Use explorer-specialist agent (rules mode) for the codebase analysis; write the rules document in the main session
 MANDATORY: Conduct a comprehensive analysis of the codebase to extract rules and conventions.
 
 Your objective is to thoroughly analyze a codebase and extract all coding rules, patterns, conventions, best practices, and anti-patterns that should guide future code creation.

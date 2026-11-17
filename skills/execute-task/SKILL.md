@@ -42,7 +42,7 @@ The execute-task skill orchestrates work through this sequence:
 - **Break the work into the smallest possible vertical slice** — each slice produces a working, testable result
 - **Ensure backward compatibility** with existing system flows
 - Decompose the task into concrete subtasks (what needs to be built, tested, documented)
-- Determine if specialist agents (developer-specialist, database-specialist, cybersecurity-specialist) are needed
+- Determine if agents (developer-specialist, reviewer-specialist, qa-specialist) are needed
 
 ### 3. **Create Progress Tracking** (Prepare for Test-First)
 
@@ -77,10 +77,10 @@ The execute-task skill orchestrates work through this sequence:
 
 #### 4d. Delegate When Appropriate
 
-- **For complex refactoring/architecture**: Delegate to `developer-specialist` agent
-- **For security concerns**: Escalate to `cybersecurity-specialist`
-- **For data/performance**: Escalate to `database-specialist`
-- **For patterns/architecture**: Escalate to `design-pattern-specialist`
+- **For independent or parallel implementation work**: Delegate to `developer-specialist` agent
+- **For security, coverage, or design concerns**: Request a `reviewer-specialist` review with that focus
+- **For end-to-end verification**: Delegate to `qa-specialist`
+- **For data, security, or pattern knowledge**: Load the matching skill (`database-migrations`, `security-review`, `api-design`)
 - Provide agents with clear scope: what they own, what you'll verify
 - Integrate their work back into the main execution flow
 

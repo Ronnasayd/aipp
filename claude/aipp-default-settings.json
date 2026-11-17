@@ -1,26 +1,10 @@
 {
   "agents": {
-    "codebase-rules-extractor-specialist.agent.md": false,
-    "context-architect-specialist.agent.md": false,
-    "cybersecurity-specialist.agent.md": false,
-    "database-specialist.agent.md": false,
-    "design-pattern-specialist.agent.md": false,
     "developer-specialist.agent.md": true,
-    "doc-usability-specialist.agent.md": false,
-    "english-teacher-specialist.agent.md": false,
-    "generative-ai-specialist.agent.md": false,
-    "git-specialist.agent.md": false,
-    "interview-specialist.agent.md": true,
+    "explorer-specialist.agent.md": true,
     "planner-specialist.agent.md": true,
-    "prd-reviewer-specialist.agent.md": false,
-    "product-owner-specialist.agent.md": false,
     "qa-specialist.agent.md": true,
-    "refactor-front-figma-specialist.agent.md": false,
-    "reviewer-specialist.agent.md": true,
-    "skill-specialist.agent.md": false,
-    "task-orchestration-specialist.agent.md": false,
-    "task-reviewer-specialist.agent.md": false,
-    "test-coverage-specialist.agent.md": false
+    "reviewer-specialist.agent.md": true
   },
   "instructions": {
     "agent.instructions.md": true,

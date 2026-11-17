@@ -7,7 +7,7 @@ metadata:
   version: "1.0.0"
 ---
 
-MANDATORY: Use agents [reviewer-specialist, git-specialist,design-pattern-specialist, security-specialist]
+MANDATORY: Use reviewer-specialist agents in parallel, one per focus: code quality, test coverage, security.
 
 MANDATORY: execute the **{git_diff_command}** argument as a git diff command or any other command that produces a diff-like output or a code file and analyze the output according to the system instructions.
 

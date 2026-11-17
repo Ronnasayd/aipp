@@ -42,7 +42,7 @@ The `sd-*` planning and execution skills set `disable-model-invocation: true`, s
 
 ## Agents
 
-Enabled by default: `developer-specialist`, `planner-specialist`, `reviewer-specialist`, `qa-specialist`, `interview-specialist`. Their definitions are in `agents/`, and the others can be enabled with `mif`. Choose by role: planner to research and design before coding, developer to implement, reviewer to review or refactor, QA for test plans and release checks, interview to gather requirements through questions.
+Enabled by default: `developer-specialist`, `planner-specialist`, `reviewer-specialist`, `qa-specialist`, `explorer-specialist`. Their definitions are in `agents/`; retired persona agents live in `legacy/agents/`. Choose by role: planner to research and design before coding (read-only), developer to implement, reviewer for independent read-only review (code, coverage, security, specs), QA for end-to-end checks and release sign-off, explorer for cheap read-only codebase search and mapping. Domain knowledge lives in skills, not agents. To gather requirements through questions, use the `grilling` skill.
 
 ## Commands
 

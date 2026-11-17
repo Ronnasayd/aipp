@@ -391,7 +391,7 @@ Once the agent is finalized:
 
 1. Save to `agents/<name>.agent.md` (relative to workspace root)
 2. The agent will appear in the agents list available to `runSubagent`
-3. Update any documentation that enumerates available agents (e.g., `task-orchestration-specialist` references)
+3. Add the agent to `claude/aipp-default-settings.json` and update any documentation that enumerates available agents (e.g., `skills/aipp-guide/references/workflows.md`)
 4. If this agent replaces or supersedes an existing one, note the overlap explicitly
 
 ### File Naming Convention
@@ -405,8 +405,8 @@ Follow the pattern established by all existing agents:
 Examples:
 
 ```
-database-specialist.agent.md
-cybersecurity-specialist.agent.md
+reviewer-specialist.agent.md
+explorer-specialist.agent.md
 frontend-accessibility-specialist.agent.md
 api-design-specialist.agent.md
 ```

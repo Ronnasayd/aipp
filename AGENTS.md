@@ -5,7 +5,7 @@
 ### Core Components
 
 - **MCP Servers** (`src/mcps/`): FastMCP-based tools — `skill_loader_mcp.py`, `search_engine.py` (semantic search). Registered proxies (DB, GitHub, Figma, etc.) are routed through `mcp-manager` and configured in `.mcp.json`.
-- **Agents** (`agents/`): Persona definitions (developer-specialist, cybersecurity-specialist, etc.) with behavioral instructions.
+- **Agents** (`agents/`): Role agents (developer, planner, reviewer, qa, explorer specialists) with tool and model limits. Retired persona agents are in `legacy/agents/`.
 - **Skills** (`skills/`): Reusable capabilities (workflows, guides, analysis patterns).
 - **Instructions** (`instructions/`): Domain-specific rules (code style, testing, React patterns, etc.).
 
