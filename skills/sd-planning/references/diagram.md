@@ -10,8 +10,9 @@ flowchart TD
     /sd-review-spec report-only vs original request + code"]
     V --> V2{"Gaps found?"}
     V2 -- yes --> V3["Show gaps to user,
-    apply fixes (/sd-review-spec steps 4-7)"]
-    V3 -- "new verifier, max 3 rounds" --> V
+    apply fixes (/sd-review-spec steps 4-5, 6-7)"]
+    V3 -- "High fixed: new scoped verifier, max 3 rounds" --> V
+    V3 -- "only Medium/Inconsistency fixed" --> D
     V2 -- no --> D{"Register in
     taskmaster?"}
     D -- yes --> E["/sd-insert-taskmaster"]
