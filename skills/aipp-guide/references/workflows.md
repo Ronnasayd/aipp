@@ -49,6 +49,7 @@ Enabled by default: `developer-specialist`, `planner-specialist`, `reviewer-spec
 | Command                 | Use                                                                 |
 | ----------------------- | ------------------------------------------------------------------- |
 | `/create-commit.prompt` | Create a commit from the current changes                            |
+| `/create-pr.prompt`     | Open a PR from the current branch with a generated description      |
 | `/readonly`             | Toggle readonly mode, which blocks edits and write-capable commands |
 | `/save-session-memory`  | Evaluate the session and save what is worth keeping                 |
 | `/step-by-step.prompt`  | Write up how a result was reached, reusable as a skill later        |
