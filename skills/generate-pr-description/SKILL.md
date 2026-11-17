@@ -34,6 +34,7 @@ PHASE 2 — CONTEXT GATHERING
 ====================
 
 1. Identify changes to describe:
+   - Arguments name a base branch → run `git diff origin/<base>...HEAD` and use only it; ignore staged and uncommitted changes, they are not part of the PR.
    - Run `git diff --staged`. Not empty → use as primary source.
    - `git diff --staged` empty → run `git diff main...HEAD` (or default branch) for current branch changes.
    - Still empty → stop and return `status: partial` with `reason: no changes found`.

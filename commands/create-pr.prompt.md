@@ -21,15 +21,21 @@ Arguments (optional): $ARGUMENTS
 4. Language: taken from the arguments if given; otherwise ask with `AskUserQuestion` (in Portuguese), Portuguese recommended, English as the other option.
 5. Run `git log --oneline origin/<base>..HEAD`. Empty: stop, there is nothing to open a PR for.
 6. Run `gh pr view --json url,state -q 'select(.state=="OPEN") | .url'`. Prints a URL: a PR is already open for this branch; show the URL and stop.
-7. Push the branch: `git push -u origin HEAD`. Push rejected: stop and show the error; never force-push.
-8. Invoke the `generate-pr-description` skill with the argument `<language>. Base branch: <base>; diff with git diff origin/<base>...HEAD`. Take the Markdown description from its result. Result is `status: partial`: stop and report the reason.
+7. Compare `git ls-remote --heads origin <branch>` with `git rev-parse HEAD`.
+   - Same commit: the branch is already pushed; skip the push.
+   - Different or missing: push with `git push -u origin HEAD`. Push rejected or blocked by a hook: stop, show the error and ask the user to run `! git push -u origin HEAD`; never force-push or work around the block.
+8. Invoke the `generate-pr-description` skill with the argument `<language>. Base branch: <base>. Describe only git diff origin/<base>...HEAD; ignore staged and uncommitted changes`. Take the Markdown description from its result. Result is `status: partial`: stop and report the reason.
 9. Title in _Conventional Commits_ format (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`; `!` for breaking changes), no emojis, written in English like the commits. Single commit in step 5: reuse its subject. Several: summarize them.
-10. Create the PR, passing the body through stdin so Markdown is kept intact:
+10. Create the PR. Write the body to a file and call `gh` through `rtk proxy`: the RTK rewrite of `gh pr create` drops a body sent on stdin, and the PR is created with an empty description.
 
     ```bash
-    gh pr create --base <base> --head <branch> --title "<title>" --body-file - <<'EOF'
+    cat > /tmp/pr-body.md <<'EOF'
     <description>
     EOF
+    rtk proxy gh pr create --base <base> --head <branch> --title "<title>" --body-file /tmp/pr-body.md
+    rtk proxy gh pr view --json body -q '.body | length'
     ```
+
+    Length `0`: run `rtk proxy gh pr edit <number> --body-file /tmp/pr-body.md` and check again. Then delete `/tmp/pr-body.md`.
 
 Your final response must contain the PR URL, the title, and the complete PR description verbatim in a Markdown block.
