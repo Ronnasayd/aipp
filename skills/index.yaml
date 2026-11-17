@@ -80,11 +80,6 @@ skills:
 
     '
 - name:
-  - my-tdd-workflow
-  description: Use this skill when writing new features, fixing bugs, or refactoring
-    code. Enforces test-driven development with 80%+ coverage including unit, integration,
-    and E2E tests.
-- name:
   - tdd
   description: Use when implementing any feature or bugfix, before writing implementation
     code - write the test first, watch it fail, write minimal code to pass; ensures
@@ -172,10 +167,6 @@ skills:
     of training data. Activates for setup questions, API references, code examples,
     or when the user names a framework (e.g. React, Next.js, Prisma).
 - name:
-  - my-frontend-patterns
-  description: Frontend development patterns for React, Next.js, state management,
-    performance optimization, and UI best practices.
-- name:
   - tailwindcss
   description: Tailwind CSS v4 utility-first styling patterns including responsive
     design, dark mode, and custom configuration. Use when styling with Tailwind, adding
@@ -206,14 +197,6 @@ skills:
   description: Run a full discovery cycle from problem hypothesis to validated solution.
     Use when a team needs a structured path through framing, interviews, synthesis,
     and experiments.
-- name:
-  - my-python-patterns
-  description: Pythonic idioms, PEP 8 standards, type hints, and best practices for
-    building robust, efficient, and maintainable Python applications.
-- name:
-  - my-python-testing
-  description: Python testing strategies using pytest, TDD methodology, fixtures,
-    mocking, parametrization, and coverage requirements.
 - name:
   - python-style-guide
   description: Coding conventions and best practices for Python based on the Google
@@ -541,14 +524,6 @@ skills:
     and maintainability. Enforcing idiomatic Go naming, formatting, and structure.
     Designing APIs and libraries for long-term maintainability. Avoiding unnecessary
     abstraction or complexity in Go programs.'
-- name:
-  - my-golang-testing
-  description: Go testing patterns including table-driven tests, subtests, benchmarks,
-    fuzzing, and test coverage. Follows TDD methodology with idiomatic Go practices.
-- name:
-  - my-golang-patterns
-  description: Idiomatic Go patterns, best practices, and conventions for building
-    robust, efficient, and maintainable Go applications.
 - name:
   - spec-to-requirements-table
   description: Derive a flat, self-contained requirements review table from a feature's

@@ -379,12 +379,37 @@ _INDEX_YAML_DIR = {
 }
 
 
+def _write_skill_dirs(source_dir, rel_dirs):
+    for rel in rel_dirs:
+        skill_dir = source_dir / "skills" / rel
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: x\n---\n")
+
+
+def test_sync_catalog_keys_nested_skill_by_link_name(tmp_path):
+    # why: ignores.sh removes .claude/skills/<key>, and claude.install.sh names
+    # that link after the skill dir relative to skills/ with "/" -> ":"; a bare
+    # index.yaml name never matches a nested skill's link, so it disables nothing
+    target = tmp_path / "aipp-settings.json"
+    source = tmp_path / "source"
+    source.mkdir()
+    _write_default_settings(source)
+    _write_index_yaml(source, "skills", ["deep-skill", "top-skill"])
+    _write_skill_dirs(source, ["ns/deep-skill", "top-skill"])
+
+    settings.sync_catalog(str(source), target)
+
+    catalog = json.loads((source / "claude" / "aipp-default-settings.json").read_text())
+    assert catalog["skills"] == {"ns:deep-skill": False, "top-skill": False}
+
+
 def test_sync_catalog_adds_new_item_to_catalog_file(tmp_path):
     target = tmp_path / "aipp-settings.json"
     source = tmp_path / "source"
     source.mkdir()
     _write_default_settings(source, skills={"old-skill": True})
     _write_index_yaml(source, "skills", ["old-skill", "new-skill"])
+    _write_skill_dirs(source, ["old-skill", "new-skill"])
 
     settings.sync_catalog(str(source), target)
 
@@ -426,6 +451,7 @@ def test_sync_catalog_never_overwrites_existing_catalog_value(tmp_path):
     source.mkdir()
     _write_default_settings(source, skills={"enabled-skill": True})
     _write_index_yaml(source, "skills", ["enabled-skill"])
+    _write_skill_dirs(source, ["enabled-skill"])
 
     settings.sync_catalog(str(source), target)
 
@@ -441,6 +467,7 @@ def test_sync_catalog_registers_already_catalogued_item_on_new_project(tmp_path)
     # the catalog, so a project migrated before this item existed never got it
     _write_default_settings(source, skills={"old-catalogued-skill": False})
     _write_index_yaml(source, "skills", ["old-catalogued-skill"])
+    _write_skill_dirs(source, ["old-catalogued-skill"])
     proj = str(tmp_path / "proj")
     settings.save(
         {"projects": {proj: {"skills": {}, "agents": {}, "instructions": {}}}},
@@ -486,6 +513,7 @@ def test_cli_sync_catalog_runs_and_exits_zero(tmp_path):
     source.mkdir()
     _write_default_settings(source)
     _write_index_yaml(source, "skills", ["fresh-skill"])
+    _write_skill_dirs(source, ["fresh-skill"])
 
     result = _run_cli(["sync-catalog", str(source)], home)
 
