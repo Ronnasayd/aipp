@@ -11,7 +11,7 @@ flowchart TD
     V --> V2{"Gaps found?"}
     V2 -- yes --> V3["Show gaps to user,
     apply fixes (/sd-review-spec steps 4-7)"]
-    V3 --> V
+    V3 -- "new verifier, max 3 rounds" --> V
     V2 -- no --> D{"Register in
     taskmaster?"}
     D -- yes --> E["/sd-insert-taskmaster"]
