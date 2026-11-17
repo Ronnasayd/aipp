@@ -1,7 +1,6 @@
 ---
 model: haiku
-context: fork
-background: false
+effort: low
 disable-model-invocation: true
 ---
 
@@ -15,6 +14,13 @@ feat(api)!: remove endpoint /v1/users
 BREAKING CHANGE: /v1/users removed, use /v2/users instead
 ```
 
-If you are on one of these branches—`master`, `main`, `develop`, or `homolog`—simply display the message on the screen so the user can copy it; otherwise, execute the `git commit` command with the generated message. If the changes do not warrant a commit, respond with "No commit needed."
+If the changes do not warrant a commit, respond with "No commit needed." and stop.
+
+Check the current branch with `git branch --show-current`.
+
+- Not one of `master`, `main`, `develop`, `homolog`, and not empty: run `git commit` with the generated message.
+- On one of those protected branches, or empty output (detached HEAD): use `AskUserQuestion` (in Portuguese) to ask whether to create a new branch for this commit. Show the proposed branch name in the question.
+  - Yes: run `git switch -c <prefix>/<description>`, then `git commit` with the generated message. `<prefix>` comes from the commit type: `feat` → `feature`, every other type keeps its name (`fix`, `chore`, `docs`, `refactor`, `perf`, `test`, `style`). `<description>` is a short kebab-case summary of the change (lowercase, ASCII, max ~5 words), e.g. `feature/add-user-export`.
+  - No: do not commit; display the message on the screen so the user can copy it.
 
 Your final response must contain the complete commit message verbatim in a code block, alongside any other fields your final response requires.
