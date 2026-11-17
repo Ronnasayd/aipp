@@ -1,7 +1,7 @@
 ---
 name: sd-review-spec
 description: "Review and correct a feature's spec documents (spec.md, design.md, tasks.md, plan.md, checks.md, requirements.md, context-map.md, ADRs) by verifying every claim against the real code, classifying gaps by severity, and applying fixes. Use when user says 'review this spec', 'audit the spec against the code', 'find gaps in the spec', 'check spec inconsistencies', 'find implicit requirements', 'validate design.md and tasks.md', or 'validate plan.md and checks.md'."
-model: opus
+model: sonnet
 effort: high
 ---
 
@@ -25,7 +25,7 @@ Audit spec docs (spec.md, design.md, tasks.md, or tlc-spec-lean's plan.md and ch
 
 Whoever drafted or discussed the spec shares its blind spots, so verification runs in a subagent that has never seen this conversation.
 
-- Spawn with the `Agent` tool (`general-purpose`). Never use `subagent_type: "fork"`: a fork inherits this conversation, which defeats the purpose. Each Step 2 run and each Step 5.5 round gets a **new** agent. Never continue an earlier verifier with `SendMessage`, because it keeps the previous round's context.
+- Spawn with the `Agent` tool (`general-purpose`, `model: "sonnet"`; effort `high` for Step 2, `medium` for Step 5.5 rounds). Without `model` it inherits the parent's model. Never use `subagent_type: "fork"`: a fork inherits this conversation, which defeats the purpose. Each Step 2 run and each Step 5.5 round gets a **new** agent. Never continue an earlier verifier with `SendMessage`, because it keeps the previous round's context.
 - Prompt contains only: repo root, absolute paths of the spec files and cited ADRs, the path of [verification-checklist.md](references/verification-checklist.md), the output file path, and in Step 5.5 the scope (touched files/claims) plus the settled-list file path. Never include a conversation summary, author rationale, your own suspicions or expected findings.
 - Verifier does not edit code or spec docs. It writes its result, in English, to `<spec-dir>/review/verify-round-<N>.md` (Step 2 = round 1; each Step 5.5 round increments N), with one row per claim: quoted claim + doc `path:line`, status (confirmed / false / unverifiable), evidence (`path:line` or command output), proposed severity.
 - Verifier's final message is only the file path plus counts per status and severity, never the findings themselves. A missing or empty file means the verifier did not run: retry once, then stop and tell the user.
