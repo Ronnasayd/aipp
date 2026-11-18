@@ -33,7 +33,7 @@
     "Product-Manager-Skills:user-story-splitting": false,
     "dynamic-programming-analysis": false,
     "generate-docs": true,
-    "generate-pr-description": true,
+    "generate-pr-description": false,
     "mattpocock:productivity:grilling": true,
     "resolve-merge-conflicts": false,
     "sd-execute": true,

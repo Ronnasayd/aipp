@@ -29,3 +29,10 @@ def test_passthrough_without_secrets():
 def test_masks_whole_token_when_detector_reports_only_prefix():
     token = "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789"
     assert _mask(f"GITHUB_TOKEN={token}\n") == "GITHUB_TOKEN=[REDACTED]\n"
+
+
+def test_masks_whole_pem_private_key_block():
+    kind = "RSA " + "PRIVATE KEY"
+    body = "MIIEpAIBAAKCAQEA1b2c3d4e5f6g7h8\nZmFrZWtleWJvZHlsaW5lMmZha2VrZXk=\n"
+    pem = f"-----BEGIN {kind}-----\n{body}-----END {kind}-----"
+    assert _mask(f"before\n{pem}\nafter\n") == "before\n[REDACTED]\nafter\n"
