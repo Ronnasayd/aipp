@@ -24,6 +24,16 @@
       "expect_output": false
     },
     {
+      "name": "glossary_md_allowed_no_output",
+      "input": { "tool_input": { "file_path": "GLOSSARY.md" } },
+      "expect_output": false
+    },
+    {
+      "name": "glossary_map_md_allowed_no_output",
+      "input": { "tool_input": { "file_path": "GLOSSARY-MAP.md" } },
+      "expect_output": false
+    },
+    {
       "name": "stray_md_at_repo_root_warned",
       "input": { "tool_input": { "file_path": "NOTES.md" } },
       "expect_output": true,

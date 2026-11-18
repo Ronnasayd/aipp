@@ -151,7 +151,7 @@
     "keycloak-docs-index": false,
     "leet-code-patterns": false,
     "mattpocock:engineering:diagnosing-bugs": false,
-    "mattpocock:engineering:domain-modeling": false,
+    "mattpocock:engineering:domain-modeling": true,
     "mattpocock:engineering:grill-with-docs": false,
     "mcp-manager-instructions": false,
     "mermaid-class-diagram": false,
