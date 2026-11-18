@@ -31,6 +31,8 @@ ALLOWED_PATTERNS = [
     "CONTRIBUTING.md",
     "SKILL.md",
     "README.md",
+    "GLOSSARY.md",
+    "GLOSSARY-MAP.md",
 ]
 
 
