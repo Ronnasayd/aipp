@@ -31,6 +31,7 @@ const readSessionEffort = async ($: EngineInterface) => {
 };
 
 type Pin = {
+  loop: string;
   model?: string;
   effort?: Level;
   skill?: string;
@@ -39,10 +40,18 @@ type Pin = {
 
 const MAIN = "";
 
+// hazard: an alias (opus) matches the session's id by family only, so a pinned older version reads as the same
+const sameModel = (wanted: string, current?: string) =>
+  wanted === current || !!current?.startsWith(`claude-${wanted}-`);
+
 export const register: Register = (on) => {
   // why: a reload dropping these only loses an override for one turn, so they need no $.state contract
-  // invariant: keyed by agentId (MAIN for the main loop) so a subagent's skill never leaks into another loop
-  const pins = new Map<string, Pin>();
+  // invariant: each entry names its loop (MAIN for the main loop) so a subagent's skill never leaks into another loop
+  // why: the engine has no skill-end event; an inline skill lasts until its loop's turn completes, which pops it
+  const stack: Pin[] = [];
+  const top = (loop: string) => stack.findLast((p) => p.loop === loop);
+  // why: a subagent's model and effort are only visible on its steps; the main loop reads the session instead
+  const seen = new Map<string, { model: string; effort?: Level }>();
   // hazard: skill.prompt carries no agentId; the Skill tool's tool.call does, and expands the prompt inside next()
   // ponytail: one slot, so two loops calling Skill at the same instant may swap pins; key by tool_use_id if seen
   let caller = MAIN;
@@ -65,39 +74,59 @@ export const register: Register = (on) => {
     const level = isLevel(effort) ? effort : undefined;
     if (!wanted && !level) return next(e);
     const loop = caller;
-    const change = [wanted && `model ${wanted}`, level && `effort ${level}`]
+    const below = top(loop);
+    const current =
+      loop === MAIN
+        ? {
+            model: await $.session.model(),
+            effort: await readSessionEffort($)
+          }
+        : seen.get(loop);
+    const nowModel = below?.model ?? current?.model;
+    const nowEffort = below?.effort ?? current?.effort;
+    const change = [
+      wanted && !sameModel(wanted, nowModel) && `model ${wanted}`,
+      level && level !== nowEffort && `effort ${level}`
+    ]
       .filter(Boolean)
       .join(" and ");
-    // why: ask rejects when dismissed and under -p; with no consent the session keeps its own model and effort
+    const inherited = { loop, model: below?.model, effort: below?.effort };
+    if (!change) {
+      stack.push({ ...inherited, refused: below?.refused, skill: e.skill });
+      return next(e);
+    }
+    // why: ask rejects when dismissed and under -p; with no consent the loop keeps what it was serving
     const answer = await $.ui
       .ask(`Skill ${e.skill} requests ${change}. Apply for this turn?`, [
         "Yes",
         "No"
       ])
       .catch(() => undefined);
-    const prior = pins.get(loop);
-    pins.set(
-      loop,
+    stack.push(
       answer === "Yes"
         ? {
-            model: wanted ?? prior?.model,
-            effort: level ?? prior?.effort,
+            loop,
+            model: wanted ?? below?.model,
+            effort: level ?? below?.effort,
             skill: e.skill
           }
-        : { refused: true }
+        : { ...inherited, skill: below?.skill, refused: true }
     );
     return next(e);
   });
 
   on("turn.step", async function* ($, e, next) {
     const loop = e.agentId ?? MAIN;
-    const pin = pins.get(loop);
+    const pin = top(loop);
     if (loop !== MAIN) {
-      if (!pin?.model && !pin?.effort) return yield* next(e);
-      await mirror($, pin.model ?? e.model, pin.effort ?? e.effort, pin.skill);
+      const model = pin?.model ?? e.model;
+      const effort = pin?.effort ?? (isLevel(e.effort) ? e.effort : undefined);
+      seen.set(loop, { model, effort });
+      if (!pin) return yield* next(e);
+      await mirror($, model, pin.effort ?? e.effort, pin.skill);
       return yield* next({
         ...e,
-        model: pin.model ?? e.model,
+        model,
         ...(pin.effort && { effort: pin.effort })
       });
     }
@@ -112,17 +141,19 @@ export const register: Register = (on) => {
 
   on("turn.complete", async ($, e, next) => {
     const loop = e.agentId ?? MAIN;
-    const pin = pins.get(loop);
-    pins.delete(loop);
-    // why: no step runs between turns, so the file would keep showing the expired override;
+    const had = stack.some((p) => p.loop === loop);
+    for (let i = stack.length; i--;)
+      if (stack[i]!.loop === loop) stack.splice(i, 1);
+    if (loop !== MAIN) seen.delete(loop);
+    // why: no step runs between turns, so the file would keep showing the popped skill;
     // $.session has no effort getter, so a missing effort means the session's own level
-    if (loop === MAIN || pin?.model || pin?.effort) {
-      const main = pins.get(MAIN);
+    if (loop === MAIN || had) {
+      const shown = stack.at(-1);
       await mirror(
         $,
-        main?.model ?? (await $.session.model()),
-        main?.effort,
-        main?.skill
+        shown?.model ?? (await $.session.model()),
+        shown?.effort,
+        shown?.skill
       );
     }
     return next(e);
