@@ -38,10 +38,12 @@ if [ "$NERD_FONT" = "1" ]; then
     ICON_TASK=$'\U0000F0AE'
     ICON_MCP=$'\U0000F1E6'
     ICON_DISABLED=$'\U0001F6C7'
+    ICON_FORK=$'\U0000F402'
 else
     ICON_TASK="📋"
     ICON_MCP="🔌"
     ICON_DISABLED="🛇"
+    ICON_FORK="🍴"
     ICON_READONLY="🔏"
     ICON_PYTHON="🐍" ICON_GO="🐹" ICON_EFFORT="🧠" ICON_JAIL="🔒" ICON_CAVEMAN="🦴" ICON_TOOLS="⚙" ICON_WRENCH="🔧"
     ICON_EMAIL="📧" ICON_SERENA="🧭" ICON_MEMORY="💾" ICON_RAGRAT="🐀" ICON_COST="💰"
@@ -519,9 +521,12 @@ if [ -n "$session_id" ]; then
     served_model=$(jq -r '.model // empty' "$served_file" 2>/dev/null)
     served_effort=$(jq -r '.effort // empty' "$served_file" 2>/dev/null)
     served_skill=$(jq -r '.skill // empty' "$served_file" 2>/dev/null)
+    served_fork=$(jq -r '.fork // empty' "$served_file" 2>/dev/null)
     # why: the file holds the engine's id while $model is the display name, so both must be compared
     model_id=$(echo "$input" | jq -r '.model.id // empty')
-    if { [ -n "$served_model" ] && [ "$served_model" != "$model" ] && [ "$served_model" != "$model_id" ]; } ||
+    # why: a forked skill is shown even on the session's model, so the user sees the fork itself
+    if [ -n "$served_fork" ] ||
+        { [ -n "$served_model" ] && [ "$served_model" != "$model" ] && [ "$served_model" != "$model_id" ]; } ||
         { [ -n "$served_effort" ] && [ "$served_effort" != "$effort_level" ]; }; then
         served_effort_info=""
         [ -n "$served_effort" ] && served_effort_info="${SEP}$(effort_badge "$served_effort")"
@@ -529,7 +534,9 @@ if [ -n "$session_id" ]; then
         if [ -n "$served_skill" ]; then
             served_effort_info=""
             [ -n "$served_effort" ] && served_effort_info=" $(effort_badge "$served_effort")"
-            served_line="${C_LAVENDER}${ICON_MODEL} ${served_skill}(${served_model}${RESET}${served_effort_info}${C_LAVENDER})${RESET}"
+            served_icon="$ICON_MODEL"
+            [ -n "$served_fork" ] && served_icon="$ICON_FORK"
+            served_line="${C_LAVENDER}${served_icon} ${served_skill}(${served_model}${RESET}${served_effort_info}${C_LAVENDER})${RESET}"
         fi
         echo -e "$served_line"
     fi

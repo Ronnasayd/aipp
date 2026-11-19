@@ -60,7 +60,9 @@ function engine($: Harness[0], on: Harness[1]) {
     frontmatter: Record<string, string | number>
   ) => {
     toolFrontmatter = frontmatter;
-    return $.tool.call({ tool: "Skill", skill: "probe", agentId } as never);
+    // why: the typed call overloads hit TS2589 on an input built for no one tool
+    const call = $.tool.call as unknown as (input: object) => Promise<unknown>;
+    return call({ tool: "Skill", skill: "probe", agentId });
   };
   const step = async (
     index: number,
@@ -180,6 +182,51 @@ test("a forked skill is left to the engine", async ($, on) => {
   await step(0);
 
   expect(served).toEqual([SESSION_MODEL]);
+});
+
+test("the served file shows a forked skill's subagent until it completes", async ($, on) => {
+  const { files, applied, skill, step, complete } = engine($, on);
+  const shown = () => JSON.parse(files[SERVED_FILE]!);
+
+  await step(0);
+  await skill({ model: "haiku", effort: "low", context: "fork" });
+  Object.assign(applied, { model: "haiku", effort: "low" });
+  await step(0, "fork-1");
+  expect(shown()).toEqual({
+    skill: "probe",
+    model: "haiku",
+    effort: "low",
+    fork: true
+  });
+
+  await complete("fork-1");
+  expect(shown()).toEqual({ model: SESSION_MODEL });
+});
+
+test("a forked skill binds only to a subagent that has not stepped yet", async ($, on) => {
+  const { files, skill, step } = engine($, on);
+
+  await step(0, "agent-1");
+  await skill({ context: "fork" });
+  await step(1, "agent-1");
+  expect(files[SERVED_FILE]).toBeUndefined();
+
+  await step(0, "fork-1");
+  expect(JSON.parse(files[SERVED_FILE]!)).toMatchObject({
+    skill: "probe",
+    fork: true
+  });
+});
+
+test("a fork that never started a subagent expires with its caller's turn", async ($, on) => {
+  const { files, skill, step, complete } = engine($, on);
+
+  await step(0);
+  await skill({ context: "fork" });
+  await complete();
+  await step(0, "agent-1");
+
+  expect(JSON.parse(files[SERVED_FILE]!)).toEqual({ model: SESSION_MODEL });
 });
 
 test("inherit and a skill without model change nothing", async ($, on) => {

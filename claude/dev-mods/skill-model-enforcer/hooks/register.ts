@@ -8,12 +8,13 @@ const mirror = async (
   $: EngineInterface,
   model: string,
   effort?: TurnStepInput["effort"],
-  skill?: string
+  skill?: string,
+  fork?: true
 ) =>
   $.fs
     .write(
       servedFile(await $.session.id()),
-      JSON.stringify({ skill, model, effort })
+      JSON.stringify({ skill, model, effort, fork })
     )
     .catch(() => {});
 
@@ -55,6 +56,11 @@ export const register: Register = (on) => {
   // hazard: skill.prompt carries no agentId; the Skill tool's tool.call does, and expands the prompt inside next()
   // ponytail: one slot, so two loops calling Skill at the same instant may swap pins; key by tool_use_id if seen
   let caller = MAIN;
+  // why: skill.prompt never learns the forked subagent's agentId, so the next loop that has not stepped yet claims it
+  // ponytail: one slot, so two forks started together may swap names; read agent.spawn if it proves to fire for them
+  // invariant: a pending fork expires with its caller's turn, so a fork that never spawned cannot name a later subagent
+  let pendingFork: { skill: string; loop: string } | undefined;
+  const forks = new Map<string, string>();
 
   on("tool.call", { tool: "Skill" }, async ($, e, next) => {
     caller = e.agentId ?? MAIN;
@@ -68,7 +74,10 @@ export const register: Register = (on) => {
   on("skill.prompt", async ($, e, next) => {
     const { model, effort, context } = e.frontmatter;
     // invariant: a forked skill's model and effort are applied by the engine to its subagent, never to this loop
-    if (context === "fork") return next(e);
+    if (context === "fork") {
+      pendingFork = { skill: e.skill, loop: caller };
+      return next(e);
+    }
     const wanted =
       typeof model === "string" && model !== "inherit" ? model : undefined;
     const level = isLevel(effort) ? effort : undefined;
@@ -119,11 +128,17 @@ export const register: Register = (on) => {
     const loop = e.agentId ?? MAIN;
     const pin = top(loop);
     if (loop !== MAIN) {
+      if (pendingFork && !seen.has(loop) && !forks.has(loop)) {
+        forks.set(loop, pendingFork.skill);
+        pendingFork = undefined;
+      }
       const model = pin?.model ?? e.model;
       const effort = pin?.effort ?? (isLevel(e.effort) ? e.effort : undefined);
       seen.set(loop, { model, effort });
+      const fork = forks.get(loop);
+      if (fork) await mirror($, model, effort, pin?.skill ?? fork, true);
       if (!pin) return yield* next(e);
-      await mirror($, model, pin.effort ?? e.effort, pin.skill);
+      if (!fork) await mirror($, model, pin.effort ?? e.effort, pin.skill);
       return yield* next({
         ...e,
         model,
@@ -141,7 +156,9 @@ export const register: Register = (on) => {
 
   on("turn.complete", async ($, e, next) => {
     const loop = e.agentId ?? MAIN;
-    const had = stack.some((p) => p.loop === loop);
+    if (pendingFork?.loop === loop) pendingFork = undefined;
+    const wasFork = forks.delete(loop);
+    const had = wasFork || stack.some((p) => p.loop === loop);
     for (let i = stack.length; i--;)
       if (stack[i]!.loop === loop) stack.splice(i, 1);
     if (loop !== MAIN) seen.delete(loop);
