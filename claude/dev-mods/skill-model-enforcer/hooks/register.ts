@@ -148,7 +148,7 @@ export const register: Register = (on) => {
     // why: no step runs between turns, so the file would keep showing the popped skill;
     // $.session has no effort getter, so a missing effort means the session's own level
     if (loop === MAIN || had) {
-      const shown = stack.at(-1);
+      const shown = top(MAIN);
       await mirror(
         $,
         shown?.model ?? (await $.session.model()),

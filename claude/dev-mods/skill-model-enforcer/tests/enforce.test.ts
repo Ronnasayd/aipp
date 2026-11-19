@@ -420,6 +420,23 @@ test("a subagent's end restores the main loop's own override", async ($, on) => 
   expect(served).toEqual(["haiku", "claude-sonnet-5-5", "haiku"]);
 });
 
+test("one subagent's end shows the main loop, not another subagent", async ($, on) => {
+  const { files, skill, subagentSkill, step, complete } = engine($, on);
+
+  await skill({ model: "haiku" });
+  await subagentSkill("agent-1", { model: "claude-sonnet-5-5" });
+  await subagentSkill("agent-2", { model: "claude-opus-5-5", effort: "low" });
+  await step(0);
+  await step(0, "agent-1");
+  await step(0, "agent-2");
+  await complete("agent-2");
+
+  expect(JSON.parse(files[SERVED_FILE]!)).toEqual({
+    skill: "probe",
+    model: "haiku"
+  });
+});
+
 test("a skill asking for the session's model and effort only renames", async ($, on) => {
   const { asks, files, skill, step } = engine($, on);
 
