@@ -167,6 +167,15 @@ def test_served_line_prefixes_skill_name(tmp_path):
     assert re.search(r"probe\(haiku \S+ ▰▱▱▱▱ low\)", plain)
 
 
+def test_served_line_marks_forked_skill_even_on_session_model(tmp_path):
+    output = run_served(
+        tmp_path,
+        {"skill": "probe", "model": "claude-opus-5-5", "effort": "high", "fork": True},
+    )
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
+    assert re.search(r" probe\(claude-opus-5-5 \S+ ▰▰▰▱▱ high\)", plain)
+
+
 def test_pace_shows_equivalent_time_in_hours_and_minutes(tmp_path):
     # why: 3h left = 120 min elapsed; 10% used = 30 min -> 90 min under (1% = 3 min)
     resets_at = int(time.time()) + 3 * 3600
