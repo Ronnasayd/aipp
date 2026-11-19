@@ -218,6 +218,17 @@ test("a forked skill binds only to a subagent that has not stepped yet", async (
   });
 });
 
+test("a fork that never started a subagent expires with its caller's turn", async ($, on) => {
+  const { files, skill, step, complete } = engine($, on);
+
+  await step(0);
+  await skill({ context: "fork" });
+  await complete();
+  await step(0, "agent-1");
+
+  expect(JSON.parse(files[SERVED_FILE]!)).toEqual({ model: SESSION_MODEL });
+});
+
 test("inherit and a skill without model change nothing", async ($, on) => {
   const { served, skill, step } = engine($, on);
 

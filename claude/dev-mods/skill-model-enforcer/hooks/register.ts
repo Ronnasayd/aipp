@@ -58,7 +58,8 @@ export const register: Register = (on) => {
   let caller = MAIN;
   // why: skill.prompt never learns the forked subagent's agentId, so the next loop that has not stepped yet claims it
   // ponytail: one slot, so two forks started together may swap names; read agent.spawn if it proves to fire for them
-  let pendingFork: string | undefined;
+  // invariant: a pending fork expires with its caller's turn, so a fork that never spawned cannot name a later subagent
+  let pendingFork: { skill: string; loop: string } | undefined;
   const forks = new Map<string, string>();
 
   on("tool.call", { tool: "Skill" }, async ($, e, next) => {
@@ -74,7 +75,7 @@ export const register: Register = (on) => {
     const { model, effort, context } = e.frontmatter;
     // invariant: a forked skill's model and effort are applied by the engine to its subagent, never to this loop
     if (context === "fork") {
-      pendingFork = e.skill;
+      pendingFork = { skill: e.skill, loop: caller };
       return next(e);
     }
     const wanted =
@@ -128,7 +129,7 @@ export const register: Register = (on) => {
     const pin = top(loop);
     if (loop !== MAIN) {
       if (pendingFork && !seen.has(loop) && !forks.has(loop)) {
-        forks.set(loop, pendingFork);
+        forks.set(loop, pendingFork.skill);
         pendingFork = undefined;
       }
       const model = pin?.model ?? e.model;
@@ -155,6 +156,7 @@ export const register: Register = (on) => {
 
   on("turn.complete", async ($, e, next) => {
     const loop = e.agentId ?? MAIN;
+    if (pendingFork?.loop === loop) pendingFork = undefined;
     const wasFork = forks.delete(loop);
     const had = wasFork || stack.some((p) => p.loop === loop);
     for (let i = stack.length; i--;)
