@@ -45,8 +45,10 @@ function engine($: Harness[0], on: Harness[1]) {
       stopReason: "end_turn"
     } as never;
   });
-  const skill = (frontmatter: Record<string, string | number>) =>
-    $.skill.prompt({ skill: "probe", text: "go", frontmatter });
+  const skill = (
+    frontmatter: Record<string, string | number>,
+    name = "probe"
+  ) => $.skill.prompt({ skill: name, text: "go", frontmatter });
   // why: the Skill tool expands the prompt inside its own tool.call, the only event that names the calling loop
   let toolFrontmatter: Record<string, string | number> = {};
   on("tool.call", { tool: "Skill" }, async () => {
@@ -416,4 +418,98 @@ test("a subagent's end restores the main loop's own override", async ($, on) => 
   await step(1);
 
   expect(served).toEqual(["haiku", "claude-sonnet-5-5", "haiku"]);
+});
+
+test("one subagent's end shows the main loop, not another subagent", async ($, on) => {
+  const { files, skill, subagentSkill, step, complete } = engine($, on);
+
+  await skill({ model: "haiku" });
+  await subagentSkill("agent-1", { model: "claude-sonnet-5-5" });
+  await subagentSkill("agent-2", { model: "claude-opus-5-5", effort: "low" });
+  await step(0);
+  await step(0, "agent-1");
+  await step(0, "agent-2");
+  await complete("agent-2");
+
+  expect(JSON.parse(files[SERVED_FILE]!)).toEqual({
+    skill: "probe",
+    model: "haiku"
+  });
+});
+
+test("a skill asking for the session's model and effort only renames", async ($, on) => {
+  const { asks, files, skill, step } = engine($, on);
+
+  await skill({ model: SESSION_MODEL, effort: SESSION_EFFORT });
+  await skill({ model: "opus", effort: SESSION_EFFORT }, "alias");
+  await step(0);
+
+  expect(asks).toEqual([]);
+  expect(JSON.parse(files[SERVED_FILE]!)).toEqual({
+    skill: "alias",
+    model: SESSION_MODEL,
+    effort: SESSION_EFFORT
+  });
+});
+
+test("a nested skill matching the active override only renames", async ($, on) => {
+  const { asks, files, served, skill, step } = engine($, on);
+
+  await skill({ model: "haiku", effort: "low" }, "outer");
+  await skill({ model: "haiku", effort: "low" }, "inner");
+  await step(0);
+
+  expect(asks).toHaveLength(1);
+  expect(served).toEqual(["haiku"]);
+  expect(JSON.parse(files[SERVED_FILE]!)).toEqual({
+    skill: "inner",
+    model: "haiku",
+    effort: "low"
+  });
+});
+
+test("a partial match asks only for what differs", async ($, on) => {
+  const { asks, skill } = engine($, on);
+
+  await skill({ model: SESSION_MODEL, effort: "low" });
+
+  expect(asks).toEqual([
+    "Skill probe requests effort low. Apply for this turn?"
+  ]);
+});
+
+test("refusing a nested skill keeps the outer skill's override", async ($, on) => {
+  const { dialog, served, efforts, skill, step } = engine($, on);
+
+  await skill({ model: "haiku", effort: "low" }, "outer");
+  dialog.reply = "No";
+  await skill({ model: "claude-sonnet-5-5" }, "inner");
+  await step(0);
+
+  expect(served).toEqual(["haiku"]);
+  expect(efforts).toEqual(["low"]);
+});
+
+test("a subagent skill matching its own model only renames, and pops on completion", async ($, on) => {
+  const { asks, files, skill, subagentSkill, step, complete } = engine($, on);
+  const shown = () => JSON.parse(files[SERVED_FILE]!);
+
+  await skill({ model: "haiku" }, "outer");
+  await step(0);
+  await step(0, "agent-1");
+  await subagentSkill("agent-1", {
+    model: SESSION_MODEL,
+    effort: SESSION_EFFORT
+  });
+  await step(1, "agent-1");
+
+  expect(asks).toHaveLength(1);
+  expect(shown()).toEqual({
+    skill: "probe",
+    model: SESSION_MODEL,
+    effort: SESSION_EFFORT
+  });
+
+  await complete("agent-1");
+  expect(shown()).toEqual({ skill: "outer", model: "haiku" });
 });
