@@ -32,6 +32,7 @@ services:
     network_mode: host
     environment:
       - DATA_DIR=/data
+      - PORT=20128
     volumes:
       - /home/omniroute-data:/data
     healthcheck:
