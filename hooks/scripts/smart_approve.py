@@ -592,11 +592,11 @@ def decide(
 
     # Then ask — any sub-command needing confirmation forces a prompt,
     # unless permission_mode is "bypassPermissions", which promotes to allow.
-    ask_cmd = next(
-        (c for c in sub_commands if command_matches_pattern(c, ask_patterns)), None
-    )
-    if ask_cmd is not None:
-        return _ask_decision(ask_cmd, bypass_permissions)
+    ask_cmds = [c for c in sub_commands if command_matches_pattern(c, ask_patterns)]
+    # why: any bypass-immune ask must prompt, wherever it sits in the chain.
+    decisions = [_ask_decision(c, bypass_permissions) for c in ask_cmds]
+    if decisions:
+        return next((d for d in decisions if d[0] == "ask"), decisions[0])
 
     if all(command_matches_pattern(c, allow_patterns) for c in sub_commands):
         return "allow", "All sub-commands match allow patterns"
