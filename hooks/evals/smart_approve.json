@@ -5,12 +5,22 @@
   "cases": [
     {
       "name": "non_bash_tool_no_output",
-      "input": { "tool_name": "Read", "tool_input": { "file_path": "x" } },
+      "input": {
+        "tool_name": "Read",
+        "tool_input": {
+          "file_path": "x"
+        }
+      },
       "expect_output": false
     },
     {
       "name": "empty_command_no_output",
-      "input": { "tool_name": "Bash", "tool_input": { "command": "" } },
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": ""
+        }
+      },
       "expect_output": false
     },
     {
@@ -27,7 +37,9 @@
       "name": "denied_pattern_yields_deny",
       "input": {
         "tool_name": "Bash",
-        "tool_input": { "command": "git push --force" }
+        "tool_input": {
+          "command": "git push --force"
+        }
       },
       "expect_output": true,
       "expect_pattern": "\"permissionDecision\": \"deny\""
@@ -36,7 +48,9 @@
       "name": "allowed_pattern_yields_allow",
       "input": {
         "tool_name": "Bash",
-        "tool_input": { "command": "git status" }
+        "tool_input": {
+          "command": "git status"
+        }
       },
       "expect_output": true,
       "expect_pattern": "\"permissionDecision\": \"allow\""
@@ -45,7 +59,9 @@
       "name": "ask_pattern_yields_ask",
       "input": {
         "tool_name": "Bash",
-        "tool_input": { "command": "curl https://example.com" }
+        "tool_input": {
+          "command": "curl https://example.com"
+        }
       },
       "expect_output": true,
       "expect_pattern": "\"permissionDecision\": \"ask\""
@@ -54,7 +70,9 @@
       "name": "bypass_permissions_promotes_ask_to_allow",
       "input": {
         "tool_name": "Bash",
-        "tool_input": { "command": "curl https://example.com" },
+        "tool_input": {
+          "command": "curl https://example.com"
+        },
         "permission_mode": "bypassPermissions"
       },
       "expect_output": true,
@@ -64,7 +82,55 @@
       "name": "bypass_permissions_still_denies",
       "input": {
         "tool_name": "Bash",
-        "tool_input": { "command": "sudo rm -rf /" },
+        "tool_input": {
+          "command": "sudo rm -rf /"
+        },
+        "permission_mode": "bypassPermissions"
+      },
+      "expect_output": true,
+      "expect_pattern": "\"permissionDecision\": \"deny\""
+    },
+    {
+      "name": "git_push_yields_ask",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git push origin feature/x"
+        }
+      },
+      "expect_output": true,
+      "expect_pattern": "\"permissionDecision\": \"ask\""
+    },
+    {
+      "name": "rtk_git_push_yields_ask",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "rtk git push"
+        }
+      },
+      "expect_output": true,
+      "expect_pattern": "\"permissionDecision\": \"ask\""
+    },
+    {
+      "name": "bypass_permissions_still_asks_for_git_push",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git push -u origin feature/x"
+        },
+        "permission_mode": "bypassPermissions"
+      },
+      "expect_output": true,
+      "expect_pattern": "\"permissionDecision\": \"ask\""
+    },
+    {
+      "name": "force_push_still_denied",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git push --force-with-lease origin feature/x"
+        },
         "permission_mode": "bypassPermissions"
       },
       "expect_output": true,

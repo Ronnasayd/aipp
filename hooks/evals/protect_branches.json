@@ -9,9 +9,67 @@
       "tool_input": {
         "command": "git push"
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
       "expect": "deny",
-      "expect_pattern": "protected branch"
+      "expect_pattern": "protected branch",
+      "branch": "master"
+    },
+    {
+      "name": "push_on_homolog_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "git push"
+      },
+      "branch": "homolog",
+      "expect": "deny",
+      "expect_pattern": "direct push to protected branch"
+    },
+    {
+      "name": "push_explicit_master_ref_from_feature_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "git push origin HEAD:master"
+      },
+      "branch": "feature/x",
+      "expect": "deny",
+      "expect_pattern": "push to protected branch"
+    },
+    {
+      "name": "push_explicit_develop_from_feature_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "git push origin develop"
+      },
+      "branch": "feature/x",
+      "expect": "deny",
+      "expect_pattern": "push to protected branch"
+    },
+    {
+      "name": "push_explicit_refs_heads_main_from_feature_denied",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "git push origin HEAD:refs/heads/main"
+      },
+      "branch": "feature/x",
+      "expect": "deny",
+      "expect_pattern": "push to protected branch"
+    },
+    {
+      "name": "push_feature_branch_allowed",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "git push -u origin feature/x"
+      },
+      "branch": "feature/x",
+      "expect": "allow"
+    },
+    {
+      "name": "plain_push_on_feature_allowed",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "git push"
+      },
+      "branch": "feature/x",
+      "expect": "allow"
     },
     {
       "name": "push_force_flag_on_master_denied",
@@ -19,9 +77,9 @@
       "tool_input": {
         "command": "git push --force origin master"
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
       "expect": "deny",
-      "expect_pattern": "force-push"
+      "expect_pattern": "force-push",
+      "branch": "master"
     },
     {
       "name": "branch_delete_master_denied",
@@ -29,9 +87,9 @@
       "tool_input": {
         "command": "git branch -D master"
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
       "expect": "deny",
-      "expect_pattern": "delete of protected branch"
+      "expect_pattern": "delete of protected branch",
+      "branch": "master"
     },
     {
       "name": "commit_on_master_denied",
@@ -39,9 +97,9 @@
       "tool_input": {
         "command": "git commit -m x"
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
       "expect": "deny",
-      "expect_pattern": "direct commit"
+      "expect_pattern": "direct commit",
+      "branch": "master"
     },
     {
       "name": "reset_hard_on_master_denied",
@@ -49,9 +107,9 @@
       "tool_input": {
         "command": "git reset --hard HEAD~1"
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
       "expect": "deny",
-      "expect_pattern": "hard reset"
+      "expect_pattern": "hard reset",
+      "branch": "master"
     },
     {
       "name": "non_git_command_allowed",
@@ -59,8 +117,8 @@
       "tool_input": {
         "command": "ls -la"
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
-      "expect": "allow"
+      "expect": "allow",
+      "branch": "master"
     },
     {
       "name": "git_status_on_master_allowed",
@@ -68,8 +126,8 @@
       "tool_input": {
         "command": "git status"
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
-      "expect": "allow"
+      "expect": "allow",
+      "branch": "master"
     },
     {
       "name": "empty_command_allowed",
@@ -77,8 +135,8 @@
       "tool_input": {
         "command": ""
       },
-      "cwd": "$AI_PROJECT_ROOT_DIR",
-      "expect": "allow"
+      "expect": "allow",
+      "branch": "master"
     }
   ]
 }
