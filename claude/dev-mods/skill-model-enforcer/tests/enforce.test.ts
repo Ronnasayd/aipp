@@ -17,6 +17,8 @@ function engine($: Harness[0], on: Harness[1]) {
     effort: SESSION_EFFORT
   };
   const stored: { effortLevel?: string } = { effortLevel: SESSION_EFFORT };
+  const env: Record<string, string> = {};
+  on("env.get", (_, e) => ({ value: env[e.name] }));
   on("settings.read", () => ({ value: stored }) as never);
   on("tool.call", { tool: "AskUserQuestion" }, (_$, e) => {
     const { question } = e.questions[0]!;
@@ -95,6 +97,7 @@ function engine($: Harness[0], on: Harness[1]) {
     dialog,
     applied,
     stored,
+    env,
     skill,
     subagentSkill,
     step,
@@ -331,6 +334,29 @@ test("the override asks first and names what it would change", async ($, on) => 
   ]);
   expect(served).toEqual(["haiku"]);
   expect(efforts).toEqual(["low"]);
+});
+
+test("SKILL_MODE_ENFORCE_AUTO applies the override without asking", async ($, on) => {
+  const { asks, dialog, env, served, efforts, skill, step } = engine($, on);
+  env.SKILL_MODE_ENFORCE_AUTO = "1";
+
+  dialog.reply = "No";
+  await skill({ model: "haiku", effort: "low" });
+  await step(0);
+
+  expect(asks).toEqual([]);
+  expect(served).toEqual(["haiku"]);
+  expect(efforts).toEqual(["low"]);
+});
+
+test("an empty SKILL_MODE_ENFORCE_AUTO still asks", async ($, on) => {
+  const { asks, env, skill, step } = engine($, on);
+  env.SKILL_MODE_ENFORCE_AUTO = "";
+
+  await skill({ model: "haiku" });
+  await step(0);
+
+  expect(asks).toHaveLength(1);
 });
 
 test("a refusal keeps the session's model and effort", async ($, on) => {
