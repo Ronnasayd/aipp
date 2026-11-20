@@ -26,13 +26,13 @@ services:
         condition: service_healthy
 
   omniroute:
-    build:
-      context: ./omniroute
+    image: diegosouzapw/omniroute:latest
     container_name: omniroute
     restart: unless-stopped
     network_mode: host
     environment:
       - DATA_DIR=/data
+      - PORT=20128
     volumes:
       - /home/omniroute-data:/data
     healthcheck:
