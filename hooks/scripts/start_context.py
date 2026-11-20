@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -406,6 +407,59 @@ def documentation_lang() -> str:
     )
 
 
+GLOSSARY_TERM = re.compile(r"^\*\*(.+?)\*\*:", re.MULTILINE)
+
+
+def glossary_reference(payload: dict) -> str:
+    """Render a markdown section pointing at the project's domain glossary.
+
+    Lists term names only, never definitions.
+
+    Args:
+        payload: Hook payload containing the project `cwd`.
+
+    Returns:
+        Markdown section naming the glossary file and its terms, or "" if absent.
+    """
+    cwd = project_dir(payload)
+    if os.path.exists(os.path.join(cwd, "GLOSSARY-MAP.md")):
+        return (
+            "## Domain glossary\n\n"
+            "Read `GLOSSARY-MAP.md` and the relevant context glossary "
+            "before naming things."
+        )
+    path = os.path.join(cwd, "GLOSSARY.md")
+    if not os.path.exists(path):
+        return ""
+    with open(path, encoding="utf-8") as f:
+        terms = GLOSSARY_TERM.findall(f.read())
+    return (
+        "## Domain glossary\n\n"
+        "Read `GLOSSARY.md` before naming things. Terms: " + ", ".join(terms)
+    )
+
+
+def optional_sections(payload: dict) -> str:
+    """Join every non-empty optional context section, each preceded by a blank line.
+
+    Args:
+        payload: Hook payload containing the project `cwd`.
+
+    Returns:
+        Concatenated markdown sections, or "" when none apply.
+    """
+    sections = [
+        glossary_reference(payload),
+        package_json(payload),
+        find_config_files(payload),
+        project_ports(payload),
+        disabled_mcp_servers(),
+        docker_containers(),
+        available_binaries(),
+    ]
+    return "".join(f"\n\n{s}" for s in sections if s)
+
+
 def main() -> None:
     """Assemble session-start context sections and emit the hook output."""
     try:
@@ -434,24 +488,7 @@ def main() -> None:
     additional_context = (
         f"{agent_instructions}\n\n{documentation_lang()}\n\n{communication_lang()}"
     )
-    package_text = package_json(payload)
-    if package_text:
-        additional_context += f"\n\n{package_text}"
-    config_text = find_config_files(payload)
-    if config_text:
-        additional_context += f"\n\n{config_text}"
-    ports_text = project_ports(payload)
-    if ports_text:
-        additional_context += f"\n\n{ports_text}"
-    disabled_mcp_text = disabled_mcp_servers()
-    if disabled_mcp_text:
-        additional_context += f"\n\n{disabled_mcp_text}"
-    docker_text = docker_containers()
-    if docker_text:
-        additional_context += f"\n\n{docker_text}"
-    binaries_text = available_binaries()
-    if binaries_text:
-        additional_context += f"\n\n{binaries_text}"
+    additional_context += optional_sections(payload)
     output = {
         "hookSpecificOutput": {
             "hookEventName": hook_event_name,
