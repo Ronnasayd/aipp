@@ -44,18 +44,24 @@ PERMISSIONS: dict[str, list[str]] = {
     ],
 }
 
+# why: these "ask" patterns publish outside the machine, so they still prompt
+# even when permission_mode is "bypassPermissions".
+BYPASS_IMMUNE_ASK: list[str] = ["Bash(git push:*)"]
+
 
 def load_settings(path: str | None = None) -> dict:
     """Load and return the permissions dict from settings.json.
 
     Args:
-        path: Optional path to settings.json. Defaults to $CLAUDE_CONFIG_DIR/settings.json.
+        path: Optional path to settings.json.
+            Defaults to $CLAUDE_CONFIG_DIR/settings.json.
 
     Returns:
         dict: The loaded settings dictionary, or empty dict if file not found.
     """
     if path is None:
-        path = f"{os.getenv('CLAUDE_CONFIG_DIR', os.path.expanduser('~/.claude'))}/settings.json"
+        config_dir = os.getenv("CLAUDE_CONFIG_DIR", os.path.expanduser("~/.claude"))
+        path = f"{config_dir}/settings.json"
     path = os.path.expanduser(path)
     try:
         with open(path, encoding="utf-8") as f:
@@ -206,6 +212,27 @@ def command_matches_pattern(cmd: str, patterns: list[tuple[str, str]]) -> bool:
     return False
 
 
+def _find_closing_paren(command: str, open_idx: int) -> int:
+    """Find the paren matching the one at open_idx.
+
+    Args:
+        command: The command string.
+        open_idx: Index of an opening paren.
+
+    Returns:
+        int: Index of the matching ")", or len(command) when unbalanced.
+    """
+    depth = 0
+    for j in range(open_idx, len(command)):
+        if command[j] == "(":
+            depth += 1
+        elif command[j] == ")":
+            depth -= 1
+            if depth == 0:
+                return j
+    return len(command)
+
+
 def extract_subshells(command: str) -> list[str]:
     """Extract contents of $() and backtick subshells, recursively.
 
@@ -226,22 +253,12 @@ def extract_subshells(command: str) -> list[str]:
             and command[i + 1] == "("
             and not (i + 2 < len(command) and command[i + 2] == "(")
         ):
-            # Find matching closing paren
-            depth = 0
-            start = i + 2
-            j = i + 1
-            while j < len(command):
-                if command[j] == "(":
-                    depth += 1
-                elif command[j] == ")":
-                    depth -= 1
-                    if depth == 0:
-                        content = command[start:j]
-                        subshells.append(content)
-                        # Recurse into content for nested subshells
-                        subshells.extend(extract_subshells(content))
-                        break
-                j += 1
+            j = _find_closing_paren(command, i + 1)
+            if j < len(command):
+                content = command[i + 2 : j]
+                subshells.append(content)
+                # why: recurse into content, since subshells can nest
+                subshells.extend(extract_subshells(content))
             i = j + 1
         else:
             i += 1
@@ -489,20 +506,17 @@ def decompose_command(command: str) -> list[str]:
     Returns:
         list[str]: List of normalized command strings.
     """
-    all_commands = []
+    all_commands: list[str] = []
 
     # Get top-level segments
     segments = split_on_operators(command)
 
     for seg in segments:
         # Also decompose any subshells found in this segment
-        subshells = extract_subshells(seg)
-        for sub in subshells:
-            sub_segments = split_on_operators(sub)
-            for ss in sub_segments:
-                normalized = normalize_command(ss)
-                if normalized:
-                    all_commands.append(normalized)
+        for sub in extract_subshells(seg):
+            all_commands.extend(
+                n for n in map(normalize_command, split_on_operators(sub)) if n
+            )
 
         # Normalize the top-level segment itself
         normalized = normalize_command(seg)
@@ -517,6 +531,26 @@ def decompose_command(command: str) -> list[str]:
     ]
 
 
+def _ask_decision(cmd: str, bypass_permissions: bool) -> tuple[str, str]:
+    """Resolve an "ask" match, promoting it to "allow" in bypass mode.
+
+    Args:
+        cmd: The sub-command that matched an ask pattern.
+        bypass_permissions: Whether permission_mode is "bypassPermissions".
+
+    Returns:
+        tuple[str, str]: (decision, reason).
+    """
+    immune = command_matches_pattern(cmd, parse_bash_patterns(BYPASS_IMMUNE_ASK))
+    if bypass_permissions and not immune:
+        return (
+            "allow",
+            f"Sub-command '{cmd}' matches ask pattern; "
+            "promoted to allow (bypassPermissions mode)",
+        )
+    return "ask", f"Sub-command '{cmd}' matches ask pattern"
+
+
 def decide(
     command: str, settings: dict, bypass_permissions: bool = False
 ) -> tuple[str | None, str | None]:
@@ -527,8 +561,8 @@ def decide(
     matches both ``git push`` and ``rtk git push``.
 
     When ``bypass_permissions`` is True (payload permission_mode ==
-    "bypassPermissions"), an "ask" decision is promoted to "allow";
-    "deny" is still honored.
+    "bypassPermissions"), an "ask" decision is promoted to "allow",
+    except for BYPASS_IMMUNE_ASK patterns; "deny" is still honored.
 
     Args:
         command: The command string to check.
@@ -558,24 +592,13 @@ def decide(
 
     # Then ask — any sub-command needing confirmation forces a prompt,
     # unless permission_mode is "bypassPermissions", which promotes to allow.
-    for cmd in sub_commands:
-        if command_matches_pattern(cmd, ask_patterns):
-            if bypass_permissions:
-                return (
-                    "allow",
-                    f"Sub-command '{cmd}' matches ask pattern; "
-                    "promoted to allow (bypassPermissions mode)",
-                )
-            return "ask", f"Sub-command '{cmd}' matches ask pattern"
+    ask_cmd = next(
+        (c for c in sub_commands if command_matches_pattern(c, ask_patterns)), None
+    )
+    if ask_cmd is not None:
+        return _ask_decision(ask_cmd, bypass_permissions)
 
-    # Check if ALL match allow
-    all_allowed = True
-    for cmd in sub_commands:
-        if not command_matches_pattern(cmd, allow_patterns):
-            all_allowed = False
-            break
-
-    if all_allowed:
+    if all(command_matches_pattern(c, allow_patterns) for c in sub_commands):
         return "allow", "All sub-commands match allow patterns"
 
     return None, None

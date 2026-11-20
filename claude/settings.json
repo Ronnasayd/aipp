@@ -77,7 +77,7 @@
       "Bash(git clean:*)",
       "Bash(git push --force:*)",
       "Bash(git push --force-with-lease:*)",
-      "Bash(git push:*)",
+      "Bash(git push -f:*)",
       "Bash(git rebase:*)",
       "Bash(git branch -D:*)",
       "Bash(git branch -d:*)",
@@ -120,7 +120,7 @@
       "ScheduleWakeup",
       "SendFeedback"
     ],
-    "ask": [],
+    "ask": ["Bash(git push:*)"],
     "defaultMode": "bypassPermissions"
   },
   "model": "opus",

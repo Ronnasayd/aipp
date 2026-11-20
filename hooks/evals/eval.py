@@ -11,6 +11,8 @@ mode "exit_code" (PreToolUse allow/deny hooks):
     tool_name       str, default "Bash"
     tool_input      dict
     cwd             optional, default repo root
+    branch          optional; run in a throwaway git repo checked out on this
+                     branch (also exported as CLAUDE_PROJECT_DIR)
     expect          "allow" | "deny"   (deny == exit code 2)
     expect_pattern  optional substr required in stderr
 
@@ -25,13 +27,17 @@ mode "stdout" (hooks that print JSON/context to stdout, always exit 0):
 
 import json
 import os
+from pathlib import Path
+import shutil
 import subprocess
 import sys
-from pathlib import Path
+import tempfile
 
 EVALS_DIR = Path(__file__).resolve().parent
 HOOKS_DIR = EVALS_DIR.parent
 REPO_ROOT = HOOKS_DIR.parent
+
+GIT = shutil.which("git") or "git"
 
 ENV = {
     **os.environ,
@@ -40,21 +46,62 @@ ENV = {
 
 
 def run_exit_code_case(hook_path: Path, case: dict) -> tuple[bool, str]:
+    """Run one allow/deny case; exit code 2 means deny.
+
+    Args:
+        hook_path: Hook script to execute.
+        case: Eval case spec.
+
+    Returns:
+        tuple[bool, str]: (passed, failure message).
+    """
     payload = {
         "tool_name": case.get("tool_name", "Bash"),
         "tool_input": case.get("tool_input", {}),
     }
-    cwd = case.get("cwd", str(REPO_ROOT))
+    if "branch" in case:
+        with tempfile.TemporaryDirectory() as repo:
+            subprocess.run(  # noqa: S603 -- argv built from repo-owned paths, no shell
+                [GIT, "init", "-q", "-b", case["branch"], repo],
+                check=True,
+            )
+            return _run_exit_code(
+                hook_path, payload, case, repo, {**ENV, "CLAUDE_PROJECT_DIR": repo}
+            )
+    return _run_exit_code(
+        hook_path,
+        payload,
+        case,
+        os.path.expandvars(case.get("cwd", str(REPO_ROOT))),
+        ENV,
+    )
 
+
+def _run_exit_code(
+    hook_path: Path, payload: dict, case: dict, cwd: str, env: dict
+) -> tuple[bool, str]:
+    """Run the hook with payload in cwd and check its allow/deny result.
+
+    Args:
+        hook_path: Hook script to execute.
+        payload: JSON payload sent on stdin.
+        case: Eval case spec.
+        cwd: Working directory for the hook.
+        env: Environment for the hook.
+
+    Returns:
+        tuple[bool, str]: (passed, failure message).
+    """
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603 -- argv built from repo-owned paths, no shell
             [sys.executable, str(hook_path)],
             input=json.dumps(payload),
             capture_output=True,
             text=True,
             cwd=cwd,
-            env=ENV,
+            env=env,
             timeout=10,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return False, "TIMEOUT"
@@ -78,6 +125,15 @@ def run_exit_code_case(hook_path: Path, case: dict) -> tuple[bool, str]:
 
 
 def run_stdout_case(hook_path: Path, case: dict) -> tuple[bool, str]:
+    """Run one stdout case and match its output.
+
+    Args:
+        hook_path: Hook script to execute.
+        case: Eval case spec.
+
+    Returns:
+        tuple[bool, str]: (passed, failure message).
+    """
     session_id = case.get("input", {}).get("session_id", "")
     for template in case.get("cache_files", []):
         path = Path(template.format(session_id=session_id, short_id=session_id[:8]))
@@ -88,7 +144,7 @@ def run_stdout_case(hook_path: Path, case: dict) -> tuple[bool, str]:
     )
 
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603 -- argv built from repo-owned paths, no shell
             [sys.executable, str(hook_path)],
             input=stdin_data,
             capture_output=True,
@@ -96,6 +152,7 @@ def run_stdout_case(hook_path: Path, case: dict) -> tuple[bool, str]:
             cwd=str(REPO_ROOT),
             env=ENV,
             timeout=90,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return False, "TIMEOUT"
@@ -128,39 +185,48 @@ RUNNERS = {"exit_code": run_exit_code_case, "stdout": run_stdout_case}
 
 
 def run_eval_file(eval_path: Path) -> tuple[int, int]:
+    """Run every case in one eval JSON.
+
+    Args:
+        eval_path: Eval JSON file.
+
+    Returns:
+        tuple[int, int]: (passed, failed) case counts.
+    """
     spec = json.loads(eval_path.read_text())
     hook_path = HOOKS_DIR / spec["hook"]
     mode = spec.get("mode", "exit_code")
     runner = RUNNERS[mode]
 
     if not hook_path.exists():
-        print(f"[{eval_path.name}] SKIP: hook not found: {hook_path}")
+        sys.stdout.write(f"[{eval_path.name}] SKIP: hook not found: {hook_path}\n")
         return 0, 0
 
     passed = 0
     failed = 0
-    print(f"\n=== {eval_path.name} -> {spec['hook']} ({mode}) ===")
+    sys.stdout.write(f"\n=== {eval_path.name} -> {spec['hook']} ({mode}) ===\n")
     for case in spec.get("cases", []):
         name = case["name"]
         ok, msg = runner(hook_path, case)
         if ok:
             passed += 1
-            print(f"  PASS  {name}")
+            sys.stdout.write(f"  PASS  {name}\n")
         else:
             failed += 1
-            print(f"  FAIL  {name}: {msg}")
+            sys.stdout.write(f"  FAIL  {name}: {msg}\n")
 
     return passed, failed
 
 
 def main() -> None:
+    """Run the given eval files, or all of them, and exit 1 on failure."""
     args = sys.argv[1:]
     eval_files = (
         sorted(EVALS_DIR.glob("*.json")) if not args else [Path(a) for a in args]
     )
 
     if not eval_files:
-        print("No eval files found.")
+        sys.stdout.write("No eval files found.\n")
         sys.exit(1)
 
     total_passed = 0
@@ -170,8 +236,8 @@ def main() -> None:
         total_passed += p
         total_failed += f
 
-    print(f"\n{'=' * 40}")
-    print(f"TOTAL: {total_passed} passed, {total_failed} failed")
+    sys.stdout.write(f"\n{'=' * 40}\n")
+    sys.stdout.write(f"TOTAL: {total_passed} passed, {total_failed} failed\n")
     sys.exit(1 if total_failed else 0)
 
 

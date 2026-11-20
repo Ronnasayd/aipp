@@ -107,7 +107,7 @@ def _check_push(tokens: list[str], args: list[str], branch: str | None) -> None:
 
     for ref in refs:
         ref_branch = ref.split(":")[-1] if ":" in ref else ref
-        ref_branch = ref_branch.lstrip("+")
+        ref_branch = ref_branch.lstrip("+").removeprefix("refs/heads/")
         if ref_branch in PROTECTED_BRANCHES:
             if has_force:
                 deny(" ".join(tokens), "force-push to protected branch", ref_branch)
@@ -117,6 +117,9 @@ def _check_push(tokens: list[str], args: list[str], branch: str | None) -> None:
                     "delete of protected branch (remote)",
                     ref_branch,
                 )
+            # why: plain `git push` is "ask" in settings, so a protected target
+            # pushed from a feature branch must be denied here, not prompted.
+            deny(" ".join(tokens), "push to protected branch", ref_branch)
 
     # `git push` / `git push origin` with no explicit ref, force-pushing
     # while HEAD is on a protected branch
