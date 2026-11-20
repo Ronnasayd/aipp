@@ -105,12 +105,15 @@ export const register: Register = (on) => {
       return next(e);
     }
     // why: ask rejects when dismissed and under -p; with no consent the loop keeps what it was serving
-    const answer = await $.ui
-      .ask(`Skill ${e.skill} requests ${change}. Apply for this turn?`, [
-        "Yes",
-        "No"
-      ])
-      .catch(() => undefined);
+    // why: SKILL_MODE_ENFORCE_AUTO set to any non-empty value opts out of the per-skill consent dialog
+    const answer = (await $.env.get("SKILL_MODE_ENFORCE_AUTO"))
+      ? "Yes"
+      : await $.ui
+          .ask(`Skill ${e.skill} requests ${change}. Apply for this turn?`, [
+            "Yes",
+            "No"
+          ])
+          .catch(() => undefined);
     stack.push(
       answer === "Yes"
         ? {
