@@ -26,8 +26,7 @@ services:
         condition: service_healthy
 
   omniroute:
-    build:
-      context: ./omniroute
+    image: diegosouzapw/omniroute:latest
     container_name: omniroute
     restart: unless-stopped
     network_mode: host

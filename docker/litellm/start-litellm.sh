@@ -25,5 +25,6 @@ echo "export ANTHROPIC_DEFAULT_HAIKU_MODEL=omnirouter-low" >> /tmp/litellm_env.s
 echo "export ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> /tmp/litellm_env.sh
 echo "claude" >> /tmp/litellm_env.sh
 echo "docker compose -f $DIR/docker-compose.yml down --remove-orphans" >> /tmp/litellm_env.sh
+echo "✅ Omniroute em http://127.0.0.1:20128"
 echo "✅ LiteLLM em http://$(hostname -I | awk '{print $1}'):4000"
 echo "Execute 'source /tmp/litellm_env.sh' to set environment variables for LiteLLM."
