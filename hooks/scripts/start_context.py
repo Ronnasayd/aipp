@@ -379,6 +379,21 @@ def disabled_mcp_servers() -> str:
     )
 
 
+def extra_allowed_paths() -> str:
+    """Render a markdown section listing PROTECT_FILES_EXTRA_ALLOWED patterns.
+
+    Returns:
+        Markdown section listing each extra allowed pattern, or "" if unset.
+    """
+    raw = os.environ.get("PROTECT_FILES_EXTRA_ALLOWED", "")
+    patterns = [p.strip() for p in re.split(r"[;,]", raw) if p.strip()]
+    if not patterns:
+        return ""
+    return "## Extra allowed paths (PROTECT_FILES_EXTRA_ALLOWED)\n\n" + "\n".join(
+        f"- `{p}`" for p in patterns
+    )
+
+
 def communication_lang() -> str:
     """Render a markdown line instructing which language to communicate in.
 
@@ -454,6 +469,7 @@ def optional_sections(payload: dict) -> str:
         find_config_files(payload),
         project_ports(payload),
         disabled_mcp_servers(),
+        extra_allowed_paths(),
         docker_containers(),
         available_binaries(),
     ]
