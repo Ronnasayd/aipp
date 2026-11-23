@@ -1,5 +1,5 @@
 [project]
-name = "ai-pair-programming-hooks"
+name = "aipp-hooks"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = ["numpy", "fastembed", "pyyaml", "tree-sitter-language-pack", "spacy", "langdetect"]
