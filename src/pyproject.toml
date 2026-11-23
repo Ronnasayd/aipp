@@ -1,5 +1,5 @@
 [project]
-name = "ai-pair-programmer-mcps"
+name = "aipp-mcps"
 version = "0.1.0"
 description = "AI pair programmer tool"
 authors = [{ name = "Ronnasayd Machado" }]

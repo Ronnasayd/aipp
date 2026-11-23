@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "ai-pair-programmer-mcps"
+name = "aipp-mcps"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
