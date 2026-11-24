@@ -84,6 +84,8 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 
 - Anytime: evaluate what worth saving as permanent memory. Save only what next session needs and can't rediscover from code, Git, or CLAUDE.md — _reason_ behind decision, non-obvious invariant, user preference. Already in repo or only relevant to this conversation → don't save. Persist via `ai-memory-durable-pages` skill.
 
+- Permanent memory scope: generic info (tool/CLI/MCP/library behavior, shared hooks, machine setup, user preferences, anything useful in another project) → save in `_global` (`memory_write_page` with `scope: "global"`). Project pages hold only what is specific to that project (its code, domain, decisions, config). Mixed content → split: generic part in `_global`, specific part in project. Before writing, search `_global` and update the existing page, never duplicate per project.
+
 - Domain vocabulary: `GLOSSARY.md` (or `GLOSSARY-MAP.md`) exists → read before naming things, use its terms exactly. Term resolved/changed with user, or term conflicts with glossary → update via `domain-modeling` skill. No glossary yet → create it only once first term agreed with user, never from agent inference alone. Glossary holds terms only; reasons/gotchas go to ai-memory, not glossary.
 
 - Self-contained task (no dependency on history, clear input, concise output, intermediate work not required in the main conversation) → use a sub-agent.

@@ -118,7 +118,7 @@
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/Ronnasayd/AI-pair-programming.git#subdirectory=src",
+        "git+https://github.com/Ronnasayd/aipp.git#subdirectory=src",
         "skill-loader-mcp"
       ],
       "alwaysLoad": true
