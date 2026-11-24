@@ -15,13 +15,39 @@ from utils import get_hooks_logger  # noqa: E402
 LOG = get_hooks_logger("StartMemoryRules")
 
 # Durable page path prefixes worth surfacing at session start.
-DURABLE_PREFIXES = ("rules/", "_rules/", "gotchas/", "procedures/", "feedback")
+DURABLE_PREFIXES = (
+    "rules/",
+    "_rules/",
+    "gotchas/",
+    "procedures/",
+    "feedback",
+    "notes/",
+    "decisions/",
+    "preferences/",
+    "bugs/",
+    "concepts/",
+    "reference/",
+    "tools/",
+)
 
 # Query the FTS index (which covers the `path` field) with both singular and
 # plural forms of every durable prefix, so a page is matched by its path alone
 # even when its title/body contains none of these words.
-FTS_QUERY = "rules OR rule OR feedback OR gotcha OR gotchas OR procedure OR procedures"
+FTS_QUERY = (
+    "rules OR rule OR feedback OR gotcha OR gotchas OR procedure OR procedures "
+    "OR note OR notes OR decision OR decisions OR preference OR preferences "
+    "OR bug OR bugs OR concept OR concepts OR reference OR references "
+    "OR tool OR tools"
+)
 LIMIT = "60"
+
+GLOBAL_HINT = (
+    "Generic memory (tools, hooks, machine setup, user preferences) is saved in the "
+    "`_global` project and is not listed here. Before working with a tool, hook or "
+    "error, check it for relevant pages: `ai-memory search '<terms>' --project "
+    "_global` (or `global_scope_hits` in `memory_query`), then `ai-memory read-page "
+    "--project _global --path <path>`."
+)
 
 
 def fetch_pages() -> list[tuple[str, str]]:
@@ -72,18 +98,20 @@ def main() -> None:
 
     pages = fetch_pages()
     LOG.debug("[main] %d durable pages matched", len(pages))
-    if not pages:
-        sys.exit(0)
 
-    lines = [
-        "## ai-memory: durable pages in this project",
-        "",
-        "Permanent memory (rules, feedback, gotchas, procedures). "
-        "Read a page with `ai-memory read-page --path <path>` or "
-        "`memory_read_page` when relevant.",
-        "",
-    ]
-    lines.extend(f"- `{path}` — {title}" for path, title in pages)
+    lines = []
+    if pages:
+        lines += [
+            "## ai-memory: durable pages in this project",
+            "",
+            "Permanent memory (rules, gotchas, procedures, notes, decisions, etc.). "
+            "Read a page with `ai-memory read-page --path <path>` or "
+            "`memory_read_page` when relevant.",
+            "",
+        ]
+        lines.extend(f"- `{path}` — {title}" for path, title in pages)
+        lines.append("")
+    lines += ["## ai-memory: `_global` pages", "", GLOBAL_HINT]
 
     output = {
         "hookSpecificOutput": {
