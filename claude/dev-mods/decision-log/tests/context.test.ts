@@ -78,8 +78,19 @@ test("an unreadable session file is never overwritten", async ($, on) => {
 
 test("a result shape this build does not know warns and keeps the answer", async ($, on) => {
   const { files, logs, question } = engine($, on);
-  const ran = await question({ answers: null, questions: "?" }, ask());
-  expect(ran.result).toEqual({ answers: null, questions: "?" });
+  const unknownShapes = [
+    { answers: null, questions: "?" },
+    { answers: {}, questions: undefined },
+    { answers: null, questions: [ask()] },
+    { answers: "Home", questions: [ask()] }
+  ];
+  for (const shape of unknownShapes) {
+    const ran = await question(shape, ask());
+    expect(ran.result).toEqual(shape);
+  }
   expect(files).toEqual({});
-  expect(logs).toHaveLength(1);
+  expect(logs).toHaveLength(unknownShapes.length);
+  for (const log of logs) {
+    expect(log).toContain("formato de resultado desconhecido");
+  }
 });

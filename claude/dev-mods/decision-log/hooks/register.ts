@@ -91,6 +91,13 @@ function section(d: Decision, n: number, time: string) {
     .join("\n\n");
 }
 
+function isAnswered(result: unknown): result is Answered {
+  const { questions, answers } = (result ?? {}) as Partial<Answered>;
+  return (
+    Array.isArray(questions) && typeof answers === "object" && answers !== null
+  );
+}
+
 function toDecisions(answered: Answered, skill: string): Decision[] {
   return answered.questions.flatMap((q) => {
     const answer = answered.answers[q.question] || answered.response;
@@ -167,7 +174,9 @@ export const register: Register = (on) => {
     queue = queue
       .then(async () => {
         const sid = await $.session.id();
-        const answered = ran.result as unknown as Answered;
+        const answered: unknown = ran.result;
+        if (!isAnswered(answered))
+          throw new Error("formato de resultado desconhecido");
         const decisions = toDecisions(answered, skills.get(sid) ?? "nenhuma");
         if (decisions.length > 0) await record($, sid, decisions);
       })
