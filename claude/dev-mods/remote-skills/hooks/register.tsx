@@ -6,17 +6,16 @@ const PREFIX = "rs-";
 const SERVER = "aipp_skill-loader";
 
 type Entry = { name: string; description: string };
-type McpResult = { content: { type: string }[]; structuredContent?: unknown };
+type Download = { errors?: string[]; error?: string };
 
-// why: skill-loader tools return a JSON dict either as structuredContent or as a text block.
-function parseResult<T>(res: McpResult): { data: T; text?: string } {
-  const text = (
-    res.content.find((b) => b.type === "text") as { text?: string } | undefined
-  )?.text;
-  return {
-    data: (res.structuredContent ?? JSON.parse(text ?? "{}")) as T,
-    text
-  };
+// hazard: PostToolUse hooks (context-mode) replace answers over 4096 B with a non-JSON excerpt,
+// so an unparsable answer says nothing about whether the download worked; the disk does.
+function parseDownload(text: string): Download {
+  try {
+    return (JSON.parse(text) as Download | null) ?? {};
+  } catch {
+    return {};
+  }
 }
 
 // hazard: ponytail shortcut — parses only the shape build-skill-index.py writes (one name, plain or
@@ -62,34 +61,35 @@ export const register: Register = (on) => {
   on("command.run", async ($, e, next) => {
     if (!e.command.startsWith(PREFIX)) return next(e);
     const name = e.command.slice(PREFIX.length);
-    const res = await $.mcp.call(SERVER, "get_remote_skill", { name });
-    const { data, text: raw } = parseResult<{
-      content?: string;
-      files?: string[];
-      error?: string;
-    }>(res);
-    if (res.isError || !data.content)
-      return {
-        text: `Falha ao carregar skill ${name}: ${data.error ?? raw ?? "sem conteúdo"}`
-      };
-
-    let files = "";
-    if (data.files?.length) {
-      // why: scripts the SKILL.md runs by relative path must exist on disk; the MCP
-      // server's own cwd is not guaranteed to be the project, so pass an absolute dir.
-      const saved = await $.mcp.call(SERVER, "download_remote_skill", {
+    let content: string;
+    let files: string;
+    // why: a throwing command.run hook is skipped and the user only sees the host's misleading
+    // "no command.run hook answered", so every failure becomes an answer.
+    try {
+      // why: the MCP server's own cwd is not guaranteed to be the project.
+      const skills = `${await $.session.root()}/.claude/skills`;
+      const res = await $.mcp.call(SERVER, "download_remote_skill", {
         name,
-        dest_dir: `${await $.session.root()}/.claude/skills`
+        dest_dir: skills
       });
-      const { data: out, text } = parseResult<{
-        dir?: string;
-        errors?: string[];
-        error?: string;
-      }>(saved);
-      files = out.dir
-        ? `\n\nSkill files saved to ${out.dir} (${data.files.join(", ")}); resolve relative paths in the skill from that directory.` +
-          (out.errors?.length ? ` Failed: ${out.errors.join("; ")}` : "")
-        : `\n\nAdjacent files (download failed: ${out.error ?? text}; fetch with ${SERVER} get_remote_skill_file): ${data.files.join(", ")}`;
+      const raw = res.content
+        .map((b) => (b as { text?: string }).text ?? "")
+        .join("");
+      const { error, errors } = parseDownload(raw);
+      if (res.isError || error) throw new Error(error ?? raw);
+
+      const dir = `${skills}/${name}`;
+      const skillMd = await $.fs.read(`${dir}/SKILL.md`);
+      if (typeof skillMd !== "string" || !skillMd)
+        throw new Error(`SKILL.md vazio ou ilegível em ${dir}`);
+      content = skillMd;
+      files =
+        `\n\nSkill files saved to ${dir}; resolve relative paths in the skill from that directory.` +
+        (errors?.length ? ` Failed: ${errors.join("; ")}` : "");
+    } catch (err) {
+      return {
+        text: `Falha ao carregar skill ${name}: ${err instanceof Error ? err.message : String(err)}`
+      };
     }
     const task = e.args.trim() ? `\n\nTask: ${e.args.trim()}` : "";
     // why: a command.run answer only records context and never starts a model turn.
@@ -103,9 +103,7 @@ export const register: Register = (on) => {
     );
     return {
       text: `Skill ${name} carregada.`,
-      context: [
-        `Follow this skill "${name}":\n\n${data.content}${files}${task}`
-      ]
+      context: [`Follow this skill "${name}":\n\n${content}${files}${task}`]
     };
   });
 };
