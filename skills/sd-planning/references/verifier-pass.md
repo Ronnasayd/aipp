@@ -27,24 +27,25 @@ flowchart TD
     G -- no --> Done([Step 4])
     G -- yes --> F["Show gaps to user; fix per /sd-review-spec steps 4-5, 6-7
     (skip its Step 5.5 — this loop replaces it)"]
-    F --> Q{"Depth low, or no fix in a
-    re-verified severity applied?"}
+    F --> Q{"Depth low, or round
+    had zero High findings?"}
     Q -- yes --> Done
     Q -- no --> H{"Round limit hit?
     medium: 3, high: 5"}
     H -- no --> R2["New fresh sub-agent (never SendMessage to the old one),
-    scoped to files/claims touched by those fixes,
+    scoped to files/claims touched by this round's fixes
+    (medium: High fixes; high: High, Medium, Inconsistency fixes),
     given spec-dir/review/settled.md"] --> R
     H -- "yes, High remains" --> E([STOP: escalate remaining findings
     BLOCKED / TRIED / NEED])
 ```
 
-| Rule                      | Detail                                                                                  |
-| ------------------------- | --------------------------------------------------------------------------------------- |
-| Re-verified severities    | `low`: none; `medium`: High; `high`: High, Medium, Inconsistency                        |
-| Outside re-verified       | One fix pass, no re-verification (`low`: every finding, step ends after one fix pass)   |
-| Loop ends                 | Round reports zero High findings, or round limit (3 at `medium`, 5 at `high`)           |
-| Limit hit with High left  | STOP, escalate to the user (BLOCKED / TRIED / NEED); never apply another round of fixes |
-| `high`, last round        | Medium and Inconsistency findings from the last round get one fix pass                  |
-| Scope of re-verify rounds | Only files/claims touched by the fixes, not the full doc set                            |
-| Settled list              | Pass `<spec-dir>/review/settled.md` so contested/declined findings are not reopened     |
+| Rule                      | Detail                                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| Re-verified severities    | Fixes the next round checks. `low`: none; `medium`: High; `high`: High, Medium, Inconsistency |
+| Outside re-verified       | One fix pass, no re-verification (`low`: every finding, step ends after one fix pass)         |
+| Loop ends                 | Round reports zero High findings, or round limit (3 at `medium`, 5 at `high`)                 |
+| Limit hit with High left  | STOP, escalate to the user (BLOCKED / TRIED / NEED); never apply another round of fixes       |
+| Round with zero High      | Its Medium and Inconsistency findings get one fix pass; no new round, even at `high`          |
+| Scope of re-verify rounds | Only files/claims touched by the fixes, not the full doc set                                  |
+| Settled list              | Pass `<spec-dir>/review/settled.md` so contested/declined findings are not reopened           |
