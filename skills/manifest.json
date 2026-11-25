@@ -886,14 +886,20 @@
   },
   "sd-planning": {
     "skill_md": "sd-planning/SKILL.md",
-    "files": ["CHECKLIST.md", "references/diagram.md", "references/docs-adr.md"]
+    "files": [
+      "CHECKLIST.md",
+      "references/diagram.md",
+      "references/docs-adr.md",
+      "references/verifier-pass.md"
+    ]
   },
   "sd-review-spec": {
     "skill_md": "sd-review-spec/SKILL.md",
     "files": [
       "references/fix-by-file.md",
       "references/taskmaster-sync.md",
-      "references/verification-checklist.md"
+      "references/verification-checklist.md",
+      "references/verifier-loop.md"
     ]
   },
   "semantic-commit-message": {

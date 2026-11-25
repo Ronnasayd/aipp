@@ -1,0 +1,33 @@
+# Steps 2 and 5.5 — Fresh-context verifier and re-verification loop
+
+Whoever drafted or discussed the spec shares its blind spots, so verification runs in a subagent that has never seen this conversation.
+
+## Spawning the verifier
+
+| Rule        | Detail                                                                                                                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool        | `Agent` tool, `general-purpose`, `model: "sonnet"` (without `model` it inherits the parent's model); effort `high` for Step 2, `medium` for Step 5.5 rounds                                                                                                                                                         |
+| Fresh agent | Never `subagent_type: "fork"` (inherits this conversation). Each Step 2 run and each Step 5.5 round gets a **new** agent; never continue an earlier verifier with `SendMessage` (keeps the previous round's context)                                                                                                |
+| Prompt      | Only: repo root, absolute paths of spec files + cited ADRs, path of [verification-checklist.md](verification-checklist.md), output file path; in Step 5.5 also the scope (touched files/claims) + settled-list path                                                                                                 |
+| Never pass  | Conversation summary, author rationale, own suspicions, expected findings                                                                                                                                                                                                                                           |
+| Output file | Verifier never edits code or spec docs. Writes, in English, `<spec-dir>/review/verify-round-<N>.md` (Step 2 = round 1; each Step 5.5 round increments N); one row per claim: quoted claim + doc `path:line`, status (confirmed / false / unverifiable), evidence (`path:line` or command output), proposed severity |
+| Final msg   | Only file path + counts per status and severity, never the findings. Missing/empty file = verifier did not run → retry once, then stop and tell the user                                                                                                                                                            |
+| Disposition | Main agent reads the file and fills a `Disposition` column in that same file (Step 3); no finding dropped without one                                                                                                                                                                                               |
+| No subagent | Harness lacks a subagent tool → verify inline; Step 8 report states "verification was not fresh-context"                                                                                                                                                                                                            |
+
+## Step 5.5 loop
+
+| Rule              | Detail                                                                                                                                                                                                                      |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skip              | Depth `low`                                                                                                                                                                                                                 |
+| Trigger           | After applying every fix in the depth's re-verified severities (`medium`: High; `high`: High, Medium, Inconsistency)                                                                                                        |
+| Round             | New verifier, scoped to files/claims touched by those fixes, given `review/settled.md` path                                                                                                                                 |
+| Repeat            | Any High finding remains (new or unresolved) → Steps 4-5.5 on remaining items                                                                                                                                               |
+| End               | Round reports zero High findings, or round limit hit: 3 at `medium`, 5 at `high`                                                                                                                                            |
+| Limit hit         | STOP — no further fix unsupervised — escalate remaining findings to user (BLOCKED / TRIED / NEED if project uses it)                                                                                                        |
+| Last round, high  | Medium and Inconsistency findings from the last round get one fix pass                                                                                                                                                      |
+| Same vs new       | Agent judges. Fix that only moved a line number = same finding, resolved. Fix that broke a different claim = new finding, counts toward the round budget                                                                    |
+| Settled list      | Settled = CONTEST, DECLINE, or ESCALATE the user confirmed without change. Kept in `<spec-dir>/review/settled.md` across rounds. Verifier re-raising a settled finding (same scope, same issue) → don't reopen, don't count |
+| Applied ≠ settled | An applied fix never settles a finding. Later verifier raises same issue at same scope → fix failed or later edit reintroduced it → reopen                                                                                  |
+
+Why `medium` re-verifies only High: Medium and Inconsistency cost less when wrong, and re-verifying every Medium makes routine reviews expensive for little gain. Use `high` only when that trade-off does not hold.
