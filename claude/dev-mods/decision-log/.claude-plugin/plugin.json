@@ -1,0 +1,5 @@
+{
+  "name": "decision-log",
+  "version": "0.1.0",
+  "description": "Writes every answered AskUserQuestion to a per-session markdown file in .decisions/"
+}

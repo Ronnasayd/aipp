@@ -13,7 +13,7 @@
     "PROTECT_FILES_MCP_ALLOWLIST": "aipp_ssh-mcp",
     "QUESTION_TOOL_LANG": "Portuguese",
     "MD_LANGUAGE": "English",
-    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/dev-mods/tool-history:~/.claude/dev-mods/cache-warmup:~/.claude/dev-mods/tool-stats:~/.claude/dev-mods/skill-model-enforcer:~/.claude/dev-mods/remote-skills:~/.claude/dev-mods/quiz-mod",
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/dev-mods/tool-history:~/.claude/dev-mods/cache-warmup:~/.claude/dev-mods/tool-stats:~/.claude/dev-mods/skill-model-enforcer:~/.claude/dev-mods/remote-skills:~/.claude/dev-mods/quiz-mod:~/.claude/dev-mods/decision-log",
     "CLAUDE_CODE_PROMPT_CACHE_TTL": "5m",
     "CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL": "5m",
     "SKILL_MODE_ENFORCE_AUTO": "1",
