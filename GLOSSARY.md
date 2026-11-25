@@ -52,6 +52,10 @@ _Avoid_: Panel, bar, widget
 A short label that a Dev-mod adds to the Claude Code status line.
 _Avoid_: Indicator, tag
 
+**Decision log**:
+The per-session record of the questions an agent asked the user, the options offered and the answers chosen.
+_Avoid_: Question history, grilling log, decision history
+
 ### Harness
 
 **Harness**:
