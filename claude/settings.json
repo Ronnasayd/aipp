@@ -147,7 +147,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$AIPP_AUTONOMOUS\" != \"1\" ] &&[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
+            "command": "[ \"$AIPP_AUTONOMOUS\" = \"1\" ] || [ -z \"$CLAUDE_PROJECT_DIR\" ] || uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
             "timeout": 10,
             "async": true
           },
@@ -205,7 +205,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"$AIPP_AUTONOMOUS\" != \"1\" ] &&[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
+            "command": "[ \"$AIPP_AUTONOMOUS\" = \"1\" ] || [ -z \"$CLAUDE_PROJECT_DIR\" ] || uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
             "timeout": 10,
             "async": true
           }
@@ -216,7 +216,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -x \"$CLAUDE_CONFIG_DIR/hooks/rtk-rewrite.sh\" ] && $CLAUDE_CONFIG_DIR/hooks/rtk-rewrite.sh | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh RtkRewrite",
+            "command": "[ ! -x \"$CLAUDE_CONFIG_DIR/hooks/rtk-rewrite.sh\" ] || $CLAUDE_CONFIG_DIR/hooks/rtk-rewrite.sh | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh RtkRewrite",
             "timeout": 10
           },
           {
