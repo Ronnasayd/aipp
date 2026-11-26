@@ -13,7 +13,7 @@ Always-on, author ≠ verifier. Never skip it and never ask whether to run it; o
 
 | Rule         | Detail                                                                                                                                                                            |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Agent        | Fresh sub-agent, `model: "sonnet"`; effort `high` in round 1, `medium` in later rounds; no inherited context from steps 1-2                                                       |
+| Agent        | Fresh sub-agent, `model: "opus"`, effort `high` in every round; no inherited context from steps 1-2                                                                               |
 | Runs         | `/sd-review-spec` in report-only mode against `spec.md`, `design.md`, `tasks.md`, `requirements.md`, cited ADRs                                                                   |
 | Input (only) | Original feature request, verbatim as the user stated it; the feature's spec dir path                                                                                             |
 | Checks       | Every doc claim vs real code; full set covers what the original request needs: scope, constraints, edge cases, dependencies, every `requirements.md` requirement traced to a task |
