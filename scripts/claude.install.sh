@@ -141,7 +141,8 @@ LOCAL_SETTINGS="$LOCAL/$DEFAULT_FOLDER/settings.local.json"
 if [ ! -f "$LOCAL_SETTINGS" ]; then
   echo '{}' > "$LOCAL_SETTINGS"
 fi
-jq --arg dir "$LOCAL" '.env.CLAUDE_PROJECT_DIR = $dir | .env.PROTECT_FILES_EXTRA_ALLOWED = (.env.PROTECT_FILES_EXTRA_ALLOWED // "")' "$LOCAL_SETTINGS" > "${LOCAL_SETTINGS}.tmp" && mv "${LOCAL_SETTINGS}.tmp" "$LOCAL_SETTINGS"
+# why: hooks run `uv run --project $AI_PROJECT_ROOT_DIR`; Claude Code does not source ~/.bashrc, so the var must live in settings env
+jq --arg dir "$LOCAL" --arg root "$SOURCE" '.env.CLAUDE_PROJECT_DIR = $dir | .env.AI_PROJECT_ROOT_DIR = $root | .env.PROTECT_FILES_EXTRA_ALLOWED = (.env.PROTECT_FILES_EXTRA_ALLOWED // "")' "$LOCAL_SETTINGS" > "${LOCAL_SETTINGS}.tmp" && mv "${LOCAL_SETTINGS}.tmp" "$LOCAL_SETTINGS"
 ########################################################################################
 if ! [ -e "$LOCAL/$DEFAULT_FOLDER/context-refs.json" ] && ! [ -L "$LOCAL/$DEFAULT_FOLDER/context-refs.json" ]; then
 ln -s "$SOURCE/claude/context-refs.json" "$LOCAL/$DEFAULT_FOLDER/context-refs.json"
