@@ -50,6 +50,7 @@ def run(cmd: str, cwd: str) -> str | None:
     """
     result = run_command_cwd(cmd, cwd=cwd, timeout=COMMAND_TIMEOUT_SECONDS)
     if not result["success"]:
+        logger.debug("command failed: %s | stderr: %s", cmd, result["error"])
         return None
     return result["output"]
 
@@ -81,22 +82,19 @@ def has_github_remote(cwd: str) -> bool:
     return "github.com" in (run("git remote -v", cwd) or "")
 
 
-def fetch_open_pr(cwd: str) -> dict | None:
-    """Fetch the PR gh resolves for the current branch.
+def fetch_branch_pr(cwd: str) -> dict | None:
+    """Fetch the PR gh resolves for the current branch, in any state.
 
     Args:
         cwd: Repository directory.
 
     Returns:
-        The PR fields when the PR is OPEN, else None.
+        The PR fields, or None when gh found no PR.
     """
     raw = run(f"gh pr view --json {PR_FIELDS}", cwd)
     if not raw:
         return None
-    pr = json.loads(raw)
-    if pr.get("state") != "OPEN":
-        return None
-    return pr
+    return json.loads(raw)
 
 
 def repo_slug(pr_url: str) -> tuple[str, str]:
@@ -116,7 +114,7 @@ def count_unresolved_threads(pr: dict, cwd: str) -> int | None:
     """Count the PR's unresolved inline review threads via GraphQL.
 
     Args:
-        pr: PR fields from fetch_open_pr.
+        pr: PR fields from fetch_branch_pr.
         cwd: Repository directory.
 
     Returns:
@@ -158,7 +156,7 @@ def render_summary(pr: dict, unresolved: int | None) -> str:
     """Render the markdown block injected as additionalContext.
 
     Args:
-        pr: PR fields from fetch_open_pr.
+        pr: PR fields from fetch_branch_pr.
         unresolved: Unresolved thread count, None when unknown.
 
     Returns:
@@ -182,6 +180,28 @@ def render_summary(pr: dict, unresolved: int | None) -> str:
     )
 
 
+def can_query_pr(cwd: str) -> bool:
+    """Check the prerequisites for asking gh about the current branch's PR.
+
+    Args:
+        cwd: Repository directory.
+
+    Returns:
+        True when gh is installed, cwd is on a branch, and a github.com remote
+        exists. Each failed check is logged with its reason.
+    """
+    if not shutil.which("gh"):
+        logger.debug("skip: gh not found on PATH (PATH=%s)", os.environ.get("PATH"))
+        return False
+    if not current_branch(cwd):
+        logger.debug("skip: no branch (detached HEAD or not a git repo)")
+        return False
+    if not has_github_remote(cwd):
+        logger.debug("skip: no github.com remote")
+        return False
+    return True
+
+
 def build_context(cwd: str) -> str | None:
     """Build the PR review summary for the branch checked out in cwd.
 
@@ -191,15 +211,23 @@ def build_context(cwd: str) -> str | None:
     Returns:
         The summary, or None when there is no open PR with a review.
     """
-    if not shutil.which("gh"):
+    logger.debug("start: cwd=%s", cwd)
+    if not can_query_pr(cwd):
         return None
-    if not current_branch(cwd) or not has_github_remote(cwd):
-        return None
-    pr = fetch_open_pr(cwd)
+    pr = fetch_branch_pr(cwd)
     if pr is None:
+        logger.debug("skip: no PR found for current branch")
+        return None
+    if pr.get("state") != "OPEN":
+        logger.debug("skip: PR #%s state is %s", pr.get("number"), pr.get("state"))
         return None
     unresolved = count_unresolved_threads(pr, cwd)
     if not pr.get("latestReviews") and not unresolved:
+        logger.debug(
+            "skip: PR #%s has no reviews and %s unresolved threads",
+            pr["number"],
+            "unknown" if unresolved is None else unresolved,
+        )
         return None
     return render_summary(pr, unresolved)
 
@@ -208,9 +236,11 @@ def main() -> None:
     """Read the SessionStart payload and emit the PR review summary if any."""
     try:
         payload = json.loads(sys.stdin.read(MAX_STDIN))
-    except (json.JSONDecodeError, TypeError, OSError):
+    except (json.JSONDecodeError, TypeError, OSError) as exc:
+        logger.debug("skip: invalid SessionStart payload: %s", exc)
         sys.exit(0)
     if not isinstance(payload, dict):
+        logger.debug("skip: SessionStart payload is not an object")
         sys.exit(0)
 
     context = build_context(project_dir(payload))
