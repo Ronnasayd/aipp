@@ -18,6 +18,7 @@ Scripts live in [`scripts/`](scripts) and run via
 | `start_context.py`             | Logs tool calls / seeds session context.                                                      |
 | `start_memory_rules.py`        | Injects the project's durable ai-memory pages and a pointer to `_global`.                     |
 | `taskmaster_next_task.py`      | Surfaces the next pending Taskmaster task per tag.                                            |
+| `pr_review_context.py`         | Summarizes the branch's open GitHub PR (decision, reviewers, unresolved threads) if reviewed. |
 | `ai-memory` session-start hook | Fetches pending cross-session handoff.                                                        |
 | `mcp_manager_context`          | Injects mcp-manager server/tool catalog.                                                      |
 

@@ -1,0 +1,31 @@
+{
+  "hook": "scripts/pr_review_context.py",
+  "mode": "stdout",
+  "description": "Eval cases for pr_review_context.py (SessionStart, open-PR review summary). Positive paths are covered by hooks/scripts/test_pr_review_context.py with a fake gh.",
+  "cases": [
+    {
+      "name": "empty_stdin_silent",
+      "raw_stdin": "",
+      "expect_output": false
+    },
+    {
+      "name": "malformed_json_silent",
+      "raw_stdin": "{not json",
+      "expect_output": false
+    },
+    {
+      "name": "non_object_payload_silent",
+      "raw_stdin": "[1, 2]",
+      "expect_output": false
+    },
+    {
+      "name": "repo_branch_without_reviewed_pr_silent",
+      "input": {
+        "hook_event_name": "SessionStart",
+        "source": "startup",
+        "session_id": "eval-pr-review"
+      },
+      "expect_output": false
+    }
+  ]
+}

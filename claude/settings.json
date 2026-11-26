@@ -395,6 +395,11 @@
           },
           {
             "type": "command",
+            "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/pr_review_context.py",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "command": "uvx --from git+https://github.com/Ronnasayd/mcp-manager.git mcp_manager_context $MCP_MANAGER_CATALOG | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh McpManagerContext",
             "timeout": 10
           },
