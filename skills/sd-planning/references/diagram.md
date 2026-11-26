@@ -11,7 +11,10 @@ flowchart TD
     DP --> V["3. Verifier (fresh sub-agent, no inherited context)
     /sd-review-spec report-only vs original request + code"]
     V --> V2{"Gaps found?"}
-    V2 -- yes --> V3["Show gaps to user,
+    V2 -- yes --> VL{"High found and round limit hit?
+    (medium: 3, high: 5)"}
+    VL -- yes --> X([STOP before fixing: BLOCKED / TRIED / NEED])
+    VL -- no --> V3["Show gaps to user,
     apply fixes (/sd-review-spec steps 4-5, 6-7)"]
     V3 -- "High remains: new scoped verifier (medium: until zero High or max 3 rounds; high: until zero High or max 5 rounds)" --> V
     V3 -- "depth low, or zero High" --> D
