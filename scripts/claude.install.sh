@@ -142,7 +142,8 @@ if [ ! -f "$LOCAL_SETTINGS" ]; then
   echo '{}' > "$LOCAL_SETTINGS"
 fi
 # why: hooks run `uv run --project $AI_PROJECT_ROOT_DIR`; Claude Code does not source ~/.bashrc, so the var must live in settings env
-jq --arg dir "$LOCAL" --arg root "$SOURCE" '.env.CLAUDE_PROJECT_DIR = $dir | .env.AI_PROJECT_ROOT_DIR = $root | .env.PROTECT_FILES_EXTRA_ALLOWED = (.env.PROTECT_FILES_EXTRA_ALLOWED // "")' "$LOCAL_SETTINGS" > "${LOCAL_SETTINGS}.tmp" && mv "${LOCAL_SETTINGS}.tmp" "$LOCAL_SETTINGS"
+# why: AIPP_AUTO=1 comes from `aipp --auto`; without it AIPP_AUTONOMOUS is removed so a rerun returns the project to interactive mode
+jq --arg dir "$LOCAL" --arg root "$SOURCE" --arg auto "${AIPP_AUTO:-0}" '.env.CLAUDE_PROJECT_DIR = $dir | .env.AI_PROJECT_ROOT_DIR = $root | .env.PROTECT_FILES_EXTRA_ALLOWED = (.env.PROTECT_FILES_EXTRA_ALLOWED // "") | if $auto == "1" then .env.AIPP_AUTONOMOUS = "1" else del(.env.AIPP_AUTONOMOUS) end' "$LOCAL_SETTINGS" > "${LOCAL_SETTINGS}.tmp" && mv "${LOCAL_SETTINGS}.tmp" "$LOCAL_SETTINGS"
 ########################################################################################
 if ! [ -e "$LOCAL/$DEFAULT_FOLDER/context-refs.json" ] && ! [ -L "$LOCAL/$DEFAULT_FOLDER/context-refs.json" ]; then
 ln -s "$SOURCE/claude/context-refs.json" "$LOCAL/$DEFAULT_FOLDER/context-refs.json"

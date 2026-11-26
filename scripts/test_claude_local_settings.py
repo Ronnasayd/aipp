@@ -18,7 +18,7 @@ def _settings_jq_line():
     return lines[0]
 
 
-def _run(tmp_path, initial):
+def _run(tmp_path, initial, extra_env=None):
     local = tmp_path / "proj"
     (local / ".claude").mkdir(parents=True)
     settings = local / ".claude" / "settings.local.json"
@@ -30,6 +30,7 @@ def _run(tmp_path, initial):
             "LOCAL": str(local),
             "SOURCE": str(tmp_path / "aipp"),
             "LOCAL_SETTINGS": str(settings),
+            **(extra_env or {}),
         },
         capture_output=True,
         text=True,
@@ -48,3 +49,13 @@ def test_keeps_existing_env_keys(tmp_path):
     env, local = _run(tmp_path, {"env": {"PROTECT_FILES_EXTRA_ALLOWED": "/x"}})
     assert env["CLAUDE_PROJECT_DIR"] == str(local)
     assert env["PROTECT_FILES_EXTRA_ALLOWED"] == "/x"
+
+
+def test_auto_sets_aipp_autonomous(tmp_path):
+    env, _ = _run(tmp_path, {}, {"AIPP_AUTO": "1"})
+    assert env["AIPP_AUTONOMOUS"] == "1"
+
+
+def test_without_auto_removes_aipp_autonomous(tmp_path):
+    env, _ = _run(tmp_path, {"env": {"AIPP_AUTONOMOUS": "1"}})
+    assert "AIPP_AUTONOMOUS" not in env
