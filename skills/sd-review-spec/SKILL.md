@@ -14,11 +14,11 @@ Audit spec docs (spec.md, design.md, tasks.md, or tlc-spec-lean's plan.md + chec
 
 `depth=low|medium|high` or the bare word; missing/unrecognized → `medium`. Changes only Step 5.5. Report-only runs never reach Step 5.5: sd-planning skips it and applies depth to its own loop; sd-lean-planning runs report-only.
 
-| Depth            | Step 5.5 re-verifies fixes of    | Loop ends when                                   | Cost    | Use when                                            |
-| ---------------- | -------------------------------- | ------------------------------------------------ | ------- | --------------------------------------------------- |
-| low              | none (Step 5.5 skipped)          | n/a                                              | Lowest  | Quick audit, small spec, or report-only run         |
-| medium (default) | High only                        | zero High findings, or escalation after 3 rounds | Medium  | Routine reviews                                     |
-| high             | High, Medium and Inconsistencies | zero High findings, or escalation after 5 rounds | Highest | Critical spec where a wrong Medium fix is expensive |
+| Depth            | Step 5.5 re-verifies fixes of                                    | Loop ends when                                   | Cost    | Use when                                            |
+| ---------------- | ---------------------------------------------------------------- | ------------------------------------------------ | ------- | --------------------------------------------------- |
+| low              | none (Step 5.5 skipped)                                          | n/a                                              | Lowest  | Quick audit, small spec, or report-only run         |
+| medium (default) | High only                                                        | zero High findings, or escalation after 3 rounds | Medium  | Routine reviews                                     |
+| high             | High; Medium and Inconsistencies only while the round has a High | zero High findings, or escalation after 5 rounds | Highest | Critical spec where a wrong Medium fix is expensive |
 
 ## Steps
 
