@@ -43,10 +43,25 @@ def test_immune_ask_promoted_when_autonomous(monkeypatch: pytest.MonkeyPatch) ->
     )
 
 
-def test_autonomous_still_asks_without_bypass(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Autonomous mode only lifts immunity; outside bypass mode asks still prompt."""
+@pytest.mark.parametrize("command", ["git push origin feature/x", "curl https://x"])
+def test_autonomous_promotes_ask_without_bypass(
+    monkeypatch: pytest.MonkeyPatch, command: str
+) -> None:
+    """Cloud sessions run in auto mode, not bypass; nobody can answer a prompt."""
     monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
-    assert decide("git push origin feature/x", SETTINGS)[0] == "ask"
+    assert decide(command, SETTINGS)[0] == "allow"
+
+
+def test_autonomous_still_honors_deny(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Autonomous mode promotes asks only; deny rules keep blocking."""
+    monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
+    settings = {"permissions": {"deny": ["Bash(rm -rf:*)"]}}
+    assert decide("rm -rf /tmp/x", settings)[0] == "deny"
+
+
+def test_interactive_asks_without_bypass() -> None:
+    """Without bypass or autonomous mode an ask pattern still prompts."""
+    assert decide("curl https://x", SETTINGS)[0] == "ask"
 
 
 def test_git_push_asks_from_builtin_permissions(

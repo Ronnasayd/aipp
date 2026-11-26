@@ -542,7 +542,7 @@ def decompose_command(command: str) -> list[str]:
 
 
 def _ask_decision(cmd: str, bypass_permissions: bool) -> tuple[str, str]:
-    """Resolve an "ask" match, promoting it to "allow" in bypass mode.
+    """Resolve an "ask" match, promoting it to "allow" in bypass or autonomous mode.
 
     Args:
         cmd: The sub-command that matched an ask pattern.
@@ -551,9 +551,15 @@ def _ask_decision(cmd: str, bypass_permissions: bool) -> tuple[str, str]:
     Returns:
         tuple[str, str]: (decision, reason).
     """
-    immune = not autonomous_mode() and command_matches_pattern(
-        cmd, parse_bash_patterns(BYPASS_IMMUNE_ASK)
-    )
+    # why: cloud sessions run in "auto" mode, never bypassPermissions, and no
+    # human is attached to answer a prompt; deny rules still apply upstream.
+    if autonomous_mode():
+        return (
+            "allow",
+            f"Sub-command '{cmd}' matches ask pattern; "
+            "promoted to allow (AIPP_AUTONOMOUS=1)",
+        )
+    immune = command_matches_pattern(cmd, parse_bash_patterns(BYPASS_IMMUNE_ASK))
     if bypass_permissions and not immune:
         return (
             "allow",
@@ -574,7 +580,8 @@ def decide(
 
     When ``bypass_permissions`` is True (payload permission_mode ==
     "bypassPermissions"), an "ask" decision is promoted to "allow",
-    except for BYPASS_IMMUNE_ASK patterns; "deny" is still honored.
+    except for BYPASS_IMMUNE_ASK patterns. With AIPP_AUTONOMOUS=1 every
+    "ask" is promoted, in any permission mode. "deny" is always honored.
 
     Args:
         command: The command string to check.
@@ -602,8 +609,8 @@ def decide(
         if command_matches_pattern(cmd, deny_patterns):
             return "deny", f"Sub-command '{cmd}' matches deny pattern"
 
-    # Then ask — any sub-command needing confirmation forces a prompt,
-    # unless permission_mode is "bypassPermissions", which promotes to allow.
+    # invariant: one ask sub-command forces a prompt for the whole chain,
+    # unless bypassPermissions or AIPP_AUTONOMOUS=1 promotes it to allow.
     ask_cmds = [c for c in sub_commands if command_matches_pattern(c, ask_patterns)]
     # why: any bypass-immune ask must prompt, wherever it sits in the chain.
     decisions = [_ask_decision(c, bypass_permissions) for c in ask_cmds]
