@@ -135,6 +135,7 @@ Options:
   --codex        Execute codex install script
   --taskmaster   Execute taskmaster install script
   --gitignore    Execute gitignore install script
+  --auto         With --claude: set AIPP_AUTONOMOUS=1 in .claude/settings.local.json (omit to remove it)
   --clean        Remove all symlinks created by the install scripts
   --doctor       Check system health (tools, symlinks, env, plugins, project links)
   --help, -h     Display this help message
@@ -212,6 +213,10 @@ else
         ;;
       --gitignore)
         BACKENDS+=("gitignore")
+        shift
+        ;;
+      --auto)
+        export AIPP_AUTO=1
         shift
         ;;
       --clean)
