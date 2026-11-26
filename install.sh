@@ -85,17 +85,21 @@ else
     install_tool "ai-memory" "ai-memory --version" "mkdir -p ~/.local/bin && curl -fsSL https://raw.githubusercontent.com/akitaonrails/ai-memory/main/bin/ai-memory -o ~/.local/bin/ai-memory && chmod +x ~/.local/bin/ai-memory"
 
     install_tool "asdf" "asdf --version" "curl -fsSL https://github.com/asdf-vm/asdf/releases/download/v0.18.0/asdf-v0.18.0-linux-amd64.tar.gz | tar -xz -C ~/.local/bin asdf"
-    # why: asdf >= 0.16 resolves node via shims; they must be on PATH for this run and future shells.
-    export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
-    for rc in ~/.bashrc ~/.zshrc; do
-      if [ -f "$rc" ] && ! grep -q 'ASDF_DATA_DIR:-$HOME/.asdf}/shims' "$rc"; then
-        echo 'export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"' >> "$rc" && echo "asdf shims add at $rc [ok]"
-      fi
-    done
-    asdf plugin list 2>/dev/null | grep -qx nodejs || asdf plugin add nodejs && echo "asdf nodejs plugin [ok]"
-    asdf install nodejs "$NODE_VERSION" && echo "nodejs $NODE_VERSION [ok]"
+    node_major() { node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1; }
+    # why: skip asdf node setup when a usable node exists, so shims never shadow it.
+    if ! [ "$(node_major)" -ge 24 ] 2>/dev/null; then
+      # why: asdf >= 0.16 resolves node via shims; they must be on PATH for this run and future shells.
+      export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
+      for rc in ~/.bashrc ~/.zshrc; do
+        if [ -f "$rc" ] && ! grep -q 'ASDF_DATA_DIR:-$HOME/.asdf}/shims' "$rc"; then
+          echo 'export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"' >> "$rc" && echo "asdf shims add at $rc [ok]"
+        fi
+      done
+      asdf plugin list 2>/dev/null | grep -qx nodejs || asdf plugin add nodejs && echo "asdf nodejs plugin [ok]"
+      asdf install nodejs "$NODE_VERSION" && echo "nodejs $NODE_VERSION [ok]"
+    fi
 
-    NODE_MAJOR="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1)"
+    NODE_MAJOR="$(node_major)"
     if [ -n "$NODE_MAJOR" ] && [ "$NODE_MAJOR" -ge 24 ]; then
       npm i -g @tech-leads-club/harness-toolkit && CLAUDE_CONFIG_DIR=/tmp/fake-claude tlc harness install
     else
