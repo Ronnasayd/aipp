@@ -74,6 +74,12 @@ def make_runner(
     return calls, runner
 
 
+@pytest.fixture(autouse=True)
+def _no_file_logging(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep test runs out of the real ~/.claude/logs/hooks.log."""
+    monkeypatch.setattr(pr_review_context.logger, "handlers", [])
+
+
 @pytest.fixture
 def use_runner(monkeypatch: pytest.MonkeyPatch):
     """Install a fake runner on the hook module and return its call log."""
@@ -183,3 +189,62 @@ def test_graphql_failure_without_reviews_is_silent(use_runner) -> None:
     use_runner(pr={**OPEN_PR, "latestReviews": []}, graphql_ok=False)
 
     assert pr_review_context.build_context("/repo") is None
+
+
+GH = "/usr/bin/gh"
+
+
+@pytest.mark.parametrize(
+    ("case", "expected"),
+    [
+        ({"gh_path": None, "pr": OPEN_PR}, "skip: gh not found on PATH"),
+        ({"gh_path": GH, "branch": "HEAD", "pr": OPEN_PR}, "skip: no branch"),
+        (
+            {
+                "gh_path": GH,
+                "remotes": "origin\tgit@gitlab.com:o/r.git (fetch)",
+                "pr": OPEN_PR,
+            },
+            "skip: no github.com remote",
+        ),
+        ({"gh_path": GH, "pr": None}, "skip: no PR found for current branch"),
+        (
+            {"gh_path": GH, "pr": {**OPEN_PR, "state": "MERGED"}},
+            "skip: PR #81 state is MERGED",
+        ),
+        (
+            {"gh_path": GH, "pr": {**OPEN_PR, "latestReviews": []}, "threads": [True]},
+            "skip: PR #81 has no reviews and 0 unresolved threads",
+        ),
+    ],
+)
+def test_skip_reason_is_logged(
+    use_runner,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    case: dict,
+    expected: str,
+) -> None:
+    """Every silent exit logs why, so a missing summary can be diagnosed."""
+    runner_kwargs = dict(case)
+    gh_path = runner_kwargs.pop("gh_path")
+    use_runner(**runner_kwargs)
+    monkeypatch.setattr(pr_review_context.shutil, "which", lambda _: gh_path)
+
+    with caplog.at_level("DEBUG", logger="PrReviewContext"):
+        assert pr_review_context.build_context("/repo") is None
+
+    assert expected in caplog.text
+
+
+def test_failed_command_logs_stderr(
+    use_runner, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failing gh call logs the command and its stderr."""
+    use_runner(pr=None)
+
+    with caplog.at_level("DEBUG", logger="PrReviewContext"):
+        pr_review_context.build_context("/repo")
+
+    assert "command failed: gh pr view" in caplog.text
+    assert "boom" in caplog.text
