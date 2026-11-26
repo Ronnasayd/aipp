@@ -13,6 +13,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils import (
+    autonomous_mode,
     decide_yes,
     emit_additional_context,
     get_by_key,
@@ -114,6 +115,10 @@ def asks_user(message: str) -> bool:
 
 def main() -> None:
     """Read the hook payload from stdin and emit the reminder if warranted."""
+    if autonomous_mode():
+        LOG.debug("Skipping: AIPP_AUTONOMOUS=1, no human to ask")
+        sys.exit(0)
+
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError) as e:

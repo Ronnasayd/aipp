@@ -86,3 +86,24 @@ def test_extra_allowed_included_in_optional_sections(
     """The section reaches the hook's additionalContext."""
     monkeypatch.setenv("PROTECT_FILES_EXTRA_ALLOWED", "/tmp/xyz")
     assert "`/tmp/xyz`" in start_context.optional_sections({"cwd": str(tmp_path)})
+
+
+@pytest.mark.parametrize("value", [None, "0", "true"])
+def test_autonomous_section_absent_unless_exactly_one(
+    monkeypatch: pytest.MonkeyPatch, value: str | None
+) -> None:
+    """Only AIPP_AUTONOMOUS=1 reports autonomous mode; anything else is silent."""
+    if value is None:
+        monkeypatch.delenv("AIPP_AUTONOMOUS", raising=False)
+    else:
+        monkeypatch.setenv("AIPP_AUTONOMOUS", value)
+    assert start_context.autonomous_mode_notice() == ""
+
+
+def test_autonomous_section_in_optional_sections(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """AIPP_AUTONOMOUS=1 adds the autonomous-mode notice to session context."""
+    monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
+    sections = start_context.optional_sections({"cwd": str(tmp_path)})
+    assert "AUTONOMOUS MODE ACTIVE" in sections

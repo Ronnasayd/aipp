@@ -78,7 +78,6 @@
       "Bash(git push --force:*)",
       "Bash(git push --force-with-lease:*)",
       "Bash(git push -f:*)",
-      "Bash(git rebase:*)",
       "Bash(git branch -D:*)",
       "Bash(git branch -d:*)",
       "Bash(docker rm:*)",
@@ -120,7 +119,6 @@
       "ScheduleWakeup",
       "SendFeedback"
     ],
-    "ask": ["Bash(git push:*)"],
     "defaultMode": "bypassPermissions"
   },
   "model": "opus",
@@ -149,7 +147,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
+            "command": "[ \"$AIPP_AUTONOMOUS\" = \"1\" ] || [ -z \"$CLAUDE_PROJECT_DIR\" ] || uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
             "timeout": 10,
             "async": true
           },
@@ -207,7 +205,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
+            "command": "[ \"$AIPP_AUTONOMOUS\" = \"1\" ] || [ -z \"$CLAUDE_PROJECT_DIR\" ] || uv run --project $AI_PROJECT_ROOT_DIR $CLAUDE_PROJECT_DIR/.claude/hooks/scripts/notify_sound.py",
             "timeout": 10,
             "async": true
           }
@@ -218,7 +216,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_CONFIG_DIR/hooks/rtk-rewrite.sh | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh RtkRewrite",
+            "command": "[ ! -x \"$CLAUDE_CONFIG_DIR/hooks/rtk-rewrite.sh\" ] || $CLAUDE_CONFIG_DIR/hooks/rtk-rewrite.sh | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh RtkRewrite",
             "timeout": 10
           },
           {
@@ -287,7 +285,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           }
         ]
@@ -358,7 +356,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           }
         ]
@@ -421,7 +419,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           }
         ]
@@ -460,7 +458,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           }
         ]
@@ -601,7 +599,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           }
         ]
@@ -655,7 +653,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           }
         ]
@@ -699,7 +697,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           }
         ]
@@ -730,7 +728,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           },
           {
@@ -759,7 +757,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
+            "command": "bash -c '[ -f $CLAUDE_CONFIG_DIR/agent-flow/hook.js ] || exit 0; set -o pipefail; node $CLAUDE_CONFIG_DIR/agent-flow/hook.js 2>&1 | bash $AI_PROJECT_ROOT_DIR/scripts/ext-log.sh AgentFlow'",
             "timeout": 10
           },
           {

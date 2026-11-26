@@ -92,6 +92,7 @@ def clef_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CLOUDFLARE_API_TOKEN", TOKEN)
     monkeypatch.delenv("DECISION_BACKEND", raising=False)
     monkeypatch.delenv("CLEF_MODEL", raising=False)
+    monkeypatch.delenv("AIPP_AUTONOMOUS", raising=False)
 
 
 def test_real_question_injects_rule(
@@ -101,6 +102,16 @@ def test_real_question_injects_rule(
     serve(monkeypatch, clef_reply(0.98))
     out = run_hook(monkeypatch, capsys, QUESTION)
     assert json.loads(out)["hookSpecificOutput"]["additionalContext"]
+
+
+def test_autonomous_mode_skips_reminder_and_backend(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """With AIPP_AUTONOMOUS=1 nobody can answer, so no reminder and no request."""
+    monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
+    seen = serve(monkeypatch, clef_reply(0.98))
+    assert run_hook(monkeypatch, capsys, QUESTION) == ""
+    assert not seen
 
 
 def test_rhetorical_question_injects_nothing(

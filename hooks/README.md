@@ -36,24 +36,24 @@ Scripts live in [`scripts/`](scripts) and run via
 
 ## PreToolUse
 
-| Matcher             | Script                        | Purpose                                                                                                                                                                                 |
-| ------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AskUserQuestion`   | `notify_sound.py`             | Plays an alert sound when the user is asked a question.                                                                                                                                 |
-| `Bash`              | `rtk-rewrite.sh`              | Rewrites commands through the RTK token-saving proxy.                                                                                                                                   |
-| `Bash`              | `smart_approve.py`            | Decomposes compound bash commands and checks each against allow/deny patterns.                                                                                                          |
-| `Bash`              | `protect_branches.py`         | Denies git operations that would mutate a protected branch (main/master/develop/homolog) outside a PR flow.                                                                             |
-| `Bash`              | `dev_server_tmux_check.py`    | Blocks dev-server commands run outside tmux/screen.                                                                                                                                     |
-| `Edit\|Write`       | `md_language_check.py`        | Asks the user before saving Portuguese markdown under `docs/` or `.specs/`.                                                                                                             |
-| `Edit\|Write`       | `context_refs.py`             | Injects reference-file contents into context when a matched file is about to be edited.                                                                                                 |
-| `Edit\|Write`       | `semantic_similar_refs.py`    | Surfaces semantically similar existing code for content about to be written, via rag-rat (languages it indexes here) or codebase-memory-mcp otherwise; skipped if neither is installed. |
-| `Write`             | `md_location_check.py`        | Warns when a `.md` file is created outside standard locations.                                                                                                                          |
-| `Read\|Edit\|Write` | `dir_context_refs.py`         | Walks parent dirs for `CONTEXT.md`/`CLAUDE.md`/`AGENTS.md` and announces them.                                                                                                          |
-| `Read`              | `large_file_read_warning.py`  | Warns when reading a large file without offset/limit.                                                                                                                                   |
-| _(all)_             | `tooluse_context_rules.py`    | Generic rule engine: injects `additionalContext` when a rule's `match(payload)` is true.                                                                                                |
-| _(all)_             | `subagent_guidelines.py`      | Injects launch guidelines for the caller.                                                                                                                                               |
-| _(all)_             | `protect_files.py`            | Blocks reads/writes/exfiltration of protected paths (secrets, home dir, etc.), hardened against compound/obfuscated commands.                                                           |
-| _(all)_             | `ai-memory` pre-tool-use hook | Records tool-call observation.                                                                                                                                                          |
-| _(all)_             | `agent-flow/hook.js`          | External agent-flow integration hook.                                                                                                                                                   |
+| Matcher             | Script                        | Purpose                                                                                                                                                                                                       |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AskUserQuestion`   | `notify_sound.py`             | Plays an alert sound when the user is asked a question. Skipped when `AIPP_AUTONOMOUS=1`.                                                                                                                     |
+| `Bash`              | `rtk-rewrite.sh`              | Rewrites commands through the RTK token-saving proxy.                                                                                                                                                         |
+| `Bash`              | `smart_approve.py`            | Decomposes compound bash commands and checks each against allow/deny patterns. Built-in rules: `git push` asks even in `bypassPermissions`, `git rebase` is denied; both are lifted when `AIPP_AUTONOMOUS=1`. |
+| `Bash`              | `protect_branches.py`         | Denies git operations that would mutate a protected branch (main/master/develop/homolog) outside a PR flow.                                                                                                   |
+| `Bash`              | `dev_server_tmux_check.py`    | Blocks dev-server commands run outside tmux/screen.                                                                                                                                                           |
+| `Edit\|Write`       | `md_language_check.py`        | Asks the user before saving Portuguese markdown under `docs/` or `.specs/`.                                                                                                                                   |
+| `Edit\|Write`       | `context_refs.py`             | Injects reference-file contents into context when a matched file is about to be edited.                                                                                                                       |
+| `Edit\|Write`       | `semantic_similar_refs.py`    | Surfaces semantically similar existing code for content about to be written, via rag-rat (languages it indexes here) or codebase-memory-mcp otherwise; skipped if neither is installed.                       |
+| `Write`             | `md_location_check.py`        | Warns when a `.md` file is created outside standard locations.                                                                                                                                                |
+| `Read\|Edit\|Write` | `dir_context_refs.py`         | Walks parent dirs for `CONTEXT.md`/`CLAUDE.md`/`AGENTS.md` and announces them.                                                                                                                                |
+| `Read`              | `large_file_read_warning.py`  | Warns when reading a large file without offset/limit.                                                                                                                                                         |
+| _(all)_             | `tooluse_context_rules.py`    | Generic rule engine: injects `additionalContext` when a rule's `match(payload)` is true.                                                                                                                      |
+| _(all)_             | `subagent_guidelines.py`      | Injects launch guidelines for the caller.                                                                                                                                                                     |
+| _(all)_             | `protect_files.py`            | Blocks reads/writes/exfiltration of protected paths (secrets, home dir, etc.), hardened against compound/obfuscated commands.                                                                                 |
+| _(all)_             | `ai-memory` pre-tool-use hook | Records tool-call observation.                                                                                                                                                                                |
+| _(all)_             | `agent-flow/hook.js`          | External agent-flow integration hook.                                                                                                                                                                         |
 
 ## PostToolUse
 
@@ -78,12 +78,12 @@ Scripts live in [`scripts/`](scripts) and run via
 
 ## Stop / SubagentStop
 
-| Script                               | Purpose                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stop_lint_gate.py`                  | Re-runs lint on files changed this turn and blocks the stop if any fail.                                                                                                                                                                                                                                                                                                                                        |
-| `question_tool_enforcer.py`          | If the last assistant message has a `?` and `utils.decide` (Clef; needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`) confirms it asks the user something, nudges toward `AskUserQuestion`. Backend unavailable: the `?` alone triggers it. `utils.decide_yes` caches answers for 30 days in `~/.cache/decision-cache`, keyed by a hash of backend, model, question and state; failures are never cached. |
-| `subagent_response_format_gate.py`   | Blocks a subagent's stop if its response doesn't match the required output format (SubagentStop only).                                                                                                                                                                                                                                                                                                          |
-| `ai-memory` stop/subagent-stop hooks | Closes out the session/subagent observation stream.                                                                                                                                                                                                                                                                                                                                                             |
+| Script                               | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stop_lint_gate.py`                  | Re-runs lint on files changed this turn and blocks the stop if any fail.                                                                                                                                                                                                                                                                                                                                                                          |
+| `question_tool_enforcer.py`          | If the last assistant message has a `?` and `utils.decide` (Clef; needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`) confirms it asks the user something, nudges toward `AskUserQuestion`. Backend unavailable: the `?` alone triggers it. Skipped when `AIPP_AUTONOMOUS=1`. `utils.decide_yes` caches answers for 30 days in `~/.cache/decision-cache`, keyed by a hash of backend, model, question and state; failures are never cached. |
+| `subagent_response_format_gate.py`   | Blocks a subagent's stop if its response doesn't match the required output format (SubagentStop only).                                                                                                                                                                                                                                                                                                                                            |
+| `ai-memory` stop/subagent-stop hooks | Closes out the session/subagent observation stream.                                                                                                                                                                                                                                                                                                                                                                                               |
 
 ## SessionEnd
 
@@ -107,7 +107,7 @@ Scripts live in [`scripts/`](scripts) and run via
 
 ## Shared utilities
 
-- `utils.py` — shared helpers (logging, payload parsing) used by most scripts above.
+- `utils.py` — shared helpers (logging, payload parsing, `autonomous_mode()` for `AIPP_AUTONOMOUS`) used by most scripts above.
 - `embedding_daemon.py` — SentenceTransformer daemon over a Unix socket, backing semantic-search hooks.
 - `merge_coverage.py` — merges a partial Istanbul coverage run into the project's coverage dir; used by `jest_coverage_incremental.py`.
 - `log_hooks.py` — logs every hook invocation (wired on nearly every event, with `JSON_COLORIZE=1`).
@@ -117,4 +117,14 @@ Scripts live in [`scripts/`](scripts) and run via
 Cross-cutting hooks not in `scripts/` (external, run via `node`/shell directly
 from `claude/settings.json`): `caveman-activate.js`, `caveman-mode-tracker.js`,
 `agent-flow/hook.js`, `rtk-rewrite.sh`, and the `ai-memory` hook set under
-`~/.local/share/ai-memory/hooks/claude-code/`.
+`~/.local/share/ai-memory/hooks/claude-code/`. The `agent-flow` and `rtk` entries
+are guarded by a file-exists check, so machines without them (e.g. cloud
+containers) skip them silently.
+
+## Autonomous mode
+
+To run an agent headless (cloud, CI) with no human to answer prompts, export
+`AIPP_AUTONOMOUS=1` in the job environment. The same `claude/settings.json`
+serves both modes; see [`ENVIRONMENTS.md`](ENVIRONMENTS.md) for exactly what
+changes. Pushes to protected branches stay denied, so the agent delivers via
+a feature branch and pull request.

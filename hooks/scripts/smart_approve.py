@@ -21,7 +21,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
     sys.path.append(script_dir)
 
-from utils import split_on_operators  # noqa: E402
+from utils import autonomous_mode, split_on_operators  # noqa: E402
 
 # Custom permissions, same style as settings.json permissions.{allow,deny,ask}.
 # Merged into the settings layers by load_merged_settings (highest priority).
@@ -41,11 +41,18 @@ PERMISSIONS: dict[str, list[str]] = {
         "Bash(docker run:*)",
         "Bash(docker exec:*)",
         "Bash(git merge:*)",
+        "Bash(git push:*)",
     ],
 }
 
+# why: denied for interactive sessions only; an autonomous cloud agent needs
+# rebase to keep its PR branch current. Lives here, not in settings.json,
+# because settings.json is shared by both environments.
+INTERACTIVE_ONLY_DENY: list[str] = ["Bash(git rebase:*)"]
+
 # why: these "ask" patterns publish outside the machine, so they still prompt
-# even when permission_mode is "bypassPermissions".
+# even when permission_mode is "bypassPermissions" -- unless AIPP_AUTONOMOUS=1,
+# where no human exists to answer and protect_branches.py guards main branches.
 BYPASS_IMMUNE_ASK: list[str] = ["Bash(git push:*)"]
 
 
@@ -142,12 +149,15 @@ def _merge_custom_permissions(settings: dict) -> dict:
     Custom patterns are appended after the settings-file patterns
     (deduplicated, order-preserving) for allow/deny/ask.
     """
-    if not any(PERMISSIONS.get(k) for k in ("allow", "deny", "ask")):
+    custom = {k: list(PERMISSIONS.get(k, [])) for k in ("allow", "deny", "ask")}
+    if not autonomous_mode():
+        custom["deny"] += INTERACTIVE_ONLY_DENY
+    if not any(custom.values()):
         return settings
 
     perms = settings.setdefault("permissions", {})
-    for key in ("allow", "deny", "ask"):
-        perms[key] = list(dict.fromkeys(perms.get(key, []) + PERMISSIONS.get(key, [])))
+    for key, extra in custom.items():
+        perms[key] = list(dict.fromkeys(perms.get(key, []) + extra))
     return settings
 
 
@@ -541,7 +551,9 @@ def _ask_decision(cmd: str, bypass_permissions: bool) -> tuple[str, str]:
     Returns:
         tuple[str, str]: (decision, reason).
     """
-    immune = command_matches_pattern(cmd, parse_bash_patterns(BYPASS_IMMUNE_ASK))
+    immune = not autonomous_mode() and command_matches_pattern(
+        cmd, parse_bash_patterns(BYPASS_IMMUNE_ASK)
+    )
     if bypass_permissions and not immune:
         return (
             "allow",

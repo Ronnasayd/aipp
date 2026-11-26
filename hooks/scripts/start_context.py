@@ -13,6 +13,7 @@ if script_dir not in sys.path:
     sys.path.append(script_dir)
 
 from utils import (  # noqa: E402
+    autonomous_mode,
     bump_loop_count,
     get_by_key,
     get_hooks_logger,
@@ -394,6 +395,23 @@ def extra_allowed_paths() -> str:
     )
 
 
+def autonomous_mode_notice() -> str:
+    """Render a markdown section announcing autonomous mode when it is on.
+
+    Returns:
+        Markdown section stating AIPP_AUTONOMOUS=1 is active, or "" when off.
+    """
+    if not autonomous_mode():
+        return ""
+    return (
+        "## AUTONOMOUS MODE ACTIVE (`AIPP_AUTONOMOUS=1`)\n\n"
+        "No human is attached to this session. Follow the `Autonomous mode` "
+        "section of the agent instructions: never ask the user, assume the most "
+        "reasonable default and state it in one line, deliver via feature "
+        "branch + pull request, and report `BLOCKED / TRIED / NEED` when stuck."
+    )
+
+
 def communication_lang() -> str:
     """Render a markdown line instructing which language to communicate in.
 
@@ -464,6 +482,7 @@ def optional_sections(payload: dict) -> str:
         Concatenated markdown sections, or "" when none apply.
     """
     sections = [
+        autonomous_mode_notice(),
         glossary_reference(payload),
         package_json(payload),
         find_config_files(payload),

@@ -93,6 +93,11 @@ def walk_respecting_gitignore(
         yield dirpath, dirnames, filenames
 
 
+def autonomous_mode() -> bool:
+    """Return True when AIPP_AUTONOMOUS=1 (headless agent, no human to ask)."""
+    return os.environ.get("AIPP_AUTONOMOUS", "").strip() == "1"
+
+
 def strip_ansi(text: str) -> str:
     """Remove ANSI escape sequences from a string."""
     ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")

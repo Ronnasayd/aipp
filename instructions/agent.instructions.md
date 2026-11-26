@@ -37,6 +37,16 @@ applyTo: "**/*"
 
 - Self-contained task (no dependency on history, clear input, concise output, intermediate work not required in the main conversation) → use a sub-agent.
 
+## Autonomous mode (`AIPP_AUTONOMOUS=1`)
+
+`AIPP_AUTONOMOUS=1` (exactly `1`; any other value or unset = interactive, rules above apply) means headless/cloud run, no human attached → these override the rules above:
+
+- Never ask the user (`AskUserQuestion`, `grilling`, plain-text questions). Ambiguity → pick the most reasonable default, state the assumption in one line, continue.
+- Task request = authorization to change code. No waiting for approval.
+- Skills with human approval gates (spec approval, plan review) → write the draft, treat it as approved, record "auto-approved, autonomous mode" in it.
+- Deliver via a feature branch + pull request; the PR is the human review point. Never push to protected branches (`protect_branches.py` still denies it).
+- Truly blocked (missing credential, unreachable service) → stop and report with `BLOCKED / TRIED / NEED`, do not loop.
+
 ## Mandatory rules — hallucination protection
 
 - "I don't know" allowed: uncertain or info missing → say so explicitly (e.g. "I don't have enough information to confidently assess this"). Never fill gaps with guesses.
