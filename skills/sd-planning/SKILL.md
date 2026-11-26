@@ -1,23 +1,30 @@
 ---
 name: sd-planning
 description: Generate a feature plan through iterative problem breakdown, codebase research, and clarifying questions before handing off to tlc-spec-driven and requirements-table generation. Use when user says 'plan this feature step by step', 'help me plan this properly', 'generate a plan for this problem', or 'walk through planning this feature'.
+argument-hint: "[depth=low|medium|high] <feature request> — depth skips the step 3 depth question"
 model: opus
 effort: high
 disable-model-invocation: true
 metadata:
   author: Ronnasayd Machado - github.com/Ronnasayd
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
-# Steps
+# sd-planning
 
-See [diagram](references/diagram.md) for a visual flow overview.
+Drives a feature from request to verified plan: `/tlc-spec-driven` writes the docs, an independent fresh sub-agent audits them against the code and the original request, and a depth-driven loop fixes the gaps. The verifier pass is always-on and author ≠ verifier. Track every step with `TaskCreate`/`TaskUpdate`/`TaskGet`/`TaskList`. Flow: [diagram.md](references/diagram.md).
 
-Add the following steps as tasks using the `TaskCreate`, `TaskUpdate`, `TaskGet`, and `TaskList` tools. Update the status as you progress through each step to keep the user informed.
+| #   | Step          | Action                                                                                                                                                                                          | Output / Gate                                            |
+| --- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| 1   | Spec          | Run `/tlc-spec-driven` on the described problem                                                                                                                                                 | `spec.md`, `design.md`, `tasks.md`                       |
+| 2   | Requirements  | Settle output language with the user first (`/spec-to-requirements-table` runs isolated, can't ask), then run it with the spec dir + language as arguments                                      | `requirements.md`                                        |
+| 3   | Verifier pass | Depth from `depth=` arg, else ask once (`low`/`medium`/`high`); fresh sonnet sub-agent runs `/sd-review-spec` report-only; fix loop per depth — [verifier-pass.md](references/verifier-pass.md) | Zero High findings, or BLOCKED / TRIED / NEED escalation |
+| 4   | Taskmaster    | Ask whether to register the feature; yes → `/sd-insert-taskmaster` with the feature tag                                                                                                         | Registered, or skipped by the user                       |
+| 5   | ADR           | Check criteria in [docs-adr.md](references/docs-adr.md); offer an ADR when all are met                                                                                                          | ADR offered or not applicable                            |
+| 6   | Memory        | Save only what the next session needs and can't rediscover from code, Git or CLAUDE.md (reason behind a decision, non-obvious invariant, user preference) via `ai-memory-durable-pages`         | Durable page, or nothing worth saving                    |
 
-1. Execute the `/tlc-spec-driven` skill to generate a plan/spec based on the described problem.
-2. Execute the `/spec-to-requirements-table` skill to generate a `requirements.md` file. It runs isolated and cannot ask anything: settle the output language with the user first, then pass the feature's spec dir and the language as arguments.
-3. **Verifier pass (always-on, author ≠ verifier):** dispatch a fresh sub-agent with `model: "sonnet"` (effort `high` in round 1, `medium` in later rounds) — no inherited context from steps 1-2 — to run `/sd-review-spec` in report-only mode against the generated `spec.md`, `design.md`, `tasks.md`, `requirements.md`, and any cited ADRs. Give it only: the original feature request (verbatim, as the user stated it), and the feature's spec dir path. It audits every doc claim against the real code and checks the full set covers everything the original request needs — scope, constraints, edge cases, dependencies, and every requirement in `requirements.md` traced to a task. It does not edit anything; it returns the severity-classified gap report (same table as `/sd-review-spec` step 8). If gaps exist: show them to the user and apply fixes per `/sd-review-spec` steps 4-5 and 6-7 (skip its Step 5.5: this step owns the High re-verification loop), Medium and Inconsistency findings get one fix pass, with no re-verification. Only when a High fix was applied, repeat this step with a **new** fresh sub-agent (never reuse the previous one via `SendMessage`) scoped to the files and claims touched by those High fixes, not the full doc set, passing `<spec-dir>/review/settled.md` so contested/declined findings are not reopened. Loop until a round reports zero High findings, bounded to 3 rounds total. If gaps remain after round 3, STOP and escalate the remaining findings to the user (BLOCKED / TRIED / NEED) instead of applying a 4th round of fixes. Do not skip this step and do not ask the user whether to run it — only ask what to do with findings.
-4. Once planning is complete, ask the user if they wish to register the feature in _taskmaster_. If the answer is "yes," use the `/sd-insert-taskmaster` skill, passing the feature tag as its argument.
-5. Check the definitions in [docs-adr](./references/docs-adr.md) and consider offering to create an ADR when the criteria are met.
-6. At the end of the session, evaluate whether there is anything worth saving as permanent memory. Save as permanent memory only what the next session will need and cannot rediscover by reading the code, Git, or CLAUDE.md—such as the _reason_ behind a decision, a non-obvious invariant, or a user preference; if it is already in the repo or only matters for this specific conversation, do not save it. Use the `ai-memory-durable-pages` skill to persist it.
+## Reference files
+
+- [references/verifier-pass.md](references/verifier-pass.md) — step 3: depth question, verifier dispatch rules, fix-loop flowchart, round limits (3 `medium` / 5 `high`), settled list
+- [references/diagram.md](references/diagram.md) — mermaid flow of all six steps
+- [references/docs-adr.md](references/docs-adr.md) — ADR template, numbering, and the three criteria for offering one
