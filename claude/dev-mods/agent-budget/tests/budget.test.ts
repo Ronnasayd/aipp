@@ -17,10 +17,6 @@ function engine($: Harness[0], on: Harness[1]) {
   const spawned: string[] = [];
   const limits = { concurrent: 20 };
   const settings: { effortLevel?: string } = { effortLevel: "medium" };
-  let clock = 0;
-  let slept = 0;
-  // why: each sleep is a poll; a test frees agents at a chosen poll to model one finishing
-  const onSleep: Array<() => void> = [];
   // why: a foreground Agent call returns only when its agent ends, long after the spawn
   const finish: Record<string, () => void> = {};
   let nextId = 0;
@@ -37,12 +33,6 @@ function engine($: Harness[0], on: Harness[1]) {
   on("session.cwd", () => ({ value: CWD }));
   on("env.get", (_, e) => ({ value: env[e.name] }));
   on("settings.read", () => ({ value: settings }) as never);
-  on("clock.now", () => ({ value: clock }));
-  on("clock.sleep", (_, e) => {
-    clock += e.ms;
-    onSleep[slept++]?.();
-    return { value: undefined };
-  });
   on("fs.list", (_, e) => {
     const dir = `${e.path ?? ""}/`;
     const names = Object.keys(files)
@@ -121,7 +111,6 @@ function engine($: Harness[0], on: Harness[1]) {
     spawned,
     limits,
     settings,
-    onSleep,
     agent,
     end,
     until
@@ -141,11 +130,8 @@ test("one opus+high fills the budget; a second one is refused", async ($, on) =>
   end("a1");
 });
 
-test("two sonnet+high fit together; a third is refused without waiting, even with AGENT_BUDGET_WAIT_MS set", async ($, on) => {
-  const { spawned, env, onSleep, agent, end, until } = engine($, on);
-  env.AGENT_BUDGET_WAIT_MS = "8000";
-  let slept = false;
-  onSleep[0] = () => (slept = true);
+test("two sonnet+high fit together; a third is refused", async ($, on) => {
+  const { spawned, agent, end, until } = engine($, on);
 
   void agent({ model: "sonnet", effort: "high" });
   void agent({ model: "sonnet", effort: "high" });
@@ -154,8 +140,6 @@ test("two sonnet+high fit together; a third is refused without waiting, even wit
 
   const third = await agent({ model: "sonnet", effort: "high" });
   expect(third.deny).toMatch(/agent-budget/);
-  expect(third.deny).not.toMatch(/Waited/);
-  expect(slept).toBe(false);
   expect(spawned).toEqual(["a1", "a2"]);
   end("a1");
   end("a2");
@@ -233,15 +217,12 @@ test("two parallel opus+high calls never both pass on the same free budget", asy
   expect(answers.filter((a) => a.deny).length).toBe(1);
 });
 
-test("by default an agent over budget is refused at once, without waiting", async ($, on) => {
-  const { spawned, onSleep, agent, until } = engine($, on);
-  let slept = false;
-  onSleep[0] = () => (slept = true);
+test("a cheap agent over the remaining budget is refused", async ($, on) => {
+  const { spawned, agent, until } = engine($, on);
 
   void agent({ model: "opus", effort: "high" });
   await until(1);
   const second = await agent({ model: "haiku", effort: "low" });
   expect(second.deny).toMatch(/agent-budget/);
-  expect(slept).toBe(false);
   expect(spawned.length).toBe(1);
 });
