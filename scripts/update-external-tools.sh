@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 
-if [[ -z "$GITHUB_PAT_TOKEN" ]]; then
-  echo "Error: GITHUB_PAT_TOKEN not defined." >&2
-  exit 1
-fi
-
 SOURCE="$(pwd)"
 
 # ─── Utilitários ─────────────────────────────────────────────────────────────
@@ -31,6 +26,26 @@ _is_unchanged() {
   local local_sha
   local_sha=$(_git_blob_sha1 "$local_file")
   [[ "$local_sha" == "$remote_sha" ]]
+}
+
+# Remove do diretório local o que não existe mais no upstream (espelho)
+# invariant: só é chamado após uma listagem válida da API, então falha de rede nunca apaga nada
+_prune_orphans() {
+  local local_path="$1" entries="$2"
+  local remote_names item name
+  remote_names=$(cut -d'|' -f2 <<< "$entries")
+
+  for item in "$local_path"/* "$local_path"/.[!.]*; do
+    [[ -e "$item" || -L "$item" ]] || continue
+    name="${item##*/}"
+    # why: bytecode gerado localmente ao rodar os scripts, nunca vem do upstream
+    [[ "$name" == "__pycache__" ]] && continue
+    grep -qxF -- "$name" <<< "$remote_names" && continue
+
+    rm -rf -- "$item"
+    echo "  ✖ Removido: $item"
+    echo "$local_path" >> "$_GGHGET_CHANGED_DIRS_FILE"
+  done
 }
 
 # ─── Função principal gghget ─────────────────────────────────────────────────
@@ -93,13 +108,19 @@ gghget() {
     mkdir -p "$local_path"
 
     # `sha` da API = git blob SHA1 — compara direto com o local, sem baixar
-    echo "$response" | python3 -c "
+    local entries type name dl_url remote_sha
+    if ! entries=$(echo "$response" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
 entries = d if isinstance(d, list) else [d]
 for e in entries:
     print(e.get('type','') + '|' + e.get('name','') + '|' + (e.get('download_url') or '') + '|' + (e.get('sha') or ''))
-" | while IFS='|' read -r type name dl_url remote_sha; do
+" 2>/dev/null); then
+      echo "  ✗ Erro: resposta inválida da API para ${api_path}" >&2
+      return 1
+    fi
+
+    while IFS='|' read -r type name dl_url remote_sha; do
       if [[ "$type" == "file" ]]; then
         local local_file="${local_path}/${name}"
 
@@ -121,7 +142,9 @@ for e in entries:
       elif [[ "$type" == "dir" ]]; then
         _gghget_recurse "${api_path}/${name}" "${local_path}/${name}"
       fi
-    done
+    done <<< "$entries"
+
+    _prune_orphans "$local_path" "$entries"
   }
 
   _GGHGET_CHANGED_DIRS_FILE="$(mktemp)"
@@ -210,7 +233,10 @@ _scan_skill_dir() {
   local dir="$1"
   command -v uv &>/dev/null || return 0
 
-  if uv run skillspector scan "$dir" --no-llm --recursive; then
+  local report
+  report="$(mktemp)"
+  if uv run skillspector scan "$dir" --no-llm --recursive --format markdown --output "$report"; then
+    rm -f "$report"
     return 0
   fi
 
@@ -220,6 +246,9 @@ _scan_skill_dir() {
   rm -rf "$quarantine_dir"
   mkdir -p "$(dirname "$quarantine_dir")"
   mv "$dir" "$quarantine_dir"
+  # why: o agente que avalia a quarentena lê os findings daqui sem rodar o scan de novo
+  mv "$report" "$quarantine_dir/SKILLSPECTOR_REPORT.md"
+  echo "  → relatório: $quarantine_dir/SKILLSPECTOR_REPORT.md" >&2
 }
 
 # ─── Lista de skills ──────────────────────────────────────────────────────────
@@ -460,14 +489,20 @@ for command in "${COMMANDS[@]}"; do
 done
 }
 
-# Get all skills and commands
-get_skills_tlc
-get_skills_anthropic
-get_skills_ecc
-get_skills_mattpocock
-get_skills_agent-toolkit
-get_skills_skill-inspector
-get_skills_rea
-get_skills_product_manager_skills
-get_commands_awesome_claude_code_toolkit
+# why: guarded so tests can source the functions without hitting the network
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  if [[ -z "$GITHUB_PAT_TOKEN" ]]; then
+    echo "Error: GITHUB_PAT_TOKEN not defined." >&2
+    exit 1
+  fi
 
+  get_skills_tlc
+  get_skills_anthropic
+  get_skills_ecc
+  get_skills_mattpocock
+  get_skills_agent-toolkit
+  get_skills_skill-inspector
+  get_skills_rea
+  get_skills_product_manager_skills
+  get_commands_awesome_claude_code_toolkit
+fi
