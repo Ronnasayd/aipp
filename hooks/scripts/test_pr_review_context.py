@@ -248,3 +248,41 @@ def test_failed_command_logs_stderr(
 
     assert "command failed: gh pr view" in caplog.text
     assert "boom" in caplog.text
+
+
+def test_marker_written_when_review_exists(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """Statusline marker holds the summary while the PR has a review."""
+    monkeypatch.setattr(pr_review_context, "MARKER_DIR", tmp_path)
+
+    pr_review_context.sync_marker("/home/u/my-repo", "## Open PR review")
+
+    marker = tmp_path / "pr-review-my-repo.md"
+    assert marker.read_text(encoding="utf-8") == "## Open PR review"
+
+
+def test_marker_removed_when_no_review(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """A stale marker from an earlier session is deleted once no review remains."""
+    monkeypatch.setattr(pr_review_context, "MARKER_DIR", tmp_path)
+    marker = tmp_path / "pr-review-my-repo.md"
+    marker.write_text("stale", encoding="utf-8")
+
+    pr_review_context.sync_marker("/home/u/my-repo", None)
+    pr_review_context.sync_marker("/home/u/my-repo", None)
+
+    assert not marker.exists()
+
+
+def test_marker_write_failure_is_swallowed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An unwritable marker must not break the hook's silent contract."""
+    monkeypatch.setattr(pr_review_context, "MARKER_DIR", tmp_path / "missing")
+
+    with caplog.at_level("DEBUG", logger="PrReviewContext"):
+        pr_review_context.sync_marker("/home/u/my-repo", "## Open PR review")
+
+    assert "marker sync failed" in caplog.text
