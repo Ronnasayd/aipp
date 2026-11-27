@@ -6,8 +6,8 @@ import io
 import json
 import os
 import sys
-import urllib.error
 from typing import TYPE_CHECKING, Any
+import urllib.error
 
 import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
 import question_tool_enforcer as enforcer
@@ -48,6 +48,15 @@ def serve(monkeypatch: pytest.MonkeyPatch, body: bytes) -> list[Request]:
     seen: list[Request] = []
 
     def fake_urlopen(request: Request, timeout: float) -> io.BytesIO:
+        """Record the request and answer with the canned body.
+
+        Args:
+            request: outgoing HTTP request.
+            timeout: timeout the code under test passed.
+
+        Returns:
+            io.BytesIO: the canned response body.
+        """
         assert timeout == utils.DECISION_TIMEOUT_SECONDS
         seen.append(request)
         return io.BytesIO(body)
@@ -98,7 +107,12 @@ def clef_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_real_question_injects_rule(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A message the backend judges as asking the user gets the reminder."""
+    """A message the backend judges as asking the user gets the reminder.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     serve(monkeypatch, clef_reply(0.98))
     out = run_hook(monkeypatch, capsys, QUESTION)
     assert json.loads(out)["hookSpecificOutput"]["additionalContext"]
@@ -107,7 +121,12 @@ def test_real_question_injects_rule(
 def test_autonomous_mode_skips_reminder_and_backend(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """With AIPP_AUTONOMOUS=1 nobody can answer, so no reminder and no request."""
+    """With AIPP_AUTONOMOUS=1 nobody can answer, so no reminder and no request.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
     seen = serve(monkeypatch, clef_reply(0.98))
     assert run_hook(monkeypatch, capsys, QUESTION) == ""
@@ -117,7 +136,12 @@ def test_autonomous_mode_skips_reminder_and_backend(
 def test_codex_stop_skips_reminder_and_backend(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Codex rejects hookSpecificOutput on Stop and ends the turn, so stay silent."""
+    """Codex rejects hookSpecificOutput on Stop and ends the turn, so stay silent.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, clef_reply(0.98))
     assert run_hook(monkeypatch, capsys, QUESTION, {"turn_id": "t1"}) == ""
     assert not seen
@@ -126,7 +150,12 @@ def test_codex_stop_skips_reminder_and_backend(
 def test_rhetorical_question_injects_nothing(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A '?' that does not ask the user anything stays silent."""
+    """A '?' that does not ask the user anything stays silent.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     serve(monkeypatch, clef_reply(0.01))
     assert run_hook(monkeypatch, capsys, "Por que falha? Regex corta cedo.") == ""
 
@@ -134,7 +163,12 @@ def test_rhetorical_question_injects_nothing(
 def test_message_without_question_mark_skips_backend(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The free '?' check runs first, so plain messages cost no request."""
+    """The free '?' check runs first, so plain messages cost no request.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, clef_reply(0.98))
     assert run_hook(monkeypatch, capsys, "Tudo pronto.") == ""
     assert not seen
@@ -143,7 +177,12 @@ def test_message_without_question_mark_skips_backend(
 def test_network_failure_keeps_reminder(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """An unreachable backend falls back to the plain '?' behavior."""
+    """An unreachable backend falls back to the plain '?' behavior.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
 
     def refuse(request: Request, timeout: float) -> io.BytesIO:
         raise urllib.error.URLError(f"down: {request.full_url} {timeout}")
@@ -156,7 +195,13 @@ def test_network_failure_keeps_reminder(
 def test_missing_credential_keeps_reminder_without_request(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], var: str
 ) -> None:
-    """Without credentials nothing is sent and the reminder still fires."""
+    """Without credentials nothing is sent and the reminder still fires.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+        var: credential env var removed for this case.
+    """
     seen = serve(monkeypatch, clef_reply(0.01))
     monkeypatch.delenv(var)
     assert run_hook(monkeypatch, capsys, QUESTION)
@@ -166,13 +211,22 @@ def test_missing_credential_keeps_reminder_without_request(
 def test_malformed_answer_keeps_reminder(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A success envelope with no usable answer counts as a failure."""
+    """A success envelope with no usable answer counts as a failure.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     serve(monkeypatch, json.dumps({"success": True, "result": {}}).encode())
     assert run_hook(monkeypatch, capsys, QUESTION)
 
 
 def test_clef_request_follows_api(monkeypatch: pytest.MonkeyPatch) -> None:
-    """decide() posts state and questions with the bearer token."""
+    """decide() posts state and questions with the bearer token.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, clef_reply(0.5))
     monkeypatch.setenv("CLEF_MODEL", "clef-flash")
     questions = {"q": {"type": "noul", "instructions": "x"}}
@@ -187,7 +241,11 @@ def test_clef_request_follows_api(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_clef_failure_is_error_without_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    """API-reported failures become an error that never leaks the token."""
+    """API-reported failures become an error that never leaks the token.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     errors = [{"message": f"bad token {TOKEN}"}]
     serve(monkeypatch, json.dumps({"success": False, "errors": errors}).encode())
     error = utils.decide("s", {}).get("error", "")
@@ -198,7 +256,12 @@ def test_clef_failure_is_error_without_token(monkeypatch: pytest.MonkeyPatch) ->
 def test_long_message_sends_only_the_tail(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Very long messages are clipped to the end, where questions live."""
+    """Very long messages are clipped to the end, where questions live.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, clef_reply(0.98))
     run_hook(monkeypatch, capsys, "x" * enforcer.MAX_STATE_CHARS + QUESTION)
     state = json.loads(seen[0].data)["state"]  # type: ignore[arg-type]
@@ -207,9 +270,22 @@ def test_long_message_sends_only_the_tail(
 
 
 def test_backend_is_swappable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A registered backend serves the same contract with no other change."""
+    """A registered backend serves the same contract with no other change.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
 
     def local_model(state: Any, questions: dict[str, Any]) -> dict[str, Any]:
+        """Answer every question with the state itself.
+
+        Args:
+            state: conversation state sent to the backend.
+            questions: question ids mapped to their specs.
+
+        Returns:
+            dict[str, Any]: one answer per question id.
+        """
         return {"answers": dict.fromkeys(questions, state)}
 
     monkeypatch.setitem(utils.DECISION_BACKENDS, "local", local_model)
@@ -218,13 +294,21 @@ def test_backend_is_swappable(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_unknown_backend_is_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A misconfigured backend name is reported, not raised."""
+    """A misconfigured backend name is reported, not raised.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     monkeypatch.setenv("DECISION_BACKEND", "nope")
     assert "nope" in utils.decide("s", {}).get("error", "")
 
 
 def test_raising_backend_becomes_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """decide() contains any backend crash, so hooks never die on it."""
+    """decide() contains any backend crash, so hooks never die on it.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     serve(monkeypatch, b"[]")
     assert "error" in utils.decide("s", {})
 
@@ -244,7 +328,14 @@ def test_skip_reason_is_logged(
     payload: dict[str, Any],
     reason: str,
 ) -> None:
-    """Every silent exit leaves its reason in the log."""
+    """Every silent exit leaves its reason in the log.
+
+    Args:
+        caplog: pytest fixture that captures log records.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+        payload: hook stdin payload for this case.
+        reason: skip reason expected in the log.
+    """
     serve(monkeypatch, clef_reply(0.01))
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
     with pytest.raises(SystemExit):
@@ -257,7 +348,13 @@ def test_unavailable_decision_is_logged(
     capsys: pytest.CaptureFixture[str],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A fail-open decision names the question and the backend's error."""
+    """A fail-open decision names the question and the backend's error.
+
+    Args:
+        caplog: pytest fixture that captures log records.
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     monkeypatch.delenv("CLOUDFLARE_API_TOKEN")
     run_hook(monkeypatch, capsys, QUESTION)
     assert f"{enforcer.QUESTION_ID}: unavailable" in caplog.text
@@ -265,12 +362,27 @@ def test_unavailable_decision_is_logged(
 
 
 def ask(state: str = QUESTION, instructions: str = "It asks.") -> bool:
-    """Ask the fixed yes/no question used by the decision cache tests."""
+    """Ask the fixed yes/no question used by the decision cache tests.
+
+    Args:
+        instructions: statement the backend judges.
+        state: conversation state sent to the backend.
+
+    Returns:
+        bool: True when the backend decides yes.
+    """
     return utils.decide_yes(state, "q", instructions)
 
 
 def reply_q(noul: float) -> bytes:
-    """Build a successful Clef envelope for the cache tests' question."""
+    """Build a successful Clef envelope for the cache tests' question.
+
+    Args:
+        noul: probability returned by the fake Clef reply.
+
+    Returns:
+        bytes: JSON-encoded Clef success envelope.
+    """
     answer = {"type": "noul", "noul": noul}
     return json.dumps({"success": True, "result": {"answers": {"q": answer}}}).encode()
 
@@ -279,7 +391,13 @@ def reply_q(noul: float) -> bytes:
 def test_repeated_state_asks_backend_once(
     monkeypatch: pytest.MonkeyPatch, noul: float, *, expected: bool
 ) -> None:
-    """A repeated state reuses the answer, including a zero probability."""
+    """A repeated state reuses the answer, including a zero probability.
+
+    Args:
+        expected: yes/no result expected from the cached decision.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+        noul: probability returned by the fake Clef reply.
+    """
     seen = serve(monkeypatch, reply_q(noul))
     assert ask() is expected
     assert ask() is expected
@@ -289,7 +407,11 @@ def test_repeated_state_asks_backend_once(
 def test_cached_answer_honors_the_callers_threshold(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The probability is cached, not the yes/no reached with one threshold."""
+    """The probability is cached, not the yes/no reached with one threshold.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, reply_q(0.6))
     assert utils.decide_yes(QUESTION, "q", "It asks.", threshold=0.5)
     assert not utils.decide_yes(QUESTION, "q", "It asks.", threshold=0.7)
@@ -297,7 +419,11 @@ def test_cached_answer_honors_the_callers_threshold(
 
 
 def test_failed_decision_is_not_cached(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An outage fails open once, without pinning that answer to the state."""
+    """An outage fails open once, without pinning that answer to the state.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     serve(monkeypatch, json.dumps({"success": False, "errors": []}).encode())
     assert ask()
     seen = serve(monkeypatch, reply_q(0.1))
@@ -317,7 +443,12 @@ def test_failed_decision_is_not_cached(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_anything_shaping_the_answer_misses_the_cache(
     monkeypatch: pytest.MonkeyPatch, change: Any
 ) -> None:
-    """A different state, statement or model gets a fresh answer."""
+    """A different state, statement or model gets a fresh answer.
+
+    Args:
+        change: callable that alters one input that shapes the answer.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, reply_q(0.9))
     ask()
     change(monkeypatch)
@@ -327,7 +458,12 @@ def test_anything_shaping_the_answer_misses_the_cache(
 def test_expired_decision_asks_again(
     monkeypatch: pytest.MonkeyPatch, isolated_decision_cache: Path
 ) -> None:
-    """Past the TTL the cached answer is ignored."""
+    """Past the TTL the cached answer is ignored.
+
+    Args:
+        isolated_decision_cache: fixture that points the decision cache at a temp dir.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, reply_q(0.9))
     ask()
     expired = 1000.0
@@ -340,7 +476,12 @@ def test_expired_decision_asks_again(
 def test_corrupt_cache_entry_asks_again(
     monkeypatch: pytest.MonkeyPatch, isolated_decision_cache: Path
 ) -> None:
-    """A damaged entry behaves as a miss instead of killing the hook."""
+    """A damaged entry behaves as a miss instead of killing the hook.
+
+    Args:
+        isolated_decision_cache: fixture that points the decision cache at a temp dir.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, reply_q(0.9))
     ask()
     for entry in isolated_decision_cache.iterdir():
@@ -352,7 +493,12 @@ def test_corrupt_cache_entry_asks_again(
 def test_unwritable_cache_keeps_the_decision(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A cache that cannot be written never costs the hook its decision."""
+    """A cache that cannot be written never costs the hook its decision.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+        tmp_path: pytest fixture with a per-test temporary directory.
+    """
     blocker = tmp_path / "file"
     blocker.write_text("", encoding="utf-8")
     monkeypatch.setattr(utils, "DECISION_CACHE_DIR", blocker / "sub")
@@ -363,7 +509,12 @@ def test_unwritable_cache_keeps_the_decision(
 def test_cache_stores_no_message_text(
     monkeypatch: pytest.MonkeyPatch, isolated_decision_cache: Path
 ) -> None:
-    """Prompts stay off the disk: the entry holds only a hash and a number."""
+    """Prompts stay off the disk: the entry holds only a hash and a number.
+
+    Args:
+        isolated_decision_cache: fixture that points the decision cache at a temp dir.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     serve(monkeypatch, reply_q(0.9))
     ask()
     (entry,) = isolated_decision_cache.iterdir()
@@ -374,7 +525,12 @@ def test_cache_stores_no_message_text(
 def test_cache_hit_is_logged_without_state(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A cached decision says so, explaining why no request happened."""
+    """A cached decision says so, explaining why no request happened.
+
+    Args:
+        caplog: pytest fixture that captures log records.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     serve(monkeypatch, reply_q(0.9))
     ask()
     ask()
@@ -385,7 +541,12 @@ def test_cache_hit_is_logged_without_state(
 def test_hook_replay_skips_backend(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """The enforcer gives the same verdict on replay with a single request."""
+    """The enforcer gives the same verdict on replay with a single request.
+
+    Args:
+        capsys: pytest fixture that captures stdout/stderr.
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+    """
     seen = serve(monkeypatch, clef_reply(0.98))
     first = run_hook(monkeypatch, capsys, QUESTION)
     assert first

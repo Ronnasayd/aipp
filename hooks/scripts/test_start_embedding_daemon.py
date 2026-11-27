@@ -2,17 +2,25 @@
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
+import time
+from typing import TYPE_CHECKING
 
-import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
 import start_embedding_daemon as hook
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def test_returns_without_waiting_for_long_lived_daemon(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A daemon that never exits must not block the hook (Codex hung on it)."""
+    """A daemon that never exits must not block the hook (Codex hung on it).
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+        tmp_path: pytest fixture with a per-test temporary directory.
+    """
     sleeper = tmp_path / "daemon.py"
     sleeper.write_text("import time\ntime.sleep(10)\n")
     monkeypatch.setattr(hook, "DAEMON_SCRIPT", sleeper)
@@ -28,7 +36,12 @@ def test_returns_without_waiting_for_long_lived_daemon(
 def test_skips_spawn_when_socket_exists(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """An existing socket means a daemon is already up: spawn nothing."""
+    """An existing socket means a daemon is already up: spawn nothing.
+
+    Args:
+        monkeypatch: pytest fixture that patches env, attributes and stdin.
+        tmp_path: pytest fixture with a per-test temporary directory.
+    """
     monkeypatch.chdir(tmp_path)
     sock = Path(f"/tmp/embedding-daemon-{tmp_path.name}.sock")
     sock.touch()
