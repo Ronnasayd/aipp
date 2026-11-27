@@ -85,12 +85,9 @@
       "scripts/comment.py",
       "scripts/merge_runs.py",
       "scripts/office/helpers/__init__.py",
-      "scripts/office/helpers/merge_runs.py",
       "scripts/office/helpers/pptx_chart.py",
       "scripts/office/helpers/pptx_slide.py",
       "scripts/office/helpers/pptx_theme.py",
-      "scripts/office/helpers/simplify_redlines.py",
-      "scripts/office/pack.py",
       "scripts/office/schemas/ISO-IEC29500-4_2016/dml-chart.xsd",
       "scripts/office/schemas/ISO-IEC29500-4_2016/dml-chartDrawing.xsd",
       "scripts/office/schemas/ISO-IEC29500-4_2016/dml-diagram.xsd",
@@ -131,7 +128,6 @@
       "scripts/office/schemas/microsoft/wml-sdtdatahash-2020.xsd",
       "scripts/office/schemas/microsoft/wml-symex-2015.xsd",
       "scripts/office/soffice.py",
-      "scripts/office/unpack.py",
       "scripts/office/validate.py",
       "scripts/office/validators/__init__.py",
       "scripts/office/validators/base.py",
@@ -156,6 +152,7 @@
       "reference/evaluation.md",
       "reference/mcp_best_practices.md",
       "reference/node_mcp_server.md",
+      "reference/node_mcp_server_v2.md",
       "reference/python_mcp_server.md",
       "scripts/connections.py",
       "scripts/evaluation.py",
@@ -166,9 +163,9 @@
   "pdf": {
     "skill_md": "anthropics/pdf/SKILL.md",
     "files": [
+      "FORMS.md",
       "LICENSE.txt",
-      "forms.md",
-      "reference.md",
+      "REFERENCE.md",
       "scripts/check_bounding_boxes.py",
       "scripts/check_fillable_fields.py",
       "scripts/convert_pdf_to_images.py",
@@ -216,12 +213,9 @@
     "files": [
       "LICENSE.txt",
       "scripts/office/helpers/__init__.py",
-      "scripts/office/helpers/merge_runs.py",
       "scripts/office/helpers/pptx_chart.py",
       "scripts/office/helpers/pptx_slide.py",
       "scripts/office/helpers/pptx_theme.py",
-      "scripts/office/helpers/simplify_redlines.py",
-      "scripts/office/pack.py",
       "scripts/office/schemas/ISO-IEC29500-4_2016/dml-chart.xsd",
       "scripts/office/schemas/ISO-IEC29500-4_2016/dml-chartDrawing.xsd",
       "scripts/office/schemas/ISO-IEC29500-4_2016/dml-diagram.xsd",
@@ -262,7 +256,6 @@
       "scripts/office/schemas/microsoft/wml-sdtdatahash-2020.xsd",
       "scripts/office/schemas/microsoft/wml-symex-2015.xsd",
       "scripts/office/soffice.py",
-      "scripts/office/unpack.py",
       "scripts/office/validate.py",
       "scripts/office/validators/__init__.py",
       "scripts/office/validators/base.py",
@@ -437,7 +430,10 @@
   },
   "database-migrations": {
     "skill_md": "everything-claude-code/database-migrations/SKILL.md",
-    "files": []
+    "files": [
+      "examples/postgres-add-column.sql",
+      "examples/postgres-column-rename.sql"
+    ]
   },
   "deep-research": {
     "skill_md": "everything-claude-code/deep-research/SKILL.md",
@@ -741,12 +737,7 @@
   },
   "domain-modeling": {
     "skill_md": "mattpocock/engineering/domain-modeling/SKILL.md",
-    "files": [
-      "ADR-FORMAT.md",
-      "CONTEXT-FORMAT.md",
-      "GLOSSARY-FORMAT.md",
-      "agents/openai.yaml"
-    ]
+    "files": ["ADR-FORMAT.md", "GLOSSARY-FORMAT.md", "agents/openai.yaml"]
   },
   "grill-with-docs": {
     "skill_md": "mattpocock/engineering/grill-with-docs/SKILL.md",
@@ -824,6 +815,7 @@
     "files": [
       "references/android-applications.md",
       "references/connection-and-recovery.md",
+      "references/desktop-build.md",
       "references/environments.md",
       "references/evidence-workflows.md",
       "references/javascript-applications.md",
@@ -921,8 +913,6 @@
   "spec-to-requirements-table": {
     "skill_md": "spec-to-requirements-table/SKILL.md",
     "files": [
-      "scripts/__pycache__/test_validate_requirements.cpython-313-pytest-9.2.0.pyc",
-      "scripts/__pycache__/validate_requirements.cpython-313.pyc",
       "scripts/test_validate_requirements.py",
       "scripts/validate_requirements.py"
     ]
@@ -1271,17 +1261,14 @@
   },
   "tlc-discover": {
     "skill_md": "tech-leads-club/tlc-discover/SKILL.md",
-    "files": ["references/document-format.md"]
+    "files": ["references/document-format.md", "scripts/validate_design.py"]
   },
   "tlc-implement": {
     "skill_md": "tech-leads-club/tlc-implement/SKILL.md",
     "files": [
       "references/build.md",
-      "references/checklist-format.md",
       "references/checks.md",
       "references/memory.md",
-      "references/screens.md",
-      "references/test-policy.md",
       "references/verify-screens.md",
       "references/verify.md",
       "scripts/check_commit.py",
@@ -1292,8 +1279,6 @@
       "scripts/fixtures/verification.md",
       "scripts/lean_config.py",
       "scripts/lessons.py",
-      "scripts/mutate.py",
-      "scripts/runners.py",
       "scripts/selftest.py",
       "scripts/validate_checks.py",
       "scripts/validate_verification.py"
@@ -1302,7 +1287,6 @@
   "tlc-plan": {
     "skill_md": "tech-leads-club/tlc-plan/SKILL.md",
     "files": [
-      "references/document-format.md",
       "references/plan.md",
       "scripts/fixtures/plan.md",
       "scripts/lean_config.py",
@@ -1314,33 +1298,17 @@
   "tlc-spec-driven": {
     "skill_md": "tech-leads-club/tlc-spec-driven/SKILL.md",
     "files": [
-      "README.md",
-      "references/brownfield-mapping.md",
-      "references/code-analysis.md",
       "references/coding-principles.md",
-      "references/concerns.md",
-      "references/context-limits.md",
       "references/design.md",
       "references/discuss.md",
       "references/implement.md",
       "references/lessons.md",
       "references/memory.md",
-      "references/project-init.md",
-      "references/quick-mode.md",
-      "references/roadmap.md",
-      "references/session-handoff.md",
       "references/specify.md",
-      "references/state-management.md",
       "references/sub-agents.md",
       "references/tasks.md",
       "references/validate.md",
       "references/verify-screens.md",
-      "scripts/__pycache__/check_proofs.cpython-313.pyc",
-      "scripts/__pycache__/lean_config.cpython-312.pyc",
-      "scripts/__pycache__/lean_config.cpython-313.pyc",
-      "scripts/__pycache__/runners.cpython-312.pyc",
-      "scripts/__pycache__/runners.cpython-313.pyc",
-      "scripts/__pycache__/validate_verification.cpython-312.pyc",
       "scripts/check_commit.py",
       "scripts/check_proofs.py",
       "scripts/fixtures/checks.md",
@@ -1349,11 +1317,8 @@
       "scripts/fixtures/verification.md",
       "scripts/lean_config.py",
       "scripts/lessons.py",
-      "scripts/mutate.py",
-      "scripts/runners.py",
       "scripts/selftest.py",
       "scripts/validate_spec.py",
-      "scripts/validate_state.py",
       "scripts/validate_tasks.py",
       "scripts/validate_verification.py"
     ]
@@ -1362,26 +1327,14 @@
     "skill_md": "tech-leads-club/tlc-spec-lean/SKILL.md",
     "files": [
       "references/build.md",
-      "references/checks.md",
       "references/memory.md",
       "references/plan.md",
-      "references/verify-screens.md",
-      "references/verify.md",
-      "scripts/__pycache__/lean_config.cpython-313.pyc",
+      "references/review.md",
       "scripts/check_commit.py",
-      "scripts/check_proofs.py",
-      "scripts/fixtures/checks.md",
       "scripts/fixtures/plan.md",
-      "scripts/fixtures/proofs.md",
-      "scripts/fixtures/verification.md",
       "scripts/lean_config.py",
-      "scripts/lessons.py",
-      "scripts/mutate.py",
-      "scripts/runners.py",
       "scripts/selftest.py",
-      "scripts/validate_checks.py",
-      "scripts/validate_plan.py",
-      "scripts/validate_verification.py"
+      "scripts/validate_plan.py"
     ]
   },
   "technical-decision-helper": {

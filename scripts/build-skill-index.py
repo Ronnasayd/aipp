@@ -22,6 +22,8 @@ _FRONTMATTER_NAME_RE = re.compile(r"^name:\s*(.+)$", re.MULTILINE)
 def build_manifest(skills_dir: Path) -> dict:
     """Walk skills_dir for SKILL.md files, mapping frontmatter name to path + files.
 
+    Python bytecode (``__pycache__`` dirs, ``*.pyc``) is excluded from files.
+
     Args:
         skills_dir: Directory to search recursively for SKILL.md files.
 
@@ -38,7 +40,10 @@ def build_manifest(skills_dir: Path) -> dict:
         files = sorted(
             str(p.relative_to(skill_dir))
             for p in skill_dir.rglob("*")
-            if p.is_file() and p != skill_md
+            if p.is_file()
+            and p != skill_md
+            and p.suffix != ".pyc"
+            and "__pycache__" not in p.parts
         )
         manifest[name] = {
             "skill_md": str(skill_md.relative_to(skills_dir)),
