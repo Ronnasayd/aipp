@@ -186,3 +186,37 @@ def test_pace_shows_equivalent_time_in_hours_and_minutes(tmp_path):
     output = run_statusline(tmp_path, {}, extra={"rate_limits": rate_limits})
     plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
     assert re.search(r"-\d+\.\d% - 01:30\)", plain)
+
+
+def run_with_pr_marker(tmp_path: Path, marker_text: str | None) -> str:
+    """Run the script for a unique project name, with or without its PR marker.
+
+    Args:
+        tmp_path: Directory that holds the fake config and serves as cwd.
+        marker_text: Content of the /tmp PR review marker; None skips it.
+
+    Returns:
+        The stdout of the script.
+    """
+    name = f"proj-{uuid.uuid4().hex[:8]}"
+    # why: the script reads a fixed /tmp path, so tmp_path cannot hold this file
+    marker = Path(f"/tmp/pr-review-{name}.md")
+    if marker_text is not None:
+        marker.write_text(marker_text, encoding="utf-8")
+    try:
+        workspace = {"current_dir": f"/x/{name}", "project_dir": f"/x/{name}"}
+        return run_statusline(tmp_path, {}, extra={"workspace": workspace})
+    finally:
+        marker.unlink(missing_ok=True)
+
+
+def test_pr_review_badge_shown_when_marker_exists(tmp_path):
+    out = run_with_pr_marker(
+        tmp_path, "## Open PR review\n\nPR #81 (a → b): https://github.com/o/r/pull/81"
+    )
+    assert "PR #81 review" in out
+    assert "https://github.com/o/r/pull/81" in out
+
+
+def test_pr_review_badge_absent_without_marker(tmp_path):
+    assert "review" not in run_with_pr_marker(tmp_path, None)

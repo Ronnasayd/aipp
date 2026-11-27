@@ -9,6 +9,10 @@ thread count, and the gh commands to read the details) as additionalContext.
 Review bodies are never injected: they are external text, and the agent can
 fetch them on demand with the commands in the summary.
 
+The same summary is mirrored to /tmp/pr-review-<project dir name>.md so a
+statusline can show that the PR has a review; the file is deleted when there
+is no review to report.
+
 Silent (exit 0, no stdout) on detached HEAD, no github.com remote, gh missing
 or unauthenticated, no open PR, or an open PR without any review.
 """
@@ -17,6 +21,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import shutil
 import sys
 
@@ -29,6 +34,7 @@ from utils import get_hooks_logger, project_dir, run_command_cwd  # noqa: E402
 logger = get_hooks_logger("PrReviewContext")
 
 MAX_STDIN = 1024 * 1024
+MARKER_DIR = Path("/tmp")  # noqa: S108
 COMMAND_TIMEOUT_SECONDS = 5
 PR_FIELDS = "number,url,state,headRefName,baseRefName,reviewDecision,latestReviews"
 THREADS_QUERY = (
@@ -232,6 +238,22 @@ def build_context(cwd: str) -> str | None:
     return render_summary(pr, unresolved)
 
 
+def sync_marker(cwd: str, context: str | None) -> None:
+    """Mirror the summary to the statusline marker, or delete the marker.
+
+    Args:
+        cwd: Repository directory; its name keys the marker file.
+        context: The summary, or None when there is no review to report.
+    """
+    # hazard: keyed by dir name, same-named repos share a marker;
+    # key by full path if that bites
+    marker = MARKER_DIR / f"pr-review-{Path(cwd).resolve().name}.md"
+    if context:
+        marker.write_text(context, encoding="utf-8")
+    else:
+        marker.unlink(missing_ok=True)
+
+
 def main() -> None:
     """Read the SessionStart payload and emit the PR review summary if any."""
     try:
@@ -243,7 +265,9 @@ def main() -> None:
         logger.debug("skip: SessionStart payload is not an object")
         sys.exit(0)
 
-    context = build_context(project_dir(payload))
+    cwd = project_dir(payload)
+    context = build_context(cwd)
+    sync_marker(cwd, context)
     if not context:
         sys.exit(0)
 

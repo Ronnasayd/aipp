@@ -196,6 +196,17 @@ else
     branch_color="$C_MAUVE"
 fi
 
+# PR review badge: marker written by hooks/scripts/pr_review_context.py at SessionStart,
+# keyed by the project dir name; absent marker means no review to report.
+pr_review_info=""
+project_name=$(basename "$(echo "$input" | jq -r '.workspace.project_dir // .workspace.current_dir')")
+pr_marker="/tmp/pr-review-${project_name}.md"
+if [ -f "$pr_marker" ]; then
+    pr_number=$(grep -oE 'PR #[0-9]+' "$pr_marker" | head -1)
+    pr_url=$(grep -oE 'https://github\.com/[^ ]+/pull/[0-9]+' "$pr_marker" | head -1)
+    pr_review_info="${SEP}\e]8;;${pr_url}\e\\\\${C_RED}${pr_number} review${RESET}\e]8;;\e\\\\"
+fi
+
 # Claude Code version
 cc_version=$(claude --version 2>/dev/null | awk '{print $1}')
 
@@ -503,7 +514,7 @@ cc_ver_info=""
 # OSC 8 hyperlink: v<version> -> release notes (degrades to plain text on terminals without support)
 [ -n "$cc_version" ] && cc_ver_info="${SEP}\e]8;;https://github.com/anthropics/claude-code/releases\e\\\\${C_SUBTEXT}v${cc_version}${RESET}\e]8;;\e\\\\"
 echo -e "${email_color}${email_info}${RESET}${transcript_link}${autonomous_info}"
-echo -e "${C_TEAL}${vscode_open}${ICON_FOLDER} $folder${vscode_close}${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${readonly_info}${tools_status}${disabled_mcp_info}${cc_ver_info}"
+echo -e "${C_TEAL}${vscode_open}${ICON_FOLDER} $folder${vscode_close}${lang_info}${RESET}${SEP}${branch_color}${ICON_BRANCH} $branch${RESET}${git_info}${pr_review_info}${SEP}${C_LAVENDER}${ICON_MODEL} $model${RESET}${effort_info}${readonly_info}${tools_status}${disabled_mcp_info}${cc_ver_info}"
 echo -e "${C_BLUE}${ICON_CTX} ctx ${ctx_bar} ${ctx_pct_int}% (${ctx_usage_k}k/${ctx_size_k}k)${RESET}${SEP}${ICON_TOKEN} tok(in:${total_input_f} out:${total_output_f})${SEP}${cost_info#"${SEP}"}${dur_info}${SEP}${cache_ttl_info}"
 echo -e "${rate_info}"
 
