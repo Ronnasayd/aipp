@@ -9,6 +9,8 @@ replace_between() {
     local fim="$2"
     local conteudo="$3"
     local arquivo="$4"
+    # why: fresh projects have no AGENTS.md yet; grep/cat would print errors.
+    [ -e "$arquivo" ] || : > "$arquivo"
 
     if grep -Fq "$inicio" "$arquivo"; then
         awk -v ini="$inicio" \
@@ -242,7 +244,9 @@ if [ -f "$LOCAL/lefthook.yml" ]; then
 else
     ln -s "$SOURCE/lefthook/lefthook.yml" "$LOCAL/lefthook.yml"
 fi
-if command -v lefthook &>/dev/null; then
+if ! git -C "$LOCAL" rev-parse --git-dir &>/dev/null; then
+  echo "Warning: $LOCAL não é um repositório git, pulando 'lefthook install'." >&2
+elif command -v lefthook &>/dev/null; then
   (cd "$LOCAL" && lefthook install)
 else
   echo "Warning: lefthook não encontrado no PATH, pulando 'lefthook install'." >&2
