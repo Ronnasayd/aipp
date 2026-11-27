@@ -26,6 +26,15 @@ ln -s "$SOURCE/commands/"* "$HOME/.codex/prompts/"
 ## GITIGNORE
 git_exclude "AGENTS.md"
 # git_exclude ".codex/"
+# why: holds expanded MCP env/headers (tokens) — never commit it.
+git_exclude ".codex/config.toml"
+
+###########################################################################################
+## CODEX MCP — mirror the MCP servers Claude loads for this project.
+## Codex reads <project>/.codex/config.toml only when the project is trusted in Codex.
+MCP_JSON="$LOCAL/.mcp.json"
+[ -f "$MCP_JSON" ] || MCP_JSON="$SOURCE/claude/.mcp.json"
+python3 "$SOURCE/scripts/mcp_json_to_codex.py" "$MCP_JSON" "$LOCAL"
 
 ###########################################################################################
 ## CODEX CONFIG

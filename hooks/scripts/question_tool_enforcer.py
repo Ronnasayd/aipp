@@ -8,11 +8,11 @@ When the decision is unavailable, the '?' alone triggers the reminder.
 
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from utils import (
+from utils import (  # pylint: disable=wrong-import-position
     autonomous_mode,
     decide_yes,
     emit_additional_context,
@@ -22,8 +22,7 @@ from utils import (
 )
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-if script_dir not in sys.path:
-    sys.path.append(script_dir)
+
 
 LOG = get_hooks_logger("QuestionToolEnforcer")
 
@@ -123,6 +122,12 @@ def main() -> None:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError) as e:
         LOG.debug("Failed to parse JSON: %s", e)
+        sys.exit(0)
+
+    # hazard: Codex (the only sender of turn_id) rejects hookSpecificOutput on
+    # Stop and ends the turn, so the user could never answer the question.
+    if get_by_key(payload, "turn_id"):
+        LOG.debug("Skipping: Codex payload")
         sys.exit(0)
 
     if get_by_key(payload, "stop_hook_active"):

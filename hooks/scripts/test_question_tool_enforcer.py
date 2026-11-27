@@ -1,16 +1,13 @@
 """Regression suite for typed decisions and the question tool enforcer."""
 
-# pylint: disable=missing-param-doc,missing-return-doc
-# why: test names and docstrings state intent; pytest fixtures need no param docs
-
 from __future__ import annotations
 
 import io
 import json
 import os
 import sys
-from typing import TYPE_CHECKING, Any
 import urllib.error
+from typing import TYPE_CHECKING, Any
 
 import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
 import question_tool_enforcer as enforcer
@@ -63,6 +60,7 @@ def run_hook(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     message: str,
+    extra: dict[str, Any] | None = None,
 ) -> str:
     """Run the hook's main() on a Stop payload.
 
@@ -70,11 +68,13 @@ def run_hook(
         monkeypatch: pytest monkeypatch fixture.
         capsys: pytest stdout capture fixture.
         message: last assistant message.
+        extra: additional payload fields.
 
     Returns:
         str: what the hook printed to stdout.
     """
     payload = {"hook_event_name": "Stop", "last_assistant_message": message}
+    payload |= extra or {}
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
     with pytest.raises(SystemExit):
         enforcer.main()
@@ -111,6 +111,15 @@ def test_autonomous_mode_skips_reminder_and_backend(
     monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
     seen = serve(monkeypatch, clef_reply(0.98))
     assert run_hook(monkeypatch, capsys, QUESTION) == ""
+    assert not seen
+
+
+def test_codex_stop_skips_reminder_and_backend(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Codex rejects hookSpecificOutput on Stop and ends the turn, so stay silent."""
+    seen = serve(monkeypatch, clef_reply(0.98))
+    assert run_hook(monkeypatch, capsys, QUESTION, {"turn_id": "t1"}) == ""
     assert not seen
 
 
