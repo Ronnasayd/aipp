@@ -404,11 +404,21 @@ def autonomous_mode_notice() -> str:
     if not autonomous_mode():
         return ""
     return (
-        "## AUTONOMOUS MODE ACTIVE (`AIPP_AUTONOMOUS=1`)\n\n"
-        "No human is attached to this session. Follow the `Autonomous mode` "
-        "section of the agent instructions: never ask the user, assume the most "
-        "reasonable default and state it in one line, deliver via feature "
-        "branch + pull request, and report `BLOCKED / TRIED / NEED` when stuck."
+        "## AUTONOMOUS MODE ACTIVE\n\n"
+        "Headless/cloud run, no human attached. These rules override the "
+        "agent instructions above:\n\n"
+        "- Never ask the user (`AskUserQuestion`, `grilling`, plain-text "
+        "questions). Ambiguity → pick the most reasonable default, state the "
+        "assumption in one line, continue.\n"
+        "- Task request = authorization to change code. No waiting for approval.\n"
+        "- Skills with human approval gates (spec approval, plan review) → write "
+        'the draft, treat it as approved, record "auto-approved, autonomous '
+        'mode" in it.\n'
+        "- Deliver via a feature branch + pull request; the PR is the human "
+        "review point. Never push to protected branches (`protect_branches.py` "
+        "still denies it).\n"
+        "- Truly blocked (missing credential, unreachable service) → stop and "
+        "report with `BLOCKED / TRIED / NEED`, do not loop."
     )
 
 
