@@ -233,7 +233,10 @@ _scan_skill_dir() {
   local dir="$1"
   command -v uv &>/dev/null || return 0
 
-  if uv run skillspector scan "$dir" --no-llm --recursive; then
+  local report
+  report="$(mktemp)"
+  if uv run skillspector scan "$dir" --no-llm --recursive --format markdown --output "$report"; then
+    rm -f "$report"
     return 0
   fi
 
@@ -243,6 +246,9 @@ _scan_skill_dir() {
   rm -rf "$quarantine_dir"
   mkdir -p "$(dirname "$quarantine_dir")"
   mv "$dir" "$quarantine_dir"
+  # why: o agente que avalia a quarentena lê os findings daqui sem rodar o scan de novo
+  mv "$report" "$quarantine_dir/SKILLSPECTOR_REPORT.md"
+  echo "  → relatório: $quarantine_dir/SKILLSPECTOR_REPORT.md" >&2
 }
 
 # ─── Lista de skills ──────────────────────────────────────────────────────────

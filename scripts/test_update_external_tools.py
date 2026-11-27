@@ -82,3 +82,38 @@ def test_unparseable_listing_deletes_nothing(tmp_path):
     _gghget(out, "not json")
     assert (out / "orphan.py").exists()
     assert (out / "keep.py").exists()
+
+
+def _scan(cwd: Path, skill_dir: str, exit_code: int):
+    # why: uv is stubbed to write a fake --output report so the scan never runs for real
+    stub = (
+        'source "$1"; '
+        "uv() { while [[ $# -gt 0 ]]; do "
+        '[[ "$1" == --output ]] && echo "FAKE REPORT" > "$2"; shift; done; '
+        'return "$FAKE_EXIT"; }; '
+        '_scan_skill_dir "$2"'
+    )
+    return subprocess.run(
+        ["bash", "-c", stub, "test", str(SCRIPT), skill_dir],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=cwd,
+        env={"PATH": "/usr/bin:/bin", "FAKE_EXIT": str(exit_code)},
+    )
+
+
+def test_quarantined_skill_carries_skillspector_report(tmp_path):
+    (tmp_path / "skills/vendor/demo").mkdir(parents=True)
+    (tmp_path / "skills/vendor/demo/SKILL.md").write_text("x", encoding="utf-8")
+    _scan(tmp_path, "skills/vendor/demo", exit_code=1)
+    quarantined = tmp_path / "skills/.quarantine/skills/vendor/demo"
+    assert (quarantined / "SKILL.md").exists()
+    assert (quarantined / "SKILLSPECTOR_REPORT.md").read_text() == "FAKE REPORT\n"
+
+
+def test_clean_scan_leaves_no_report(tmp_path):
+    (tmp_path / "skills/vendor/demo").mkdir(parents=True)
+    _scan(tmp_path, "skills/vendor/demo", exit_code=0)
+    assert not (tmp_path / "skills/vendor/demo/SKILLSPECTOR_REPORT.md").exists()
+    assert not (tmp_path / "skills/.quarantine").exists()
