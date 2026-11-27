@@ -5,13 +5,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
 import start_context
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 GLOSSARY = """# Ctx
 
@@ -107,3 +104,27 @@ def test_autonomous_section_in_optional_sections(
     monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
     sections = start_context.optional_sections({"cwd": str(tmp_path)})
     assert "AUTONOMOUS MODE ACTIVE" in sections
+
+
+def test_autonomous_section_carries_full_mode_rules(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Autonomous rules live only in the notice, so it must carry all of them."""
+    monkeypatch.setenv("AIPP_AUTONOMOUS", "1")
+    notice = start_context.autonomous_mode_notice()
+    for rule in (
+        "Never ask the user",
+        "Task request = authorization to change code",
+        "auto-approved, autonomous mode",
+        "feature branch + pull request",
+        "protect_branches.py",
+        "BLOCKED / TRIED / NEED",
+    ):
+        assert rule in notice
+
+
+def test_agent_instructions_have_no_autonomous_section() -> None:
+    """Interactive sessions must not see autonomous-mode rules at all."""
+    instructions = Path(__file__).resolve().parents[2] / "instructions"
+    text = (instructions / "agent.instructions.md").read_text(encoding="utf-8")
+    assert "AIPP_AUTONOMOUS" not in text
