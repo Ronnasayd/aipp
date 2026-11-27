@@ -248,10 +248,14 @@ def sync_marker(cwd: str, context: str | None) -> None:
     # hazard: keyed by dir name, same-named repos share a marker;
     # key by full path if that bites
     marker = MARKER_DIR / f"pr-review-{Path(cwd).resolve().name}.md"
-    if context:
-        marker.write_text(context, encoding="utf-8")
-    else:
-        marker.unlink(missing_ok=True)
+    # why: marker is best-effort; an unwritable /tmp must not drop the summary
+    try:
+        if context:
+            marker.write_text(context, encoding="utf-8")
+        else:
+            marker.unlink(missing_ok=True)
+    except OSError as exc:
+        logger.debug("marker sync failed: %s", exc)
 
 
 def main() -> None:

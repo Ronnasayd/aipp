@@ -274,3 +274,15 @@ def test_marker_removed_when_no_review(
     pr_review_context.sync_marker("/home/u/my-repo", None)
 
     assert not marker.exists()
+
+
+def test_marker_write_failure_is_swallowed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An unwritable marker must not break the hook's silent contract."""
+    monkeypatch.setattr(pr_review_context, "MARKER_DIR", tmp_path / "missing")
+
+    with caplog.at_level("DEBUG", logger="PrReviewContext"):
+        pr_review_context.sync_marker("/home/u/my-repo", "## Open PR review")
+
+    assert "marker sync failed" in caplog.text
