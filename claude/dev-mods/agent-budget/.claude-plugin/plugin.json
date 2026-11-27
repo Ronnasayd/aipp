@@ -1,0 +1,5 @@
+{
+  "name": "agent-budget",
+  "version": "0.1.0",
+  "description": "Admits subagents by a model+effort cost budget instead of a flat concurrency count"
+}
