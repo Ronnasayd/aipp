@@ -11,6 +11,8 @@ replace_between() {
     local fim="$2"
     local conteudo="$3"
     local arquivo="$4"
+    # why: fresh projects have no AGENTS.md yet; grep/cat would print errors.
+    [ -e "$arquivo" ] || : > "$arquivo"
 
     if grep -Fq "$inicio" "$arquivo"; then
         awk -v ini="$inicio" \
