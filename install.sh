@@ -253,14 +253,15 @@ if [ "$CLEAN_MODE" = true ]; then
   exit 0
 fi
 
+# why: backend installers read $CLAUDE_CONFIG_DIR/aipp-settings.json, so it must be seeded for $LOCAL first
+uv run --project "$SOURCE" --directory "$SOURCE" python3 "$SOURCE/scripts/list_skills_agents.py" > /dev/null && echo "list skills [ok]"
+uv run --project "$SOURCE" python3 "$SOURCE/scripts/aipp_settings.py" sync-catalog "$SOURCE"
+uv run --project "$SOURCE" python3 "$SOURCE/scripts/aipp_settings.py" ensure-migrated "$LOCAL" "$SOURCE"
+
 # Execute selected install scripts
 for backend in "${BACKENDS[@]}"; do
   run_install "$backend"
 done
-
-uv run --project "$SOURCE" --directory "$SOURCE" python3 "$SOURCE/scripts/list_skills_agents.py" > /dev/null && echo "list skills [ok]"
-uv run --project "$SOURCE" python3 "$SOURCE/scripts/aipp_settings.py" sync-catalog "$SOURCE"
-uv run --project "$SOURCE" python3 "$SOURCE/scripts/aipp_settings.py" ensure-migrated "$LOCAL" "$SOURCE"
 
 ai-memory install-skills > /dev/null 2>&1 && echo "ai-memory install-skills [ok]"
 
