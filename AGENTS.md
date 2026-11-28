@@ -76,6 +76,8 @@ cd src && uv run skill-loader-mcp    # skill-loader MCP server
 
 - TDD mandatory when repo already has tests (suite/framework present): failing test first (Red), minimal code to pass (Green), then refactor. Small loops only, no big unverified blocks. No test setup in repo → don't impose one unprompted.
 
+- Mutation testing mandatory when repo already has tests and code modified: mutate only changed lines/hunks, run suite, surviving mutant → add/strengthen test until killed. Repo has mutation lib/framework → use it. None → mutate independently (manual edits or ad-hoc tool), revert every mutant after. Report killed/survived counts as evidence.
+
 - Evidence over trust: before human review, give proof change works — passing test logs, screenshots/recordings of E2E or visual tests. No "should work" claims.
 
 - Vertical slices only: thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice tested and validated before next.
