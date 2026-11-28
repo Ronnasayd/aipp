@@ -5,7 +5,7 @@ applyTo: "**/*"
 
 ## Mandatory rules — always follow
 
-- User question → interactive tool, never plain text. Claude: `AskUserQuestion`. Many questions: `grilling` skill.
+- User question → interactive tool, never plain text. Claude: `AskUserQuestion`. Many questions: `grilling` skill. Rule = HOW to ask; WHEN to ask = harness posture. Every needed question (incl. a BLOCKED `NEED` requiring user decision) → `AskUserQuestion`.
 
 - `AskUserQuestion` must be fully contextualized, never terse. Question body: explain _why_ asked (what found in code, what trade-off) before choice. Option `description`: what picking it does/causes — not label restated. No truncated question/option text; full explanation every time.
 
@@ -25,6 +25,8 @@ applyTo: "**/*"
 
 - Mutation testing mandatory when repo already has tests and code modified: mutate only changed lines/hunks, run suite, surviving mutant → add/strengthen test until killed. Repo has mutation lib/framework → use it. None → mutate independently (manual edits or ad-hoc tool), revert every mutant after. Report killed/survived counts as evidence.
 
+- Impact analysis on every file change: map inbound deps (inputs, params, consumed contracts) + outbound (outputs, returns, events, side effects, exposed contracts). Search project-wide (text + semantic) for every reference to changed file/functions/classes/interfaces/behaviors. Verify dependents keep contract/behavior compat; contract changed on purpose → fix every impacted site. Relevant change (esp. feat/fix) → find + update docs referencing changed file/feature/module; docs must match code. Goal: no inconsistency, regression, broken contract, stale reference, divergent docs.
+
 - Evidence over trust: before human review, give proof change works — passing test logs, screenshots/recordings of E2E or visual tests. No "should work" claims.
 
 - Vertical slices only: thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice tested and validated before next.
@@ -37,9 +39,11 @@ applyTo: "**/*"
 
 - Domain vocabulary: `GLOSSARY.md` (or `GLOSSARY-MAP.md`) exists → read before naming things, use its terms exactly. Term resolved/changed with user, or term conflicts with glossary → update via `domain-modeling` skill. No glossary yet → create it only once first term agreed with user, never from agent inference alone. Glossary holds terms only.
 
-- Self-contained task (no dependency on history, clear input, concise output, intermediate work not required in the main conversation) → use a sub-agent.
+- Self-contained task (no dependency on history, clear input, concise output, intermediate work not required in the main conversation) → use a sub-agent. Standing user authorization to spawn, only when these criteria met; goal: keep main context small.
 
 - Output style by consumer. Consumer = agent (prompts, skills, instructions, agent-facing files, sub-agent briefs, reasoning) → maximally compact, ultracave style: keep core idea, cut everything else. Consumer = human/user → maximally descriptive and clear, technical language per STE100 (`ste` skill).
+
+- Plugin scope: caveman → agent-facing text only, never user replies. ponytail → production code size only; never reduces TDD, mutation testing, or mandatory lint fixes.
 
 ## Mandatory rules — hallucination protection
 

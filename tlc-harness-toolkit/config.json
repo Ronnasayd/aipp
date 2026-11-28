@@ -34,12 +34,12 @@
     "lintCommand": [
       "sh",
       "-c",
-      "[ \"$SKIP_LINT\" = 1 ] || exec uv run .claude/hooks/scripts/lint_changed.py"
+      "[ \"$SKIP_LINT\" = 1 ] || exec uv run .claude/hooks/scripts/lint_changed.py --session"
     ],
     "testCommand": [
       "sh",
       "-c",
-      "[ \"$SKIP_TESTS\" = 1 ] || exec uv run .claude/hooks/scripts/test_changed.py"
+      "[ \"$SKIP_TESTS\" = 1 ] || exec uv run .claude/hooks/scripts/test_changed.py --session"
     ],
     "maxLoops": 5
   },

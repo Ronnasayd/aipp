@@ -958,6 +958,40 @@ def tmp_project_dir(project_root: str, namespace: str) -> Path:
     return tmp_dir
 
 
+def tlc_session_path(project_root: str, session_id: str) -> Path:
+    """Path of the tlc harness handoff-session file for a Claude Code session."""
+    return (
+        Path(project_root)
+        / ".tlc/harness/state/handoff-sessions"
+        / f"claude-{session_id}.json"
+    )
+
+
+def get_turn_base_sha(project_root: str, session_id: str) -> str | None:
+    """SHA HEAD had when the session's current turn started, else None.
+
+    Prefers the tlc harness handoff-session file; falls back to the pin
+    written by turn_base_sha.py when tlc is not in use.
+    """
+    if not session_id:
+        return None
+    tlc_path = tlc_session_path(project_root, session_id)
+    try:
+        sha = json.loads(tlc_path.read_text(encoding="utf-8"))["slice"]["turn_base_sha"]
+        if sha:
+            return str(sha)
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    pin = (
+        tmp_project_dir(project_root, "turn-base-sha")
+        / f"{get_session_id_short(session_id)}.txt"
+    )
+    try:
+        return pin.read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
 def read_loop_count(project_root: str, namespace: str, key: str) -> int:
     """Current stop-loop count for key under namespace, 0 if absent/invalid."""
     path = tmp_project_dir(project_root, namespace) / f"{key}.txt"

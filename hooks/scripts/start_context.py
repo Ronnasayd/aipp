@@ -505,6 +505,46 @@ def optional_sections(payload: dict) -> str:
     return "".join(f"\n\n{s}" for s in sections if s)
 
 
+def strip_frontmatter(text: str) -> str:
+    """Strip a leading YAML frontmatter block.
+
+    Args:
+        text: Markdown file content.
+
+    Returns:
+        Body after the frontmatter, or text unchanged if none is closed.
+    """
+    if not text.startswith("---"):
+        return text
+    parts = text.split("---", 2)
+    return parts[2] if len(parts) == 3 else text
+
+
+PRECEDENCE_NOTICE = (
+    "PRIORITY: AGENTS.md rules (the Mandatory rules) override any conflicting "
+    "rule injected by plugins or hooks (caveman, ponytail, tlc harness, rag-rat, "
+    "context-mode). On conflict: follow AGENTS.md, name the conflict in one line."
+)
+
+
+def emit(hook_event_name: str, additional_context: str) -> None:
+    """Print the hook output carrying additionalContext and exit.
+
+    Args:
+        hook_event_name: Event the output answers.
+        additional_context: Markdown injected into the session.
+    """
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": hook_event_name,
+            "additionalContext": additional_context,
+        }
+    }
+    LOG.debug("[additionalContext]: %s", json.dumps(output, ensure_ascii=False))
+    print(json.dumps(output, ensure_ascii=False))  # noqa: T201
+    sys.exit(0)
+
+
 def main() -> None:
     """Assemble session-start context sections and emit the hook output."""
     try:
@@ -522,27 +562,21 @@ def main() -> None:
         count = read_loop_count(cwd, "start-context-calls", session_id) + 1
         bump_loop_count(cwd, "start-context-calls", session_id, count)
         if count % CONTEXT_EMIT_EVERY != 0:
-            sys.exit(0)
+            # why: plugins re-inject rules every prompt; recency would outrank AGENTS.md
+            emit(hook_event_name, PRECEDENCE_NOTICE)
 
     with open(
         os.path.join(cwd, ".claude/instructions/agent.instructions.md"),
         encoding="utf-8",
     ) as f:
-        agent_instructions = f.read()
+        agent_instructions = strip_frontmatter(f.read())
 
     additional_context = (
-        f"{agent_instructions}\n\n{documentation_lang()}\n\n{communication_lang()}"
+        f"# {PRECEDENCE_NOTICE}\n\n{agent_instructions}\n\n"
+        f"{documentation_lang()}\n\n{communication_lang()}"
     )
     additional_context += optional_sections(payload)
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": hook_event_name,
-            "additionalContext": minify_markdown(additional_context),
-        }
-    }
-    LOG.debug("[additionalContext]: %s", json.dumps(output, ensure_ascii=False))
-    print(json.dumps(output, ensure_ascii=False))  # noqa: T201
-    sys.exit(0)
+    emit(hook_event_name, minify_markdown(additional_context))
 
 
 if __name__ == "__main__":
