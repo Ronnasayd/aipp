@@ -253,7 +253,8 @@ fi
 if ! git -C "$LOCAL" rev-parse --git-dir &>/dev/null; then
   echo "Warning: $LOCAL não é um repositório git, pulando 'lefthook install'." >&2
 elif command -v lefthook &>/dev/null; then
-  (cd "$LOCAL" && lefthook install)
+  # why: top-level keys of lefthook.yml are the hooks lefthook will overwrite; non-hook keys match no file
+  (cd "$LOCAL" && bash "$SOURCE/lefthook/scripts/legacy_hooks.sh" preserve $(grep -oE '^[a-z-]+:' lefthook.yml | tr -d :) && lefthook install)
 else
   echo "Warning: lefthook não encontrado no PATH, pulando 'lefthook install'." >&2
 fi
