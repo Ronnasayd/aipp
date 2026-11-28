@@ -1,10 +1,13 @@
 # Lefthook config — migrated from git-hooks/ (symlinked git hooks).
 # Install: `lefthook install` (run once per clone).
+# Hooks present before install are kept as .git/hooks/<hook>.old.<N> and run by legacy-hooks.
 # Bypass: `git commit --no-verify` (see lefthook/scripts/commit-msg.py for why this exists).
 
 pre-commit:
   follow: true
   commands:
+    legacy-hooks:
+      run: bash $AI_PROJECT_ROOT_DIR/lefthook/scripts/legacy_hooks.sh run pre-commit
     format-staged:
       run: uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/format_staged.py
     lint-staged:
@@ -21,6 +24,8 @@ pre-commit:
 commit-msg:
   follow: true
   commands:
+    legacy-hooks:
+      run: bash $AI_PROJECT_ROOT_DIR/lefthook/scripts/legacy_hooks.sh run commit-msg {1}
     conventional-commits:
       run:
         uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/conventional-commits-commit-msg.py
@@ -42,6 +47,8 @@ commit-msg:
 post-commit:
   follow: true
   commands:
+    legacy-hooks:
+      run: bash $AI_PROJECT_ROOT_DIR/lefthook/scripts/legacy_hooks.sh run post-commit
     semantic-version-bump:
       run:
         uv run --project $($AI_PROJECT_ROOT_DIR/lefthook/scripts/pick_uv_project.sh) $AI_PROJECT_ROOT_DIR/lefthook/scripts/semantic_version_bump.py
@@ -51,18 +58,24 @@ post-commit:
         > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 post-checkout:
   commands:
+    legacy-hooks:
+      run: bash $AI_PROJECT_ROOT_DIR/lefthook/scripts/legacy_hooks.sh run post-checkout {1} {2} {3}
     rag-rat-maintenance:
       run:
         test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-checkout --old-head '{1}' --new-head '{2}' --branch-checkout '{3}'
         > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 post-merge:
   commands:
+    legacy-hooks:
+      run: bash $AI_PROJECT_ROOT_DIR/lefthook/scripts/legacy_hooks.sh run post-merge {1}
     rag-rat-maintenance:
       run:
         test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-merge
         > /tmp/rag-rat-maintenance.log 2>&1 < /dev/null &) || true
 post-rewrite:
   commands:
+    legacy-hooks:
+      run: bash $AI_PROJECT_ROOT_DIR/lefthook/scripts/legacy_hooks.sh run post-rewrite {1}
     rag-rat-maintenance:
       run:
         test -f rag-rat.toml && (nohup rag-rat maintenance --trigger post-rewrite
@@ -70,6 +83,9 @@ post-rewrite:
 pre-push:
   follow: true
   commands:
+    legacy-hooks:
+      run: bash $AI_PROJECT_ROOT_DIR/lefthook/scripts/legacy_hooks.sh run pre-push {1} {2}
+      use_stdin: true
     jest:
       run: $AI_PROJECT_ROOT_DIR/lefthook/scripts/pre-push-jest
     typecheck:

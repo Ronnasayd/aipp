@@ -50,3 +50,5 @@ Commits are checked by git hooks ([`lefthook/lefthook.yml`](lefthook/lefthook.ym
 - No emoji.
 - No mentions of AI tools or assistants.
 - English only.
+
+Git hooks that a project had before `aipp` installed lefthook are not lost. The installer moves each one to `.git/hooks/<hook>.old.<N>` (the first free number), and the `legacy-hooks` command in each lefthook event runs them in numeric order with the same arguments and stdin. A failing legacy hook blocks the git operation, as it did before. Note: lefthook skips all `pre-commit` commands when no file is staged.
