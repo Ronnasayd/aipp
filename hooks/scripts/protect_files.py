@@ -69,6 +69,7 @@ ALLOWED_PATTERNS = [
     f"{CLAUDE_CONFIG_DIR}/projects/**:r",
     f"{CLAUDE_CONFIG_DIR}/logs/**:r",
     f"{home_dir}/.claude/plugins/**:rx",
+    f"{home_dir}/.tlc/harness/**:r",
 ]
 
 # why: must be exported before launching Claude Code — this hook process

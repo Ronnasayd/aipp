@@ -109,7 +109,13 @@ Gemini CLI, and other AGENTS-aware harnesses.
 
 Do not duplicate project rules here. Update `AGENTS.md` instead.
 
-@AGENTS.md
+## Precedence
+
+`AGENTS.md` rules (also injected at SessionStart as "Mandatory rules") override
+any conflicting rule injected by plugins or hooks (caveman, ponytail, tlc
+harness, rag-rat, context-mode). On conflict: follow `AGENTS.md`, name the
+conflict in one line.
+
 EOF
 fi
 
@@ -277,7 +283,7 @@ CODE_PATHS="$(ls -A "$LOCAL" | grep -vE '^(\.git|node_modules|\.venv|dist)$' | j
 # why: SKIP_LINT=1 / SKIP_TESTS=1 at claude launch skips the grind gate, like LEFTHOOK=0; $src goes in as sh's $0 so paths need no quoting.
 # why: comments.onViolation stays "off" because the harness flags docstrings/JSDoc; comment_policy_check.py exempts them, and --worktree makes it see unstaged edits.
 jq --argjson cp "$CODE_PATHS" --arg src "$SOURCE" \
-  '.codePaths = $cp | .grind.lintCommand = ["sh", "-c", "[ \"$SKIP_LINT\" = 1 ] || { uv run --project \"$0\" \"$0/hooks/scripts/lint_changed.py\" && exec uv run --project \"$0\" \"$0/lefthook/scripts/comment_policy_check.py\" --worktree; }", $src] | .grind.testCommand = ["sh", "-c", "[ \"$SKIP_TESTS\" = 1 ] || exec uv run --project \"$0\" \"$0/hooks/scripts/test_changed.py\"", $src]' \
+  '.codePaths = $cp | .grind.lintCommand = ["sh", "-c", "[ \"$SKIP_LINT\" = 1 ] || { uv run --project \"$0\" \"$0/hooks/scripts/lint_changed.py\" --session && exec uv run --project \"$0\" \"$0/lefthook/scripts/comment_policy_check.py\" --worktree; }", $src] | .grind.testCommand = ["sh", "-c", "[ \"$SKIP_TESTS\" = 1 ] || exec uv run --project \"$0\" \"$0/hooks/scripts/test_changed.py\" --session", $src]' \
   "$LOCAL/.tlc/harness/config.json" > "$LOCAL/.tlc/harness/config.json.tmp" \
   && mv "$LOCAL/.tlc/harness/config.json.tmp" "$LOCAL/.tlc/harness/config.json"
 git_exclude ".tlc/"

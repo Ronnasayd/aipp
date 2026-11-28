@@ -2,8 +2,8 @@
 """Run tests related to changed files in the working tree; exit 1 if any fail.
 
 Standalone entry for harness `grind.testCommand` / lefthook. Sibling of
-lint_changed.py: same changed-file discovery, same `--staged` / `--ignore`
-flags. No-op (exit 0) when no supported runner is installed locally.
+lint_changed.py: same changed-file discovery, same `--staged` / `--session` /
+`--ignore` flags. No-op (exit 0) when no supported runner is installed locally.
 """
 
 from pathlib import Path
@@ -13,10 +13,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 from lint_changed import (
     DEFAULT_IGNORE,
+    _changed_paths,
     _ignore_globs,
     _is_ignored,
-    _porcelain_paths,
-    _staged_paths,
 )
 from utils import minify_json, run_command_cwd, truncate_large_output
 
@@ -51,7 +50,7 @@ def main() -> int:
     runner = _installed_runner(root)
     if runner is None:
         return 0
-    changed = _staged_paths(root) if "--staged" in argv else _porcelain_paths(root)
+    changed = _changed_paths(root, argv)
     ignore = [*DEFAULT_IGNORE, *_ignore_globs(argv)]
     files = sorted(
         p

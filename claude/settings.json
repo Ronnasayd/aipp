@@ -17,7 +17,8 @@
     "CLAUDE_CODE_PROMPT_CACHE_TTL": "5m",
     "CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL": "5m",
     "SKILL_MODE_ENFORCE_AUTO": "1",
-    "CAVEMAN_DEFAULT_MODE": "ultracave"
+    "CAVEMAN_DEFAULT_MODE": "ultracave",
+    "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"
   },
   "attribution": {
     "commit": "",
@@ -117,7 +118,15 @@
       "RemoteTrigger",
       "ReportFindings",
       "ScheduleWakeup",
-      "SendFeedback"
+      "SendFeedback",
+      "mcp__plugin_rag-rat_rag-rat__memory_create",
+      "mcp__plugin_rag-rat_rag-rat__memory_update",
+      "mcp__plugin_rag-rat_rag-rat__memory_mark_obsolete",
+      "mcp__plugin_rag-rat_rag-rat__memory_rebind",
+      "mcp__plugin_rag-rat_rag-rat__memory_edge_add",
+      "mcp__plugin_rag-rat_rag-rat__memory_edge_remove",
+      "mcp__plugin_rag-rat_rag-rat__dream",
+      "mcp__plugin_rag-rat_rag-rat__dream_review"
     ],
     "defaultMode": "bypassPermissions"
   },

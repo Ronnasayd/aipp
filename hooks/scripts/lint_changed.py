@@ -2,13 +2,15 @@
 """Lint every changed file in the working tree; exit 1 if any fails.
 
 Standalone entry for harness `grind.lintCommand`: no hook payload on stdin,
-no loop counter, no pinned turn SHA (the harness owns those).
+no loop counter (the harness owns it). `--session` reads the turn-base SHA
+via utils.get_turn_base_sha.
 """
 
 from collections.abc import Callable
 from fnmatch import fnmatch
 import os
 from pathlib import Path
+import shlex
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -19,6 +21,7 @@ from typescript_lint import maybe_run_typescript_lint
 from utils import (
     find_project_root,
     get_hooks_logger,
+    get_turn_base_sha,
     minify_json,
     run_command_cwd,
     run_jscpd,
@@ -65,6 +68,38 @@ def _staged_paths(project_root: str) -> set[str]:
     if not result["success"]:
         return set()
     return {line.strip() for line in result["output"].splitlines() if line.strip()}
+
+
+def _session_paths(project_root: str) -> set[str] | None:
+    """Paths changed since the turn-base SHA (commits, worktree, untracked).
+
+    Session id comes from $CLAUDE_CODE_SESSION_ID. Returns None when no
+    turn-base SHA is pinned, so the caller can fall back to porcelain.
+    """
+    base = get_turn_base_sha(project_root, os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
+    if not base:
+        return None
+    diff = run_command_cwd(
+        f"git diff --name-only --diff-filter=d {shlex.quote(base)}", cwd=project_root
+    )
+    if not diff["success"]:
+        return None
+    untracked = run_command_cwd(
+        "git ls-files --others --exclude-standard", cwd=project_root
+    )
+    lines = diff["output"].splitlines() + untracked["output"].splitlines()
+    return {line.strip() for line in lines if line.strip()}
+
+
+def _changed_paths(project_root: str, argv: list[str]) -> set[str]:
+    """Changed paths per selection flag: --staged, --session, else porcelain."""
+    if "--staged" in argv:
+        return _staged_paths(project_root)
+    if "--session" in argv:
+        paths = _session_paths(project_root)
+        if paths is not None:
+            return paths
+    return _porcelain_paths(project_root)
 
 
 def _ignore_globs(argv: list[str]) -> list[str]:
@@ -152,16 +187,16 @@ def main() -> int:
     """Lint changed files under cwd and print failures as JSON.
 
     With `--staged` (lefthook pre-commit) only files staged for the commit are
-    linted; otherwise every file dirty in the working tree. Repeatable
+    linted; with `--session` (tlc grind) every file changed since the turn-base
+    SHA, including mid-turn commits; otherwise every file dirty in the working
+    tree. Repeatable
     `--ignore GLOB` skips matching paths (e.g. `--ignore '**/unused/**'`).
 
     Returns:
         int: 1 if any file fails lint, else 0.
     """
     root = str(Path.cwd())
-    changed = (
-        _staged_paths(root) if "--staged" in sys.argv[1:] else _porcelain_paths(root)
-    )
+    changed = _changed_paths(root, sys.argv[1:])
     ignore = [*DEFAULT_IGNORE, *_ignore_globs(sys.argv[1:])]
     files = sorted(
         p

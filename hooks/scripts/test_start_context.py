@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import io
+import json
 from pathlib import Path
 
 import pytest  # type: ignore[import-not-found]  # pylint: disable=import-error
@@ -128,3 +130,87 @@ def test_agent_instructions_have_no_autonomous_section() -> None:
     instructions = Path(__file__).resolve().parents[2] / "instructions"
     text = (instructions / "agent.instructions.md").read_text(encoding="utf-8")
     assert "AIPP_AUTONOMOUS" not in text
+
+
+def test_strip_frontmatter_drops_leading_frontmatter() -> None:
+    """Frontmatter is removed; body keeps its own --- separators."""
+    text = "---\ndescription: x\n---\nbody\n\n---\n\nmore"
+    assert start_context.strip_frontmatter(text) == "\nbody\n\n---\n\nmore"
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["intro\n\n---\n\nrest", "a\n---\nb\n---\nc", "---\nunclosed"],
+)
+def test_strip_frontmatter_keeps_text_without_frontmatter(text: str) -> None:
+    """Horizontal rules or an unclosed block must not cut the text."""
+    assert start_context.strip_frontmatter(text) == text
+
+
+def test_main_emits_instructions_without_frontmatter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """SessionStart context carries the instruction body, not its frontmatter."""
+    instructions = tmp_path / ".claude/instructions"
+    instructions.mkdir(parents=True)
+    (instructions / "agent.instructions.md").write_text(
+        "---\ndescription: hidden-meta\n---\n# Rules\n\nkeep-this-body\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(start_context, "optional_sections", lambda _payload: "")
+    payload = {"cwd": str(tmp_path), "hook_event_name": "SessionStart"}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+
+    try:
+        start_context.main()
+    except SystemExit:
+        pass
+
+    output = json.loads(capsys.readouterr().out)
+    context = output["hookSpecificOutput"]["additionalContext"]
+    assert "keep-this-body" in context
+    assert "hidden-meta" not in context
+
+
+def run_main(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture,
+    event: str,
+) -> str:
+    """Run main() on a tmp project and return its additionalContext."""
+    instructions = tmp_path / ".claude/instructions"
+    instructions.mkdir(parents=True, exist_ok=True)
+    (instructions / "agent.instructions.md").write_text(
+        "# Rules\n\nrule-body\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(start_context, "optional_sections", lambda _payload: "")
+    payload = {"cwd": str(tmp_path), "hook_event_name": event, "session_id": "s1"}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    try:
+        start_context.main()
+    except SystemExit:
+        pass
+    return json.loads(capsys.readouterr().out)["hookSpecificOutput"][
+        "additionalContext"
+    ]
+
+
+def test_session_start_puts_precedence_before_rules(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """AGENTS.md precedence is stated before the rules it ranks."""
+    context = run_main(monkeypatch, tmp_path, capsys, "SessionStart")
+    assert "AGENTS.md" in context
+    assert context.index("override") < context.index("rule-body")
+
+
+def test_prompt_submit_off_cycle_emits_only_precedence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """Off-cycle prompts re-assert precedence without repeating the rules."""
+    monkeypatch.setattr(start_context, "read_loop_count", lambda *_a: 0)
+    monkeypatch.setattr(start_context, "bump_loop_count", lambda *_a: None)
+    context = run_main(monkeypatch, tmp_path, capsys, "UserPromptSubmit")
+    assert context == start_context.PRECEDENCE_NOTICE
+    assert "AGENTS.md rules" in context and "override" in context
