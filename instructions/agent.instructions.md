@@ -31,6 +31,8 @@ applyTo: "**/*"
 
 - Vertical slices only: thin end-to-end slices (tracer bullets) through all layers, not horizontal layers (all DB, then all API, then all UI). Each slice tested and validated before next.
 
+- Simplicity proportional to problem: minimum abstractions, deps, components, rules that solve the need. No accidental complexity, premature generalization, duplication, unneeded mechanisms. Never oversimplify problems that need structure: keep essential complexity, organize it clear, cohesive, consistent. Every architectural decision/abstraction needs concrete justification. Prioritize readability, maintainability, low coupling, high cohesion, existing contracts/behaviors. Goal not smallest code: clearest, most robust, efficient solution, complexity strictly justified by problem.
+
 - Task done (testing, execution, build) → kill all background processes/servers started, delete temp dirs generated.
 
 - Anytime: evaluate what worth saving as permanent memory. Save only what next session needs and can't rediscover from code, Git, or CLAUDE.md — _reason_ behind decision, non-obvious invariant, user preference. Already in repo or only relevant to this conversation → don't save. Persist via `ai-memory-durable-pages` skill.
